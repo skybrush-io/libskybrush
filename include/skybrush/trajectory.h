@@ -83,6 +83,13 @@ typedef struct
 sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t *trajectory, int fd);
 
 /**
+ * Initializes a trajectory object from the contents of a Skybrush file in
+ * binary format, already loaded into memory.
+ */
+sb_error_t sb_trajectory_init_from_binary_file_in_memory(
+    sb_trajectory_t *trajectory, uint8_t *buf, size_t length);
+
+/**
  * Initializes a trajectory object from the contents of a memory buffer.
  */
 sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t *trajectory,

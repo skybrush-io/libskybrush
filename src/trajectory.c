@@ -15,6 +15,7 @@ static sb_error_t sb_i_trajectory_build_current_segment(
     sb_vector3_with_yaw_t start);
 
 static sb_error_t sb_i_trajectory_build_next_segment(sb_trajectory_t *trajectory);
+sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t *trajectory, sb_binary_file_parser_t *parser);
 
 /**
  * Parses an angle from the memory block that defines the trajectory,
@@ -74,14 +75,37 @@ void sb_trajectory_destroy(sb_trajectory_t *trajectory)
 sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t *trajectory, int fd)
 {
     sb_binary_file_parser_t parser;
-    sb_binary_block_t block;
     sb_error_t retval;
+
+    SB_CHECK(sb_binary_file_parser_init_from_file(&parser, fd));
+    retval = sb_i_trajectory_init_from_parser(trajectory, &parser);
+    sb_binary_file_parser_destroy(&parser);
+
+    return retval;
+}
+
+sb_error_t sb_trajectory_init_from_binary_file_in_memory(
+    sb_trajectory_t *trajectory, uint8_t *buf, size_t nbytes)
+{
+    sb_binary_file_parser_t parser;
+    sb_error_t retval;
+
+    SB_CHECK(sb_binary_file_parser_init_from_buffer(&parser, buf, nbytes));
+    retval = sb_i_trajectory_init_from_parser(trajectory, &parser);
+    sb_binary_file_parser_destroy(&parser);
+
+    return retval;
+}
+
+sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t *trajectory, sb_binary_file_parser_t *parser)
+{
+    sb_error_t retval;
+    sb_binary_block_t block;
     uint8_t *buf;
 
-    SB_CHECK(sb_binary_file_parser_init(&parser, fd));
-    SB_CHECK(sb_binary_file_find_first_block_by_type(&parser, SB_BINARY_BLOCK_TRAJECTORY));
+    SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_TRAJECTORY));
 
-    block = sb_binary_file_get_current_block(&parser);
+    block = sb_binary_file_get_current_block(parser);
 
     buf = sb_calloc(uint8_t, block.length);
     if (buf == 0)
@@ -89,7 +113,7 @@ sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t *trajectory, int 
         return SB_ENOMEM;
     }
 
-    retval = sb_binary_file_read_current_block(&parser, buf);
+    retval = sb_binary_file_read_current_block(parser, buf);
     if (retval != SB_SUCCESS)
     {
         sb_free(buf);

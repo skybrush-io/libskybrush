@@ -41,7 +41,12 @@ typedef struct
  */
 typedef struct
 {
-    int fd;          /**< File descriptor of the file being parsed by the parser */
+    int fd; /**< File descriptor of the file being parsed by the parser */
+
+    const uint8_t *buf;     /**< In-memory buffer being parsed by the parser; null if the parser uses a file */
+    const uint8_t *buf_ptr; /**< Read pointer into the in-memory buffer being parsed by the parser; null if the parser uses a file */
+    const uint8_t *buf_end; /**< End of the in-memory buffer being parsed by the parser; null if the parser uses a file */
+
     uint8_t version; /**< The schema version number of the file being parsed */
 
     long int start_of_first_block;   /**< Start position of the first block in the file */
@@ -49,12 +54,22 @@ typedef struct
 } sb_binary_file_parser_t;
 
 /**
- * Creates a new parser object.
+ * Creates a new parser object backed by an in-memory buffer.
+ *
+ * \param  parser  the parser to initialize
+ * \param  buf     the buffer that the parser will parse
+ * \param  nbytes  the number of bytes in the buffer
+ */
+sb_error_t sb_binary_file_parser_init_from_buffer(
+    sb_binary_file_parser_t *parser, uint8_t *buf, size_t nbytes);
+
+/**
+ * Creates a new parser object backed by a file descriptor.
  *
  * \param  parser  the parser to initialize
  * \param  fd      the file descriptor that the parser will read
  */
-sb_error_t sb_binary_file_parser_init(sb_binary_file_parser_t *parser, int fd);
+sb_error_t sb_binary_file_parser_init_from_file(sb_binary_file_parser_t *parser, int fd);
 
 /**
  * Destroys a parser object, releasing all the resources that it holds.
