@@ -106,6 +106,16 @@ void sb_trajectory_destroy(sb_trajectory_t *trajectory);
 void sb_trajectory_dump_current_segment(const sb_trajectory_t *trajectory);
 
 /**
+ * Returns the total duration of the trajectory, in milliseconds.
+ */
+uint32_t sb_trajectory_get_total_duration_msec(sb_trajectory_t *trajectory);
+
+/**
+ * Returns the total duration of the trajectory, in seconds.
+ */
+float sb_trajectory_get_total_duration_sec(sb_trajectory_t *trajectory);
+
+/**
  * Returns the position on the trajectory at the given time instant.
  */
 sb_error_t sb_trajectory_get_position_at(sb_trajectory_t *trajectory, float t,

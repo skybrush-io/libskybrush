@@ -142,6 +142,12 @@ void test_velocity_at()
     }
 }
 
+void test_get_total_duration()
+{
+    TEST_ASSERT_EQUAL_UINT32(50000, sb_trajectory_get_total_duration_msec(&trajectory));
+    TEST_ASSERT_EQUAL_FLOAT(50, sb_trajectory_get_total_duration_sec(&trajectory));
+}
+
 int main(int argc, char *argv[])
 {
     UNITY_BEGIN();
@@ -149,6 +155,7 @@ int main(int argc, char *argv[])
     RUN_TEST(test_header_parsing);
     RUN_TEST(test_position_at);
     RUN_TEST(test_velocity_at);
+    RUN_TEST(test_get_total_duration);
 
     return UNITY_END();
 }

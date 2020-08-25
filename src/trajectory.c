@@ -201,6 +201,25 @@ sb_error_t sb_trajectory_get_velocity_at(sb_trajectory_t *trajectory, float t, s
     return SB_SUCCESS;
 }
 
+uint32_t sb_trajectory_get_total_duration_msec(sb_trajectory_t *trajectory)
+{
+    uint32_t duration = 0;
+
+    SB_CHECK(sb_i_trajectory_rewind(trajectory));
+    while (trajectory->current_segment.length)
+    {
+        duration += trajectory->current_segment.data.duration_msec;
+        SB_CHECK(sb_i_trajectory_build_next_segment(trajectory));
+    }
+
+    return duration;
+}
+
+float sb_trajectory_get_total_duration_sec(sb_trajectory_t *trajectory)
+{
+    return sb_trajectory_get_total_duration_msec(trajectory) / 1000.0f;
+}
+
 sb_error_t sb_i_trajectory_seek_to_time(sb_trajectory_t *trajectory, float t, float *rel_t)
 {
     sb_trajectory_segment_t *segment;
