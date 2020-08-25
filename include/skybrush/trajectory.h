@@ -57,7 +57,7 @@ typedef struct
  * Structure representing the trajectory of a single drone in a Skybrush
  * mission.
  */
-typedef struct
+typedef struct sb_trajectory_s
 {
   uint8_t *buffer;      /**< Pointer to the buffer holding the trajectory */
   size_t buffer_length; /**< Number of bytes in the buffer */
