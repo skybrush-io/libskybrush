@@ -8,6 +8,7 @@ sb_trajectory_t trajectory;
 void setUp()
 {
     FILE *fp;
+    int fd;
 
     fp = fopen("fixtures/test.skyb", "rb");
     if (fp == 0)
@@ -15,7 +16,14 @@ void setUp()
         abort();
     }
 
-    sb_trajectory_init_from_binary_file(&trajectory, fp);
+    fd = fileno(fp);
+    if (fd < 0)
+    {
+        abort();
+    }
+
+    sb_trajectory_init_from_binary_file(&trajectory, fd);
+
     fclose(fp);
 }
 

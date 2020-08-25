@@ -71,14 +71,14 @@ void sb_trajectory_destroy(sb_trajectory_t *trajectory)
     trajectory->owner = 0;
 }
 
-sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t *trajectory, FILE *fp)
+sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t *trajectory, int fd)
 {
     sb_binary_file_parser_t parser;
     sb_binary_block_t block;
     sb_error_t retval;
     uint8_t *buf;
 
-    SB_CHECK(sb_binary_file_parser_init(&parser, fp));
+    SB_CHECK(sb_binary_file_parser_init(&parser, fd));
     SB_CHECK(sb_binary_file_find_first_block_by_type(&parser, SB_BINARY_BLOCK_TRAJECTORY));
 
     block = sb_binary_file_get_current_block(&parser);
@@ -216,7 +216,14 @@ sb_error_t sb_i_trajectory_seek_to_time(sb_trajectory_t *trajectory, float t, fl
         {
             if (rel_t)
             {
-                *rel_t = (t - segment->start_time_sec) / segment->duration_sec;
+                if (segment->duration_sec != 0)
+                {
+                    *rel_t = (t - segment->start_time_sec) / segment->duration_sec;
+                }
+                else
+                {
+                    *rel_t = 0.5;
+                }
             }
             return SB_SUCCESS;
         }

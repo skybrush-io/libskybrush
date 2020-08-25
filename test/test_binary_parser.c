@@ -14,11 +14,16 @@ void test_open_file()
 {
     sb_binary_file_parser_t parser;
     FILE *fp;
+    int fd;
 
     fp = fopen("fixtures/test.skyb", "rb");
-
     TEST_ASSERT(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init(&parser, fp));
+
+    fd = fileno(fp);
+    TEST_ASSERT(fd >= 0);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init(&parser, fd));
+
     TEST_ASSERT_EQUAL(1, sb_binary_file_parser_get_version(&parser));
 
     sb_binary_file_parser_destroy(&parser);
@@ -30,12 +35,16 @@ void test_read_blocks()
     sb_binary_file_parser_t parser;
     sb_binary_block_t block;
     FILE *fp;
+    int fd;
     char buf[32];
 
     fp = fopen("fixtures/test.skyb", "rb");
-
     TEST_ASSERT(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init(&parser, fp));
+
+    fd = fileno(fp);
+    TEST_ASSERT(fd >= 0);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init(&parser, fd));
 
     /* first block: trajectory */
 
@@ -78,11 +87,15 @@ void test_find_first_block_by_type()
 {
     sb_binary_file_parser_t parser;
     FILE *fp;
+    int fd;
 
     fp = fopen("fixtures/test.skyb", "rb");
-
     TEST_ASSERT(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init(&parser, fp));
+
+    fd = fileno(fp);
+    TEST_ASSERT(fd >= 0);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init(&parser, fd));
 
     TEST_ASSERT_EQUAL(SB_SUCCESS,
                       sb_binary_file_find_first_block_by_type(

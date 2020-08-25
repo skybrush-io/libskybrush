@@ -41,7 +41,7 @@ typedef struct
  */
 typedef struct
 {
-    FILE *fp;        /**< The file being parsed by the parser */
+    int fd;          /**< File descriptor of the file being parsed by the parser */
     uint8_t version; /**< The schema version number of the file being parsed */
 
     long int start_of_first_block;   /**< Start position of the first block in the file */
@@ -50,11 +50,11 @@ typedef struct
 
 /**
  * Creates a new parser object.
- * 
+ *
  * \param  parser  the parser to initialize
- * \param  fp      the file object that the parser will read
+ * \param  fd      the file descriptor that the parser will read
  */
-sb_error_t sb_binary_file_parser_init(sb_binary_file_parser_t *parser, FILE *fp);
+sb_error_t sb_binary_file_parser_init(sb_binary_file_parser_t *parser, int fd);
 
 /**
  * Destroys a parser object, releasing all the resources that it holds.
@@ -64,7 +64,7 @@ void sb_binary_file_parser_destroy(sb_binary_file_parser_t *parser);
 /**
  * Finds the first block in the file parsed by the parser that has the given
  * block type.
- * 
+ *
  * The function returns \c SB_SUCCESS if a block of the given type was found
  * or \c SB_FAILURE if no such block was found.
  */

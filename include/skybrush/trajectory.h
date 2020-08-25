@@ -80,8 +80,7 @@ typedef struct
  * Initializes a trajectory object from the contents of a Skybrush file in
  * binary format.
  */
-sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t *trajectory,
-                                               FILE *fp);
+sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t *trajectory, int fd);
 
 /**
  * Initializes a trajectory object from the contents of a memory buffer.

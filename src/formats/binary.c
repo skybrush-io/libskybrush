@@ -1,4 +1,5 @@
 #include <string.h>
+#include <unistd.h>
 #include <skybrush/error.h>
 #include <skybrush/formats/binary.h>
 
@@ -7,15 +8,15 @@
  */
 static sb_error_t sb_i_binary_file_read_next_block_header(sb_binary_file_parser_t *parser);
 
-sb_error_t sb_binary_file_parser_init(sb_binary_file_parser_t *parser, FILE *fp)
+sb_error_t sb_binary_file_parser_init(sb_binary_file_parser_t *parser, int fd)
 {
     char buf[4];
     long int offset;
 
-    parser->fp = fp;
+    parser->fd = fd;
 
     /* read and check the header */
-    if (fread(buf, sizeof(char), 4, parser->fp) != 4)
+    if (read(parser->fd, buf, 4) != 4)
     {
         return SB_EPARSE;
     }
@@ -26,7 +27,7 @@ sb_error_t sb_binary_file_parser_init(sb_binary_file_parser_t *parser, FILE *fp)
     }
 
     /* read and check the version number */
-    if (fread(&parser->version, sizeof(uint8_t), 1, parser->fp) != 1)
+    if (read(parser->fd, &parser->version, 1) != 1)
     {
         return SB_EPARSE;
     }
@@ -36,7 +37,7 @@ sb_error_t sb_binary_file_parser_init(sb_binary_file_parser_t *parser, FILE *fp)
         return SB_EPARSE;
     }
 
-    offset = ftell(parser->fp);
+    offset = lseek(parser->fd, 0, SEEK_CUR);
     if (offset < 0)
     {
         return SB_EREAD;
@@ -75,13 +76,13 @@ sb_error_t sb_binary_file_read_current_block(sb_binary_file_parser_t *parser, ui
         return SB_EREAD;
     }
 
-    if (fseek(parser->fp, parser->current_block.start_of_body, SEEK_SET))
+    if (lseek(parser->fd, parser->current_block.start_of_body, SEEK_SET) != parser->current_block.start_of_body)
     {
         /* seek failed */
         return SB_EREAD;
     }
 
-    if (fread(buf, sizeof(uint8_t), parser->current_block.length, parser->fp) != parser->current_block.length)
+    if (read(parser->fd, buf, parser->current_block.length) != parser->current_block.length)
     {
         /* read failed */
         return SB_EREAD;
@@ -92,7 +93,7 @@ sb_error_t sb_binary_file_read_current_block(sb_binary_file_parser_t *parser, ui
 
 sb_error_t sb_binary_file_rewind(sb_binary_file_parser_t *parser)
 {
-    if (fseek(parser->fp, parser->start_of_first_block, SEEK_SET))
+    if (lseek(parser->fd, parser->start_of_first_block, SEEK_SET) != parser->start_of_first_block)
     {
         /* seek failed */
         return SB_EREAD;
@@ -112,7 +113,9 @@ sb_error_t sb_binary_file_seek_to_next_block(sb_binary_file_parser_t *parser)
         return SB_EREAD;
     }
 
-    if (fseek(parser->fp, parser->current_block.start_of_body + parser->current_block.length, SEEK_SET))
+    if (
+        lseek(parser->fd, parser->current_block.start_of_body + parser->current_block.length, SEEK_SET) !=
+        parser->current_block.start_of_body + parser->current_block.length)
     {
         /* seek failed */
         return SB_EREAD;
@@ -154,30 +157,29 @@ static sb_error_t sb_i_binary_file_read_next_block_header(sb_binary_file_parser_
     uint8_t type;
     uint8_t length[2];
     long int offset;
+    off_t bytes_read;
 
-    if (fread(&type, sizeof(uint8_t), 1, parser->fp) != 1)
+    bytes_read = read(parser->fd, &type, 1);
+    if (bytes_read < 0)
     {
-        if (feof(parser->fp))
-        {
-            parser->current_block.type = SB_BINARY_BLOCK_NONE;
-            parser->current_block.length = 0;
-            parser->current_block.start_of_body = 0;
-        }
-        else
-        {
-            return SB_EREAD;
-        }
+        return SB_EREAD;
+    }
+    else if (bytes_read == 0)
+    {
+        parser->current_block.type = SB_BINARY_BLOCK_NONE;
+        parser->current_block.length = 0;
+        parser->current_block.start_of_body = 0;
     }
     else
     {
         parser->current_block.type = type;
 
-        if (fread(&length, sizeof(uint8_t), 2, parser->fp) != 2)
+        if (read(parser->fd, &length, 2) != 2)
         {
             return SB_EREAD;
         }
 
-        offset = ftell(parser->fp);
+        offset = lseek(parser->fd, 0, SEEK_CUR);
         if (offset < 0)
         {
             return SB_EREAD;

@@ -13,6 +13,10 @@ project(libskybrush C)
 # Set the path where we look for additional CMake modules
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/etc/cmake)
 
+# Platform-dependent checks
+# include(CheckFunctionExists)
+# check_function_exists(fileno HAVE_FILENO)
+
 # Turn on all compiler warnings and ensure that frame pointers are not omitted
 # so we can debug properly even when the binary is compiled with optimizations
 set(CMAKE_C_FLAGS "-std=c99 -Wall -Werror -Wno-unknown-pragmas -fno-omit-frame-pointer -funwind-tables")
