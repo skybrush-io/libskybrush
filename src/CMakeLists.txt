@@ -11,3 +11,8 @@ target_include_directories(
     PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
+
+install(TARGETS skybrush)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/skybrush DESTINATION include)
+
+
