@@ -3,6 +3,8 @@
 
 #include <skybrush/decls.h>
 
+#include <stdint.h>
+
 __BEGIN_DECLS
 
 /**

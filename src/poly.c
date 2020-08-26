@@ -1,9 +1,10 @@
-#include <strings.h>
+#include <math.h>
+#include <string.h>
 #include <skybrush/poly.h>
 
 void sb_poly_make(sb_poly_t *poly, float *xs, uint8_t num_coeffs)
 {
-    bzero(poly, sizeof(sb_poly_t));
+    memset(poly, 0, sizeof(sb_poly_t));
     poly->num_coeffs = (num_coeffs <= SB_MAX_POLY_COEFFS) ? num_coeffs : SB_MAX_POLY_COEFFS;
     memcpy(poly->coeffs, xs, poly->num_coeffs * sizeof(float));
 }
@@ -15,17 +16,17 @@ void sb_poly_make_zero(sb_poly_t *poly)
 
 void sb_poly_make_constant(sb_poly_t *poly, float x)
 {
-    bzero(poly, sizeof(sb_poly_t));
+    memset(poly, 0, sizeof(sb_poly_t));
     poly->coeffs[0] = x;
     poly->num_coeffs = 1;
 }
 
 void sb_poly_make_linear(sb_poly_t *poly, float duration, float x0, float x1)
 {
-    bzero(poly, sizeof(sb_poly_t));
+    memset(poly, 0, sizeof(sb_poly_t));
     poly->num_coeffs = 2;
 
-    if (duration != 0)
+    if (fabs(duration) > 1.0e-6f)
     {
         poly->coeffs[0] = x0;
         poly->coeffs[1] = (x1 - x0) / duration;

@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <math.h>
+#include <string.h>
 
 #include <skybrush/formats/binary.h>
 #include <skybrush/memory.h>
@@ -259,7 +260,7 @@ sb_error_t sb_i_trajectory_seek_to_time(sb_trajectory_t *trajectory, float t, fl
         {
             if (rel_t)
             {
-                if (segment->duration_sec != 0)
+                if (fabs(segment->duration_sec) > 1.0e-6f)
                 {
                     *rel_t = (t - segment->start_time_sec) / segment->duration_sec;
                 }
@@ -289,7 +290,7 @@ static sb_error_t sb_i_trajectory_build_current_segment(
     size_t num_coords;
 
     /* Initialize the current segment */
-    bzero(&trajectory->current_segment, sizeof(trajectory->current_segment));
+    memset(&trajectory->current_segment, 0, sizeof(trajectory->current_segment));
     trajectory->current_segment.start = offset;
     trajectory->current_segment.length = 0;
 
@@ -439,7 +440,7 @@ static sb_error_t sb_i_trajectory_build_current_segment(
     /* Calculate derivatives for velocity */
     data->deriv = data->poly;
     sb_poly_4d_deriv(&data->deriv);
-    if (data->duration_sec != 0)
+    if (fabs(data->duration_sec) > 1.0e-6f)
     {
         sb_poly_4d_scale(&data->deriv, 1.0f / data->duration_sec);
     }
