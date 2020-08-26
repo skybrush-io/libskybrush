@@ -64,13 +64,27 @@ static void sb_i_trajectory_take_ownership(sb_trajectory_t *trajectory);
 
 void sb_trajectory_destroy(sb_trajectory_t *trajectory)
 {
+    sb_trajectory_clear(trajectory);
+}
+
+void sb_trajectory_clear(sb_trajectory_t *trajectory)
+{
     if (trajectory->owner)
     {
         sb_free(trajectory->buffer);
     }
 
     trajectory->buffer = 0;
+    trajectory->buffer_length = 0;
     trajectory->owner = 0;
+
+    memset(&trajectory->start, 0, sizeof(trajectory->start));
+
+    trajectory->scale = 1;
+    trajectory->use_yaw = 0;
+    trajectory->header_length = 0;
+
+    sb_i_trajectory_rewind(trajectory);
 }
 
 sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t *trajectory, int fd)
@@ -140,6 +154,23 @@ sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t *trajectory, uint8_t *
     trajectory->owner = 0;
 
     trajectory->header_length = sb_i_trajectory_parse_header(trajectory);
+
+    SB_CHECK(sb_i_trajectory_rewind(trajectory));
+
+    return SB_SUCCESS;
+}
+
+sb_error_t sb_trajectory_init_empty(sb_trajectory_t *trajectory)
+{
+    trajectory->buffer = 0;
+    trajectory->buffer_length = 0;
+    trajectory->owner = 0;
+
+    memset(&trajectory->start, 0, sizeof(trajectory->start));
+
+    trajectory->scale = 1;
+    trajectory->use_yaw = 0;
+    trajectory->header_length = 0;
 
     SB_CHECK(sb_i_trajectory_rewind(trajectory));
 

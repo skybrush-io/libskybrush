@@ -32,6 +32,42 @@ void tearDown()
     sb_trajectory_destroy(&trajectory);
 }
 
+void test_trajectory_is_really_empty()
+{
+    float t[] = {-10, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60};
+    int i, n = sizeof(t) / sizeof(t[0]);
+    sb_vector3_with_yaw_t vec;
+
+    for (i = 0; i < n; i++)
+    {
+        sb_trajectory_get_position_at(&trajectory, t[i], &vec);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.yaw);
+
+        sb_trajectory_get_velocity_at(&trajectory, t[i], &vec);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.yaw);
+    }
+}
+
+void test_clear()
+{
+    sb_trajectory_clear(&trajectory);
+    test_trajectory_is_really_empty();
+}
+
+void test_init_empty()
+{
+    sb_trajectory_destroy(&trajectory); /* was created in setUp() */
+    test_trajectory_is_really_empty();
+    sb_trajectory_init_empty(&trajectory);
+    test_trajectory_is_really_empty();
+}
+
 void test_header_parsing()
 {
     sb_vector3_with_yaw_t pos;
@@ -152,6 +188,8 @@ int main(int argc, char *argv[])
 {
     UNITY_BEGIN();
 
+    RUN_TEST(test_init_empty);
+    RUN_TEST(test_clear);
     RUN_TEST(test_header_parsing);
     RUN_TEST(test_position_at);
     RUN_TEST(test_velocity_at);

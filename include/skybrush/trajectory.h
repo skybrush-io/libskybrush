@@ -96,9 +96,20 @@ sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t *trajectory,
                                           uint8_t *buf, size_t length);
 
 /**
+ * Initializes an empty trajectory.
+ */
+sb_error_t sb_trajectory_init_empty(sb_trajectory_t *trajectory);
+
+/**
  * Destroys a trajectory object and releases all memory that it owns.
  */
 void sb_trajectory_destroy(sb_trajectory_t *trajectory);
+
+/**
+ * Clears the trajectory object and removes all segments from it. Also releases
+ * any memory that the trajectory owns.
+ */
+void sb_trajectory_clear(sb_trajectory_t *trajectory);
 
 /**
  * Dumps the details of the current trajectory segment for debugging purposes.
