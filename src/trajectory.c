@@ -316,6 +316,7 @@ static sb_error_t sb_i_trajectory_build_current_segment(
     sb_trajectory_segment_t *data = &trajectory->current_segment.data;
     sb_poly_t *poly;
     float coords[8];
+	unsigned int i;
 
     uint8_t header;
     size_t num_coords;
@@ -374,7 +375,7 @@ static sb_error_t sb_i_trajectory_build_current_segment(
     }
     coords[0] = start.x;
     num_coords++;
-    for (int i = 1; i < num_coords; i++)
+    for (i = 1; i < num_coords; i++)
     {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, offset);
         offset += 2;
@@ -403,7 +404,7 @@ static sb_error_t sb_i_trajectory_build_current_segment(
     }
     coords[0] = start.y;
     num_coords++;
-    for (int i = 1; i < num_coords; i++)
+    for (i = 1; i < num_coords; i++)
     {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, offset);
         offset += 2;
@@ -432,7 +433,7 @@ static sb_error_t sb_i_trajectory_build_current_segment(
     }
     coords[0] = start.z;
     num_coords++;
-    for (int i = 1; i < num_coords; i++)
+    for (i = 1; i < num_coords; i++)
     {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, offset);
         offset += 2;
@@ -461,7 +462,7 @@ static sb_error_t sb_i_trajectory_build_current_segment(
     }
     coords[0] = start.yaw;
     num_coords++;
-    for (int i = 1; i < num_coords; i++)
+    for (i = 1; i < num_coords; i++)
     {
         coords[i + 1] = sb_i_trajectory_parse_angle(trajectory, offset);
         offset += 2;
