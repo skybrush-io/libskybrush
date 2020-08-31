@@ -142,7 +142,7 @@ float sb_trajectory_get_total_duration_sec(const sb_trajectory_t *trajectory);
  *         drone, or infinity if the trajectory never reaches an altitude that
  *         is above the starting point by the given ascent
  */
-float sb_trajectory_propose_takeoff_time(
+float sb_trajectory_propose_takeoff_time_sec(
     const sb_trajectory_t *trajectory, float min_ascent, float speed);
 
 /**
@@ -161,7 +161,7 @@ float sb_trajectory_propose_takeoff_time(
  *         drone, or infinity if the trajectory never reaches an altitude that
  *         is above the last point by the given descent
  */
-float sb_trajectory_propose_landing_time(
+float sb_trajectory_propose_landing_time_sec(
     const sb_trajectory_t *trajectory, float min_descent, float speed);
 
 /**
