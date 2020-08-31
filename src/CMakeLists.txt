@@ -6,6 +6,8 @@ add_library(
     formats/binary.c
 )
 
+set_property(TARGET skybrush PROPERTY C_STANDARD 99)
+
 target_include_directories(
     skybrush
     PUBLIC

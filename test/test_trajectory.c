@@ -37,21 +37,26 @@ void test_trajectory_is_really_empty()
     float t[] = {-10, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60};
     int i, n = sizeof(t) / sizeof(t[0]);
     sb_vector3_with_yaw_t vec;
+    sb_trajectory_player_t player;
+
+    sb_trajectory_player_init(&player, &trajectory);
 
     for (i = 0; i < n; i++)
     {
-        sb_trajectory_get_position_at(&trajectory, t[i], &vec);
+        sb_trajectory_player_get_position_at(&player, t[i], &vec);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.x);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.y);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.z);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.yaw);
 
-        sb_trajectory_get_velocity_at(&trajectory, t[i], &vec);
+        sb_trajectory_player_get_velocity_at(&player, t[i], &vec);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.x);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.y);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.z);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.yaw);
     }
+
+    sb_trajectory_player_destroy(&player);
 }
 
 void test_clear()
@@ -68,114 +73,26 @@ void test_init_empty()
     test_trajectory_is_really_empty();
 }
 
-void test_header_parsing()
+void test_get_start_position()
 {
     sb_vector3_with_yaw_t pos;
 
-    sb_trajectory_get_position_at(&trajectory, 0, &pos);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_start_position(&trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(0, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 }
 
-void test_position_at()
+void test_get_end_position()
 {
     sb_vector3_with_yaw_t pos;
-    float t[] = {0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60};
-    sb_vector3_with_yaw_t expected[] = {
-        {0, 0, 0, 0},
-        {0, 0, 5000, 0},
-        {0, 0, 10000, 0},
-        {5000, 0, 10000, 0},
-        {10000, 0, 10000, 0},
-        {10000, 5000, 10000, 0},
-        {10000, 10000, 10000, 0},
-        {5000, 5000, 10000, 0},
-        {0, 0, 10000, 0},
-        {0, 0, 5000, 0},
-        {0, 0, 0, 0},
-        {0, 0, 0, 0},
-        {0, 0, 0, 0}};
-    int i, j, n = sizeof(t) / sizeof(t[0]);
-    int random_order[] = {12, 2, 5, 8, 11, 1, 4, 7, 10, 0, 3, 6, 9};
 
-    /* test querying forward */
-    for (i = 0; i < n; i++)
-    {
-        sb_trajectory_get_position_at(&trajectory, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, pos.yaw);
-    }
-
-    /* test querying backward */
-    for (i = n - 1; i >= 0; i--)
-    {
-        sb_trajectory_get_position_at(&trajectory, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, pos.yaw);
-    }
-
-    /* test (pseudo)random access */
-    for (j = 0; j < n; j++)
-    {
-        i = random_order[j];
-        sb_trajectory_get_position_at(&trajectory, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, pos.yaw);
-    }
-}
-
-void test_velocity_at()
-{
-    sb_vector3_with_yaw_t pos;
-    float t[] = {5, 15, 25, 35, 45, 55};
-    sb_vector3_with_yaw_t expected[] = {
-        {0, 0, 1000, 0},
-        {1000, 0, 0, 0},
-        {0, 1000, 0, 0},
-        {-1000, -1000, 0, 0},
-        {0, 0, -1000, 0},
-        {0, 0, 0, 0}};
-    int i, j, n = sizeof(t) / sizeof(t[0]);
-    int random_order[] = {5, 4, 1, 3, 0, 2};
-
-    /* test querying forward */
-    for (i = 0; i < n; i++)
-    {
-        sb_trajectory_get_velocity_at(&trajectory, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, pos.yaw);
-    }
-
-    /* test querying backward */
-    for (i = n - 1; i >= 0; i--)
-    {
-        sb_trajectory_get_velocity_at(&trajectory, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, pos.yaw);
-    }
-
-    /* test (pseudo)random access */
-    for (j = 0; j < n; j++)
-    {
-        i = random_order[j];
-        sb_trajectory_get_velocity_at(&trajectory, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, pos.yaw);
-    }
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(0, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
 }
 
 void test_get_total_duration()
@@ -190,9 +107,8 @@ int main(int argc, char *argv[])
 
     RUN_TEST(test_init_empty);
     RUN_TEST(test_clear);
-    RUN_TEST(test_header_parsing);
-    RUN_TEST(test_position_at);
-    RUN_TEST(test_velocity_at);
+    RUN_TEST(test_get_start_position);
+    RUN_TEST(test_get_end_position);
     RUN_TEST(test_get_total_duration);
 
     return UNITY_END();

@@ -67,13 +67,6 @@ typedef struct sb_trajectory_s
   float scale;                 /**< Scaling factor for the coordinates */
   sb_bool_t use_yaw;           /**< Whether the yaw coordinates are relevant */
   size_t header_length;        /**< Number of bytes in the header of the buffer */
-
-  struct
-  {
-    size_t start;                 /**< Start offset of the current segment */
-    size_t length;                /**< Length of the current segment in the buffer */
-    sb_trajectory_segment_t data; /**< The current segment of the trajectory */
-  } current_segment;
 } sb_trajectory_t;
 
 /**
@@ -112,31 +105,117 @@ void sb_trajectory_destroy(sb_trajectory_t *trajectory);
 void sb_trajectory_clear(sb_trajectory_t *trajectory);
 
 /**
- * Dumps the details of the current trajectory segment for debugging purposes.
+ * Returns the end position of the trajectory.
  */
-void sb_trajectory_dump_current_segment(const sb_trajectory_t *trajectory);
+sb_error_t sb_trajectory_get_end_position(
+    const sb_trajectory_t *trajectory, sb_vector3_with_yaw_t *result);
+
+/**
+ * Returns the start position of the trajectory.
+ */
+sb_error_t sb_trajectory_get_start_position(
+    const sb_trajectory_t *trajectory, sb_vector3_with_yaw_t *result);
 
 /**
  * Returns the total duration of the trajectory, in milliseconds.
  */
-uint32_t sb_trajectory_get_total_duration_msec(sb_trajectory_t *trajectory);
+uint32_t sb_trajectory_get_total_duration_msec(const sb_trajectory_t *trajectory);
 
 /**
  * Returns the total duration of the trajectory, in seconds.
  */
-float sb_trajectory_get_total_duration_sec(sb_trajectory_t *trajectory);
+float sb_trajectory_get_total_duration_sec(const sb_trajectory_t *trajectory);
 
 /**
- * Returns the position on the trajectory at the given time instant.
+ * Proposes a takeoff time for the trajectory.
+ *
+ * The function assumes that the trajectory is specified in some common
+ * coordinate system, the drone is initially placed at the first point of the
+ * trajectory and it can take off by moving along the Z axis with a constant
+ * speed until it reaches a specified altitude _relative to the first point_
+ * of the trajectory.
+ *
+ * \param  trajectory  the trajectory to process
+ * \param  min_ascent  the minimum ascent to perform during the takeoff
+ * \param  speed       the assumed speed of the takeoff, in Z units per second
+ * \return the proposed time when the takeoff command has to be sent to the
+ *         drone, or infinity if the trajectory never reaches an altitude that
+ *         is above the starting point by the given ascent
  */
-sb_error_t sb_trajectory_get_position_at(sb_trajectory_t *trajectory, float t,
-                                         sb_vector3_with_yaw_t *result);
+float sb_trajectory_propose_takeoff_time(
+    const sb_trajectory_t *trajectory, float min_ascent, float speed);
 
 /**
- * Returns the velocity on the trajectory at the given time instant.
+ * Proposes a landing time for the trajectory.
+ *
+ * The function assumes that the trajectory is specified in some common
+ * coordinate system, the drone must land at the last point of the trajectory,
+ * it can land by moving downwards along the Z axis with a constant speed and
+ * it must start landing above a specified altitude _relative to the last point_
+ * of the trajectory.
+ *
+ * \param  trajectory  the trajectory to process
+ * \param  min_descent the minimum descent to perform during the landing
+ * \param  speed       the assumed speed of the landing, in Z units per second
+ * \return the proposed time when the landing command has to be sent to the
+ *         drone, or infinity if the trajectory never reaches an altitude that
+ *         is above the last point by the given descent
  */
-sb_error_t sb_trajectory_get_velocity_at(sb_trajectory_t *trajectory, float t,
-                                         sb_vector3_with_yaw_t *result);
+float sb_trajectory_propose_landing_time(
+    const sb_trajectory_t *trajectory, float min_descent, float speed);
+
+/**
+ * Structure representing a trajectory player that allows us to query the
+ * position and velocity along a trajectory.
+ */
+typedef struct sb_trajectory_player_s
+{
+  const sb_trajectory_t *trajectory; /**< The trajectory that the player plays */
+
+  struct
+  {
+    size_t start;                 /**< Start offset of the current segment */
+    size_t length;                /**< Length of the current segment in the buffer */
+    sb_trajectory_segment_t data; /**< The current segment of the trajectory */
+  } current_segment;
+} sb_trajectory_player_t;
+
+/* ************************************************************************* */
+
+/**
+ * Initializes a trajectory player that plays the given trajectory.
+ */
+sb_error_t sb_trajectory_player_init(sb_trajectory_player_t *player, const sb_trajectory_t *trajectory);
+
+/**
+ * Destroys a trajectory player object and releases all memory that it owns.
+ */
+void sb_trajectory_player_destroy(sb_trajectory_player_t *player);
+
+/**
+ * Dumps the details of the current trajectory segment for debugging purposes.
+ */
+void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t *player);
+
+/**
+ * Returns the position on the trajectory associated to the player at the given
+ * time instant.
+ */
+sb_error_t sb_trajectory_player_get_position_at(
+    sb_trajectory_player_t *player, float t, sb_vector3_with_yaw_t *result);
+
+/**
+ * Returns the velocity on the trajectory associated to the player at the given
+ * time instant.
+ */
+sb_error_t sb_trajectory_player_get_velocity_at(
+    sb_trajectory_player_t *player, float t, sb_vector3_with_yaw_t *result);
+
+/**
+ * Returns the total duration of the trajectory associated to the player, in seconds.
+ */
+sb_error_t sb_trajectory_player_get_total_duration_msec(
+    sb_trajectory_player_t *player, uint32_t *duration);
 
 __END_DECLS
 

@@ -13,4 +13,5 @@ add_fixture(test.skyb)
 add_unity_test(binary_parser)
 add_unity_test(poly)
 add_unity_test(trajectory)
+add_unity_test(trajectory_player)
 
