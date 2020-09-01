@@ -128,6 +128,39 @@ void test_propose_takeoff_time()
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, 1.5,
         sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 4000 /* mm/sec */));
+
+    /* Test what happens if we pass an altitude that the trajectory never
+     * reaches. We should get positive infinity, indicating that we should
+     * never take off at all. */
+    TEST_ASSERT_EQUAL_FLOAT(
+        INFINITY,
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 200000 /* mm */, 1000 /* mm/sec */));
+}
+
+void test_propose_landing_time()
+{
+    float total_duration = sb_trajectory_get_total_duration_sec(&trajectory);
+
+    /* Test invalid values first */
+    TEST_ASSERT_EQUAL_FLOAT(-INFINITY, sb_trajectory_propose_landing_time_sec(&trajectory, -1));
+
+    /* Test the case when the minimum ascent is zero so we send the landing command
+     * when we actually landed */
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, total_duration, sb_trajectory_propose_landing_time_sec(&trajectory, 0));
+
+    /* Test some valid combinations. The trajectory ends with a descent of
+     * 1 m/sec for 10 seconds, so it reaches 2 meters 2 seconds before the
+     * end of the trajectory. */
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-7, total_duration - 2,
+        sb_trajectory_propose_landing_time_sec(&trajectory, 2000 /* mm */));
+
+    /* Test what happens if we pass an altitude that the trajectory never
+     * reaches. We should get negative infinity, indicating that we should
+     * never take off at all. */
+    TEST_ASSERT_EQUAL_FLOAT(
+        -INFINITY,
+        sb_trajectory_propose_landing_time_sec(&trajectory, 200000 /* mm */));
 }
 
 int main(int argc, char *argv[])
@@ -140,6 +173,7 @@ int main(int argc, char *argv[])
     RUN_TEST(test_get_end_position);
     RUN_TEST(test_get_total_duration);
     RUN_TEST(test_propose_takeoff_time);
+    RUN_TEST(test_propose_landing_time);
 
     return UNITY_END();
 }

@@ -157,10 +157,11 @@ float sb_trajectory_propose_takeoff_time_sec(
  * \param  trajectory  the trajectory to process
  * \param  min_descent the minimum descent to perform during the landing
  * \return the proposed time when the landing command has to be sent to the
- *         drone, or infinity if the trajectory never reaches an altitude that
- *         is above the last point by the given descent
+ *         drone, or negative infinity if the trajectory never reaches an
+ *         altitude that is above the last point by the given descent
  */
-float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t *trajectory, float min_descent);
+float sb_trajectory_propose_landing_time_sec(
+    const sb_trajectory_t *trajectory, float min_descent);
 
 /**
  * Structure representing a trajectory player that allows us to query the

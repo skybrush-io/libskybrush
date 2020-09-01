@@ -290,7 +290,7 @@ float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t *trajectory, 
 
     if (min_descent < 0)
     {
-        return INFINITY;
+        return -INFINITY;
     }
 
     if (fabs(min_descent) < FLT_MIN)
@@ -300,24 +300,24 @@ float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t *trajectory, 
 
     if (sb_trajectory_player_init(&player, trajectory))
     {
-        return INFINITY;
+        return -INFINITY;
     }
 
     if (sb_trajectory_player_get_position_at(&player, INFINITY, &pos))
     {
         sb_trajectory_player_destroy(&player);
-        return INFINITY;
+        return -INFINITY;
     }
 
     if (sb_i_trajectory_player_find_latest_time_above_altitude(&player, pos.z + min_descent, &result))
     {
         sb_trajectory_player_destroy(&player);
-        return INFINITY;
+        return -INFINITY;
     }
 
     sb_trajectory_player_destroy(&player);
 
-    return isfinite(result) ? result : INFINITY;
+    return isfinite(result) ? result : -INFINITY;
 }
 
 /* ************************************************************************** */
@@ -768,5 +768,34 @@ static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
 static sb_error_t sb_i_trajectory_player_find_latest_time_above_altitude(
     sb_trajectory_player_t *player, float altitude, float *time)
 {
-    return SB_EUNIMPLEMENTED;
+    const float resolution = 1.0f / 16; /* use a power of two to avoid rounding errors */
+    float t, rel_t;
+    float current_altitude;
+    uint32_t total_duration_msec;
+    sb_bool_t reached = 0;
+
+    SB_CHECK(sb_i_trajectory_player_rewind(player));
+    SB_CHECK(sb_trajectory_player_get_total_duration_msec(player, &total_duration_msec));
+
+    t = ceilf(total_duration_msec / (1000.0f * resolution)) * resolution;
+
+    while (t >= 0)
+    {
+        SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
+        current_altitude = sb_poly_eval(&player->current_segment.data.poly.z, rel_t);
+        if (current_altitude >= altitude)
+        {
+            reached = 1;
+            break;
+        }
+
+        t -= resolution;
+    }
+
+    if (time)
+    {
+        *time = reached ? t : -INFINITY;
+    }
+
+    return SB_SUCCESS;
 }
