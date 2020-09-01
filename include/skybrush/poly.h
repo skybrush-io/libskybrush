@@ -1,10 +1,12 @@
 #ifndef SKYBRUSH_POLY_H
 #define SKYBRUSH_POLY_H
 
+#include <complex.h>
 #include <stdlib.h>
 
 #include <skybrush/basic_types.h>
 #include <skybrush/decls.h>
+#include <skybrush/error.h>
 
 __BEGIN_DECLS
 
@@ -61,9 +63,43 @@ void sb_poly_make_quadratic_bezier(sb_poly_t *poly, float duration, float u, flo
 float sb_poly_eval(const sb_poly_t *poly, float t);
 
 /**
+ * Evaluates a polynomial using Horner's rule with double precision.
+ */
+double sb_poly_eval_double(const sb_poly_t *poly, double t);
+
+/**
+ * Evaoluates a polynomial using Horner's rule at a complex value.
+ */
+float complex sb_poly_eval_complex(const sb_poly_t *poly, float complex t);
+
+/**
+ * Evaoluates a polynomial using Horner's rule at a complex value with double
+ * precision.
+ */
+double complex sb_poly_eval_complex_double(const sb_poly_t *poly, double complex t);
+
+/**
+ * Finds the real roots of a polynomial.
+ *
+ * \param  poly  the polynomial to solve
+ * \param  roots the real roots of the polynomial will be stored here; it must
+ *         point to a memory area that is large enough to hold all roots
+ * \param  num_roots  the actual number of roots found will be returned here
+ * \return error code; \c SB_SUCCESS if the call was successful,
+ *         \c SB_EUNIMPLEMENTED if polynomial solving is not implemented for the
+ *         given degree
+ */
+sb_error_t sb_poly_solve(const sb_poly_t *poly, float *roots, uint8_t *num_roots);
+
+/**
  * Returns the degree of a polynomial.
  */
 uint8_t sb_poly_get_degree(const sb_poly_t *poly);
+
+/**
+ * Adds a constant to the polynomial in-place.
+ */
+void sb_poly_add_constant(sb_poly_t *poly, float constant);
 
 /**
  * Scales a polynomial in-place.

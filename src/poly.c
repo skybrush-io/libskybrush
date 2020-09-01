@@ -1,6 +1,14 @@
+#include <float.h>
 #include <math.h>
 #include <string.h>
+
+#include <skybrush/memory.h>
 #include <skybrush/poly.h>
+
+static sb_error_t sb_i_poly_solve_1d(const sb_poly_t *poly, float *roots, uint8_t *num_roots);
+static sb_error_t sb_i_poly_solve_2d(const sb_poly_t *poly, float *roots, uint8_t *num_roots);
+static sb_error_t sb_i_poly_solve_3d(const sb_poly_t *poly, float *roots, uint8_t *num_roots);
+static sb_error_t sb_i_poly_solve_generic(const sb_poly_t *poly, float *roots, uint8_t *num_roots);
 
 void sb_poly_make(sb_poly_t *poly, float *xs, uint8_t num_coeffs)
 {
@@ -102,6 +110,45 @@ float sb_poly_eval(const sb_poly_t *poly, float t)
     return result;
 }
 
+double sb_poly_eval_double(const sb_poly_t *poly, double t)
+{
+    double result = 0.0;
+    const float *ptr = poly->coeffs + poly->num_coeffs;
+
+    while (ptr > poly->coeffs)
+    {
+        result = result * t + (*(--ptr));
+    }
+
+    return result;
+}
+
+float complex sb_poly_eval_complex(const sb_poly_t *poly, float complex t)
+{
+    float complex result = 0.0f;
+    const float *ptr = poly->coeffs + poly->num_coeffs;
+
+    while (ptr > poly->coeffs)
+    {
+        result = result * t + (*(--ptr));
+    }
+
+    return result;
+}
+
+double complex sb_poly_eval_complex_double(const sb_poly_t *poly, double complex t)
+{
+    double complex result = 0.0;
+    const float *ptr = poly->coeffs + poly->num_coeffs;
+
+    while (ptr > poly->coeffs)
+    {
+        result = result * t + (*(--ptr));
+    }
+
+    return result;
+}
+
 uint8_t sb_poly_get_degree(const sb_poly_t *poly)
 {
     return poly->num_coeffs >= 1 ? poly->num_coeffs - 1 : 0;
@@ -125,12 +172,89 @@ void sb_poly_deriv(sb_poly_t *poly)
     }
 }
 
+void sb_poly_add_constant(sb_poly_t *poly, float constant)
+{
+    if (poly->num_coeffs == 0)
+    {
+        poly->num_coeffs = 1;
+        poly->coeffs[0] = constant;
+    }
+    else
+    {
+        poly->coeffs[0] += constant;
+    }
+}
+
 void sb_poly_scale(sb_poly_t *poly, float factor)
 {
     for (uint8_t i = 0; i < poly->num_coeffs; i++)
     {
         poly->coeffs[i] *= factor;
     }
+}
+
+sb_error_t sb_poly_solve(const sb_poly_t *poly, float *roots, uint8_t *num_roots)
+{
+    uint8_t dummy, num_significant_coeffs;
+    sb_bool_t roots_allocated = 0;
+    sb_error_t retval;
+
+    if (!num_roots)
+    {
+        num_roots = &dummy;
+    }
+
+    if (poly->num_coeffs > 0)
+    {
+        for (
+            num_significant_coeffs = poly->num_coeffs;
+            num_significant_coeffs > 1 && fabs(poly->coeffs[num_significant_coeffs - 1]) < FLT_MIN;
+            num_significant_coeffs--)
+            ;
+    }
+    else
+    {
+        num_significant_coeffs = 0;
+    }
+
+    if (num_significant_coeffs == 0)
+    {
+        *num_roots = 0;
+        return SB_SUCCESS;
+    }
+
+    if (!roots)
+    {
+        roots = sb_calloc(float, num_significant_coeffs);
+        roots_allocated = 1;
+    }
+
+    switch (num_significant_coeffs)
+    {
+    case 1:
+        retval = sb_i_poly_solve_1d(poly, roots, num_roots);
+        break;
+
+    case 2:
+        retval = sb_i_poly_solve_2d(poly, roots, num_roots);
+        break;
+
+    case 3:
+        retval = sb_i_poly_solve_3d(poly, roots, num_roots);
+        break;
+
+    default:
+        retval = sb_i_poly_solve_generic(poly, roots, num_roots);
+        break;
+    }
+
+    if (roots_allocated)
+    {
+        sb_free(roots);
+        roots = 0;
+    }
+
+    return retval;
 }
 
 void sb_poly_stretch(sb_poly_t *poly, float factor)
@@ -146,6 +270,197 @@ void sb_poly_stretch(sb_poly_t *poly, float factor)
         scale *= factor;
     }
 }
+
+/* ************************************************************************* */
+
+#define IS_ZERO(x) fabs(x) < FLT_MIN
+
+static sb_error_t sb_i_poly_solve_1d(const sb_poly_t *poly, float *roots, uint8_t *num_roots)
+{
+    if (IS_ZERO(poly->coeffs[0]))
+    {
+        roots[0] = 0;
+        *num_roots = 1;
+    }
+    else
+    {
+        *num_roots = 0;
+    }
+    return SB_SUCCESS;
+}
+
+static sb_error_t sb_i_poly_solve_2d(const sb_poly_t *poly, float *roots, uint8_t *num_roots)
+{
+    float a = poly->coeffs[1];
+    float b = poly->coeffs[0];
+
+    if (IS_ZERO(a))
+    {
+        *num_roots = 0;
+    }
+    else
+    {
+        roots[0] = -b / a;
+        *num_roots = 1;
+    }
+
+    return SB_SUCCESS;
+}
+
+static sb_error_t sb_i_poly_solve_3d(const sb_poly_t *poly, float *roots, uint8_t *num_roots)
+{
+    float a = poly->coeffs[2];
+    float b = poly->coeffs[1];
+    float c = poly->coeffs[0];
+    float d;
+
+    if (IS_ZERO(a))
+    {
+        return sb_i_poly_solve_2d(poly, roots, num_roots);
+    }
+
+    d = (b * b - 4 * a * c);
+
+    if (IS_ZERO(d))
+    {
+        *num_roots = 1;
+        roots[0] = -b / (2 * a);
+    }
+    else
+    {
+        *num_roots = 2;
+        d = sqrtf(d);
+        roots[0] = (-b - d) / (2 * a);
+        roots[1] = (-b + d) / (2 * a);
+    }
+
+    return SB_SUCCESS;
+}
+
+static int compare_floats(const void *a_ptr, const void *b_ptr)
+{
+    float a = *(float *)a_ptr;
+    float b = *(float *)b_ptr;
+
+    if (isnan(a))
+    {
+        if (isnan(b))
+        {
+            return 0;
+        }
+        else
+        {
+            return 1;
+        }
+    }
+    else if (isnan(b))
+    {
+        return -1;
+    }
+
+    if (a > b)
+    {
+        return 1;
+    }
+    else if (a < b)
+    {
+        return -1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+static sb_error_t sb_i_poly_solve_generic(const sb_poly_t *poly, float *roots, uint8_t *num_roots)
+{
+    /* Durand-Kerner-Weierstrass method.
+     * Precondition: poly->num_coeffs >= 4 */
+    double complex *current, *next, *dummy;
+    double complex diff;
+    double max_diff = 100, precision = 1e-7;
+    uint8_t i, j, n = poly->num_coeffs - 1;
+    size_t num_iterations = 100;
+
+    /* allocate memory for the computation */
+    current = sb_calloc(double complex, n);
+    if (current == 0)
+    {
+        return SB_ENOMEM;
+    }
+    next = sb_calloc(double complex, n);
+    if (next == 0)
+    {
+        return SB_ENOMEM;
+    }
+
+    /* get initial condition */
+    current[0] = 0.4 + 0.9 * I;
+    for (i = 1; i < n; i++)
+    {
+        current[i] = cpow(current[0], i);
+    }
+    current[0] = 1.0;
+
+    /* iterate until convergence */
+    max_diff = precision * 100;
+    while (num_iterations > 0 && max_diff > precision)
+    {
+        max_diff = 0.0f;
+        num_iterations--;
+
+        for (i = 0; i < n; i++)
+        {
+            diff = 1.0f;
+            for (j = 0; j < n; j++)
+            {
+                if (j != i)
+                {
+                    diff *= current[i] - current[j];
+                }
+            }
+
+            diff = sb_poly_eval_complex_double(poly, current[i]) / diff;
+            next[i] = current[i] - diff;
+
+            if (fabs(creal(diff)) > max_diff)
+            {
+                max_diff = fabs(creal(diff));
+            }
+            if (fabs(cimag(diff)) > max_diff)
+            {
+                max_diff = fabs(cimag(diff));
+            }
+        }
+
+        dummy = current;
+        current = next;
+        next = dummy;
+    }
+
+    /* return entries from 'current' that have an insignificant complex part */
+    j = 0;
+    for (i = 0; i < n; i++)
+    {
+        if (fabs(cimag(current[i])) < 1e-3)
+        {
+            roots[j] = current[i];
+            j++;
+        }
+    }
+
+    /* sort roots in ascending order */
+    qsort(roots, j, sizeof(roots[0]), compare_floats);
+
+    *num_roots = j;
+
+    sb_free(current);
+    sb_free(next);
+
+    return SB_SUCCESS;
+}
+
+#undef ZERO
 
 /* ************************************************************************* */
 

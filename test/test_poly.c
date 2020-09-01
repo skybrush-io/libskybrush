@@ -74,6 +74,36 @@ void test_bezier()
     TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, 4));
 }
 
+void test_add_constant()
+{
+    sb_poly_t poly;
+
+    sb_poly_make_zero(&poly);
+    poly.num_coeffs = 0;
+    sb_poly_add_constant(&poly, 7);
+
+    TEST_ASSERT_EQUAL(7, sb_poly_eval(&poly, -1));
+    TEST_ASSERT_EQUAL(7, sb_poly_eval(&poly, 0));
+    TEST_ASSERT_EQUAL(7, sb_poly_eval(&poly, 3));
+    TEST_ASSERT_EQUAL(7, sb_poly_eval(&poly, 5));
+
+    sb_poly_make_constant(&poly, 50);
+    sb_poly_add_constant(&poly, 7);
+
+    TEST_ASSERT_EQUAL(57, sb_poly_eval(&poly, -1));
+    TEST_ASSERT_EQUAL(57, sb_poly_eval(&poly, 0));
+    TEST_ASSERT_EQUAL(57, sb_poly_eval(&poly, 3));
+    TEST_ASSERT_EQUAL(57, sb_poly_eval(&poly, 5));
+
+    sb_poly_make_linear(&poly, 5, 10, 20);
+    sb_poly_add_constant(&poly, 3);
+
+    TEST_ASSERT_EQUAL(11, sb_poly_eval(&poly, -1));
+    TEST_ASSERT_EQUAL(13, sb_poly_eval(&poly, 0));
+    TEST_ASSERT_EQUAL(19, sb_poly_eval(&poly, 3));
+    TEST_ASSERT_EQUAL(23, sb_poly_eval(&poly, 5));
+}
+
 void test_scale()
 {
     sb_poly_t poly;
@@ -156,6 +186,130 @@ void test_deriv()
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(xs4, poly.coeffs, 1);
 }
 
+void test_solve()
+{
+    sb_poly_t poly;
+    float xs[8];
+    float roots[8];
+    uint8_t num_roots;
+
+    /* constants */
+
+    sb_poly_make_zero(&poly);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(1, num_roots);
+    TEST_ASSERT_EQUAL(0, roots[0]);
+
+    sb_poly_make_constant(&poly, 2);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(0, num_roots);
+
+    /* linear */
+
+    sb_poly_make_linear(&poly, 5, 10, 20);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(1, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, -5, roots[0]);
+
+    sb_poly_make_linear(&poly, 5, 10, 10);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(0, num_roots);
+
+    /* quadratic */
+
+    xs[0] = 10;
+    xs[1] = 2;
+    xs[2] = 0;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(1, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, -5, roots[0]);
+
+    xs[0] = 9;
+    xs[1] = -6;
+    xs[2] = 1;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(1, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 3, roots[0]);
+
+    xs[0] = 5;
+    xs[1] = -6;
+    xs[2] = 1;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(2, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 1, roots[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 5, roots[1]);
+
+    /* cubic */
+
+    xs[0] = -5;
+    xs[1] = 3;
+    xs[2] = -3;
+    xs[3] = 1;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(1, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(2.5874, 1, roots[0]);
+
+    /* degenerate examples do not work well with the current solver yet */
+
+    /*
+    xs[0] = 5;
+    xs[1] = -6;
+    xs[2] = 1;
+    xs[3] = 0;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(2, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 1, roots[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 5, roots[1]);
+    */
+
+    /*
+    xs[0] = -27;
+    xs[1] = 27;
+    xs[2] = -9;
+    xs[3] = 1;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(1, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 3, roots[0]);
+    */
+
+    xs[0] = -45;
+    xs[1] = 39;
+    xs[2] = -11;
+    xs[3] = 1;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT(num_roots == 2 || num_roots == 3);
+
+    if (num_roots == 2)
+    {
+        TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[0]);
+        TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[1]);
+    }
+    else if (num_roots == 3)
+    {
+        TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[0]);
+        TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[1]);
+        TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[2]);
+    }
+
+    xs[0] = -15;
+    xs[1] = 23;
+    xs[2] = -9;
+    xs[3] = 1;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(3, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 1, roots[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[2]);
+}
+
 int main(int argc, char *argv[])
 {
     UNITY_BEGIN();
@@ -165,10 +319,13 @@ int main(int argc, char *argv[])
     RUN_TEST(test_linear);
     RUN_TEST(test_bezier);
 
+    RUN_TEST(test_add_constant);
     RUN_TEST(test_scale);
     RUN_TEST(test_get_degree);
     RUN_TEST(test_stretch);
     RUN_TEST(test_deriv);
+
+    RUN_TEST(test_solve);
 
     return UNITY_END();
 }

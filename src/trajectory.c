@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <float.h>
 #include <math.h>
 #include <string.h>
 
@@ -45,11 +46,17 @@ static void sb_i_trajectory_take_ownership(sb_trajectory_t *trajectory);
  * to be at the given start position.
  */
 static sb_error_t sb_i_trajectory_player_build_current_segment(
-    sb_trajectory_player_t *trajectory, size_t offset, uint32_t start_time_msec,
+    sb_trajectory_player_t *player, size_t offset, uint32_t start_time_msec,
     sb_vector3_with_yaw_t start);
 
 static sb_error_t sb_i_trajectory_player_build_next_segment(
-    sb_trajectory_player_t *trajectory);
+    sb_trajectory_player_t *player);
+
+/**
+ * Returns whether the trajectory player has more segments in the trajectory.
+ */
+static sb_bool_t sb_i_trajectory_player_has_more_segments(
+    sb_trajectory_player_t *player);
 
 /**
  * Resets the internal state of the trajectory and rewinds it to time zero.
@@ -62,7 +69,19 @@ static sb_error_t sb_i_trajectory_player_rewind(sb_trajectory_player_t *player);
  * start of the segment and rel_t = 1 is the end of the segment. It is
  * guaranteed that the returned relative time is between 0 and 1, inclusive.
  */
-sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *player, float t, float *rel_t);
+static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *player, float t, float *rel_t);
+
+/**
+ * Finds the earliest time when the trajectory reaches the given altitude.
+x */
+static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
+    sb_trajectory_player_t *player, float altitude, float *time);
+
+/**
+ * Finds the latest time when the trajectory is still above the given altitude.
+ */
+static sb_error_t sb_i_trajectory_player_find_latest_time_above_altitude(
+    sb_trajectory_player_t *player, float altitude, float *time);
 
 void sb_trajectory_destroy(sb_trajectory_t *trajectory)
 {
@@ -227,15 +246,78 @@ float sb_trajectory_get_total_duration_sec(const sb_trajectory_t *trajectory)
 float sb_trajectory_propose_takeoff_time_sec(
     const sb_trajectory_t *trajectory, float min_ascent, float speed)
 {
-    /* TODO(ntamas): implement this! */
-    return 0.0f;
+    sb_trajectory_player_t player;
+    sb_vector3_with_yaw_t pos;
+    float result;
+
+    if (min_ascent < 0 || speed <= 0)
+    {
+        return INFINITY;
+    }
+
+    if (fabs(min_ascent) < FLT_MIN)
+    {
+        return 0;
+    }
+
+    if (sb_trajectory_player_init(&player, trajectory))
+    {
+        return INFINITY;
+    }
+
+    if (sb_trajectory_player_get_position_at(&player, 0, &pos))
+    {
+        sb_trajectory_player_destroy(&player);
+        return INFINITY;
+    }
+
+    if (sb_i_trajectory_player_find_earliest_time_reaching_altitude(&player, pos.z + min_ascent, &result))
+    {
+        sb_trajectory_player_destroy(&player);
+        return INFINITY;
+    }
+
+    sb_trajectory_player_destroy(&player);
+
+    return isfinite(result) ? result - (min_ascent / speed) : INFINITY;
 }
 
-float sb_trajectory_propose_landing_time_sec(
-    const sb_trajectory_t *trajectory, float min_ascent, float speed)
+float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t *trajectory, float min_descent)
 {
-    /* TODO(ntamas): implement this! */
-    return sb_trajectory_get_total_duration_sec(trajectory);
+    sb_trajectory_player_t player;
+    sb_vector3_with_yaw_t pos;
+    float result;
+
+    if (min_descent < 0)
+    {
+        return INFINITY;
+    }
+
+    if (fabs(min_descent) < FLT_MIN)
+    {
+        return sb_trajectory_get_total_duration_sec(trajectory);
+    }
+
+    if (sb_trajectory_player_init(&player, trajectory))
+    {
+        return INFINITY;
+    }
+
+    if (sb_trajectory_player_get_position_at(&player, INFINITY, &pos))
+    {
+        sb_trajectory_player_destroy(&player);
+        return INFINITY;
+    }
+
+    if (sb_i_trajectory_player_find_latest_time_above_altitude(&player, pos.z + min_descent, &result))
+    {
+        sb_trajectory_player_destroy(&player);
+        return INFINITY;
+    }
+
+    sb_trajectory_player_destroy(&player);
+
+    return isfinite(result) ? result : INFINITY;
 }
 
 /* ************************************************************************** */
@@ -380,7 +462,7 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
 
     SB_CHECK(sb_i_trajectory_player_rewind(player));
 
-    while (player->current_segment.length)
+    while (sb_i_trajectory_player_has_more_segments(player))
     {
         result += player->current_segment.data.duration_msec;
         SB_CHECK(sb_i_trajectory_player_build_next_segment(player));
@@ -396,7 +478,12 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
 
 /* ************************************************************************** */
 
-sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *player, float t, float *rel_t)
+static sb_bool_t sb_i_trajectory_player_has_more_segments(sb_trajectory_player_t *player)
+{
+    return player->current_segment.length > 0;
+}
+
+static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *player, float t, float *rel_t)
 {
     sb_trajectory_segment_t *segment;
     size_t offset;
@@ -421,7 +508,7 @@ sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *player, f
         {
             offset = player->current_segment.start;
             SB_CHECK(sb_i_trajectory_player_build_next_segment(player));
-            if (player->current_segment.length == 0)
+            if (!sb_i_trajectory_player_has_more_segments(player))
             {
                 /* reached end of trajectory */
             }
@@ -452,8 +539,6 @@ sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *player, f
         }
     }
 }
-
-/* ************************************************************************** */
 
 static sb_error_t sb_i_trajectory_player_build_current_segment(
     sb_trajectory_player_t *player, size_t offset, uint32_t start_time_msec,
@@ -646,4 +731,44 @@ static sb_error_t sb_i_trajectory_player_rewind(sb_trajectory_player_t *player)
 {
     return sb_i_trajectory_player_build_current_segment(
         player, player->trajectory->header_length, 0, player->trajectory->start);
+}
+
+static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
+    sb_trajectory_player_t *player, float altitude, float *time)
+{
+    const float resolution = 1.0f / 16; /* use a power of two to avoid rounding errors */
+    float t, rel_t;
+    float current_altitude;
+    sb_bool_t reached = 0;
+
+    SB_CHECK(sb_i_trajectory_player_rewind(player));
+
+    t = 0.0f;
+    while (sb_i_trajectory_player_has_more_segments(player))
+    {
+        SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
+        current_altitude = sb_poly_eval(&player->current_segment.data.poly.z, rel_t);
+        if (current_altitude >= altitude)
+        {
+            printf("earliest_time_reaching_altitude(%.4fcm) = %.2f, reached %.4fcm\n", altitude, t, current_altitude);
+
+            reached = 1;
+            break;
+        }
+
+        t += resolution;
+    }
+
+    if (time)
+    {
+        *time = reached ? t : INFINITY;
+    }
+
+    return SB_SUCCESS;
+}
+
+static sb_error_t sb_i_trajectory_player_find_latest_time_above_altitude(
+    sb_trajectory_player_t *player, float altitude, float *time)
+{
+    return SB_EUNIMPLEMENTED;
 }
