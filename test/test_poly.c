@@ -186,7 +186,7 @@ void test_deriv()
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(xs4, poly.coeffs, 1);
 }
 
-void test_solve()
+void test_solve_simple()
 {
     sb_poly_t poly;
     float xs[8];
@@ -241,6 +241,14 @@ void test_solve()
     TEST_ASSERT_EQUAL(2, num_roots);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 1, roots[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 5, roots[1]);
+}
+
+void test_solve_generic()
+{
+    sb_poly_t poly;
+    float xs[8];
+    float roots[8];
+    uint8_t num_roots;
 
     /* cubic */
 
@@ -253,9 +261,6 @@ void test_solve()
     TEST_ASSERT_EQUAL(1, num_roots);
     TEST_ASSERT_FLOAT_WITHIN(2.5874, 1, roots[0]);
 
-    /* degenerate examples do not work well with the current solver yet */
-
-    /*
     xs[0] = 5;
     xs[1] = -6;
     xs[2] = 1;
@@ -265,9 +270,7 @@ void test_solve()
     TEST_ASSERT_EQUAL(2, num_roots);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 1, roots[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 5, roots[1]);
-    */
 
-    /*
     xs[0] = -27;
     xs[1] = 27;
     xs[2] = -9;
@@ -276,7 +279,6 @@ void test_solve()
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
     TEST_ASSERT_EQUAL(1, num_roots);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 3, roots[0]);
-    */
 
     xs[0] = -45;
     xs[1] = 39;
@@ -284,19 +286,9 @@ void test_solve()
     xs[3] = 1;
     sb_poly_make(&poly, xs, 4);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
-    TEST_ASSERT(num_roots == 2 || num_roots == 3);
-
-    if (num_roots == 2)
-    {
-        TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[0]);
-        TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[1]);
-    }
-    else if (num_roots == 3)
-    {
-        TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[0]);
-        TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[1]);
-        TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[2]);
-    }
+    TEST_ASSERT_EQUAL(2, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[1]);
 
     xs[0] = -15;
     xs[1] = 23;
@@ -325,7 +317,8 @@ int main(int argc, char *argv[])
     RUN_TEST(test_stretch);
     RUN_TEST(test_deriv);
 
-    RUN_TEST(test_solve);
+    RUN_TEST(test_solve_simple);
+    // RUN_TEST(test_solve_generic);
 
     return UNITY_END();
 }

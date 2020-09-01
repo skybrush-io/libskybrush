@@ -1,7 +1,6 @@
 #ifndef SKYBRUSH_POLY_H
 #define SKYBRUSH_POLY_H
 
-#include <complex.h>
 #include <stdlib.h>
 
 #include <skybrush/basic_types.h>
@@ -66,17 +65,6 @@ float sb_poly_eval(const sb_poly_t *poly, float t);
  * Evaluates a polynomial using Horner's rule with double precision.
  */
 double sb_poly_eval_double(const sb_poly_t *poly, double t);
-
-/**
- * Evaoluates a polynomial using Horner's rule at a complex value.
- */
-float complex sb_poly_eval_complex(const sb_poly_t *poly, float complex t);
-
-/**
- * Evaoluates a polynomial using Horner's rule at a complex value with double
- * precision.
- */
-double complex sb_poly_eval_complex_double(const sb_poly_t *poly, double complex t);
 
 /**
  * Finds the real roots of a polynomial.
