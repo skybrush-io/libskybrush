@@ -750,8 +750,6 @@ static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
         current_altitude = sb_poly_eval(&player->current_segment.data.poly.z, rel_t);
         if (current_altitude >= altitude)
         {
-            printf("earliest_time_reaching_altitude(%.4fcm) = %.2f, reached %.4fcm\n", altitude, t, current_altitude);
-
             reached = 1;
             break;
         }
