@@ -255,7 +255,7 @@ float sb_trajectory_propose_takeoff_time_sec(
         return INFINITY;
     }
 
-    if (fabs(min_ascent) < FLT_MIN)
+    if (fabsf(min_ascent) < FLT_MIN)
     {
         return 0;
     }
@@ -293,7 +293,7 @@ float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t *trajectory, 
         return -INFINITY;
     }
 
-    if (fabs(min_descent) < FLT_MIN)
+    if (fabsf(min_descent) < FLT_MIN)
     {
         return sb_trajectory_get_total_duration_sec(trajectory);
     }
@@ -526,7 +526,7 @@ static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *pl
                 {
                     *rel_t = 1;
                 }
-                else if (fabs(segment->duration_sec) > 1.0e-6f)
+                else if (fabsf(segment->duration_sec) > 1.0e-6f)
                 {
                     *rel_t = (t - segment->start_time_sec) / segment->duration_sec;
                 }
@@ -706,7 +706,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     /* Calculate derivatives for velocity */
     data->deriv = data->poly;
     sb_poly_4d_deriv(&data->deriv);
-    if (fabs(data->duration_sec) > 1.0e-6f)
+    if (fabsf(data->duration_sec) > 1.0e-6f)
     {
         sb_poly_4d_scale(&data->deriv, 1.0f / data->duration_sec);
     }

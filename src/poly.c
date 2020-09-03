@@ -34,7 +34,7 @@ void sb_poly_make_linear(sb_poly_t *poly, float duration, float x0, float x1)
     memset(poly, 0, sizeof(sb_poly_t));
     poly->num_coeffs = 2;
 
-    if (fabs(duration) > 1.0e-6f)
+    if (fabsf(duration) > 1.0e-6f)
     {
         poly->coeffs[0] = x0;
         poly->coeffs[1] = (x1 - x0) / duration;
@@ -182,7 +182,7 @@ sb_error_t sb_poly_solve(const sb_poly_t *poly, float *roots, uint8_t *num_roots
     {
         for (
             num_significant_coeffs = poly->num_coeffs;
-            num_significant_coeffs > 1 && fabs(poly->coeffs[num_significant_coeffs - 1]) < FLT_MIN;
+            num_significant_coeffs > 1 && fabsf(poly->coeffs[num_significant_coeffs - 1]) < FLT_MIN;
             num_significant_coeffs--)
             ;
     }
@@ -247,7 +247,7 @@ void sb_poly_stretch(sb_poly_t *poly, float factor)
 
 /* ************************************************************************* */
 
-#define IS_ZERO(x) fabs(x) < FLT_MIN
+#define IS_ZERO(x) fabsf(x) < FLT_MIN
 
 static sb_error_t sb_i_poly_solve_1d(const sb_poly_t *poly, float *roots, uint8_t *num_roots)
 {
