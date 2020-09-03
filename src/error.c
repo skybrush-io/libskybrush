@@ -26,7 +26,7 @@ static char *sb_i_error_messages[] = {
 
 const char *sb_error_to_string(int code)
 {
-    if (code >= 0 && code < sizeof(sb_i_error_messages) / sizeof(sb_i_error_messages[0]))
+    if (code >= 0 && code < (int)(sizeof(sb_i_error_messages) / sizeof(sb_i_error_messages[0])))
         return sb_i_error_messages[code];
     return sb_i_error_messages[SB_FAILURE];
 }
