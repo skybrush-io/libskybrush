@@ -61,6 +61,19 @@ void test_read_blocks_from_parser(sb_binary_file_parser_t *parser)
     buf[block.length] = 0;
     TEST_ASSERT_EQUAL_STRING("this is a test file", buf);
 
+    /* seeking to next block */
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_seek_to_next_block(parser));
+
+    /* third block: light program */
+
+    TEST_ASSERT_TRUE(sb_binary_file_is_current_block_valid(parser));
+
+    block = sb_binary_file_get_current_block(parser);
+    TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_LIGHT_PROGRAM, block.type);
+    TEST_ASSERT_EQUAL(27, block.length);
+    TEST_ASSERT_EQUAL(69, block.start_of_body);
+
     /* trying to read past EOF */
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_seek_to_next_block(parser));
@@ -120,15 +133,21 @@ void test_find_first_block_by_type()
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init_from_file(&parser, fd));
 
+    TEST_ASSERT_EQUAL(SB_FAILURE,
+                      sb_binary_file_find_first_block_by_type(
+                          &parser, SB_BINARY_BLOCK_NONE));
+
     TEST_ASSERT_EQUAL(SB_SUCCESS,
                       sb_binary_file_find_first_block_by_type(
                           &parser, SB_BINARY_BLOCK_COMMENT));
     TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_COMMENT,
                       sb_binary_file_get_current_block(&parser).type);
 
-    TEST_ASSERT_EQUAL(SB_FAILURE,
+    TEST_ASSERT_EQUAL(SB_SUCCESS,
                       sb_binary_file_find_first_block_by_type(
                           &parser, SB_BINARY_BLOCK_LIGHT_PROGRAM));
+    TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_LIGHT_PROGRAM,
+                      sb_binary_file_get_current_block(&parser).type);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS,
                       sb_binary_file_find_first_block_by_type(

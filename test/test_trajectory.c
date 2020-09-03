@@ -68,7 +68,6 @@ void test_clear()
 void test_init_empty()
 {
     sb_trajectory_destroy(&trajectory); /* was created in setUp() */
-    test_trajectory_is_really_empty();
     sb_trajectory_init_empty(&trajectory);
     test_trajectory_is_really_empty();
 }

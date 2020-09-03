@@ -1,9 +1,19 @@
 add_library(
     skybrush
     error.c
-    poly.c
-    trajectory.c
+
     formats/binary.c
+
+    lights/colors.c
+    lights/error_handler.cpp
+    lights/executor.cpp
+    lights/loop_stack.cpp
+    lights/program.cpp
+    lights/transition.cpp
+    lights/trigger.cpp
+
+    trajectory/poly.c
+    trajectory/trajectory.c
 )
 
 set_property(TARGET skybrush PROPERTY C_STANDARD 99)
