@@ -9,7 +9,7 @@ __BEGIN_DECLS
 /**
  * Typedef for an RGB color.
  */
-typedef struct
+typedef struct sb_rgb_color_s
 {
   uint8_t red;   /**< The red component of the color */
   uint8_t green; /**< The green component of the color */
