@@ -90,11 +90,6 @@ private:
   SignalSource *m_pSignalSource;
 
   /**
-   * Pointer to the current location within the bytecode.
-   */
-  const uint8_t *m_pNextCommand;
-
-  /**
    * The current color calculated by the command executor. This is the color
    * that should be forwarded to the LED strip.
    */
