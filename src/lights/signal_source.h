@@ -19,7 +19,7 @@ public:
      *
      * \param  channelIndex  index of the channel to read.
      */
-  virtual volatile uint8_t filteredChannelValue(uint8_t channelIndex) const = 0;
+  virtual uint8_t filteredChannelValue(uint8_t channelIndex) const = 0;
 
   /**
      * Returns the current value of the given channel.

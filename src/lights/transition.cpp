@@ -5,6 +5,38 @@
  * https://github.com/warrenm/AHEasing/blob/master/AHEasing/easing.c
  */
 
+transition_progress_t easing_func_linear(transition_progress_t p);
+transition_progress_t easing_func_in_sine(transition_progress_t p);
+transition_progress_t easing_func_out_sine(transition_progress_t p);
+transition_progress_t easing_func_in_out_sine(transition_progress_t p);
+transition_progress_t easing_func_in_quad(transition_progress_t p);
+transition_progress_t easing_func_out_quad(transition_progress_t p);
+transition_progress_t easing_func_in_out_quad(transition_progress_t p);
+transition_progress_t easing_func_in_cubic(transition_progress_t p);
+transition_progress_t easing_func_out_cubic(transition_progress_t p);
+transition_progress_t easing_func_in_out_cubic(transition_progress_t p);
+transition_progress_t easing_func_in_quart(transition_progress_t p);
+transition_progress_t easing_func_out_quart(transition_progress_t p);
+transition_progress_t easing_func_in_out_quart(transition_progress_t p);
+transition_progress_t easing_func_in_quint(transition_progress_t p);
+transition_progress_t easing_func_out_quint(transition_progress_t p);
+transition_progress_t easing_func_in_out_quint(transition_progress_t p);
+transition_progress_t easing_func_in_circ(transition_progress_t p);
+transition_progress_t easing_func_out_circ(transition_progress_t p);
+transition_progress_t easing_func_in_out_circ(transition_progress_t p);
+transition_progress_t easing_func_in_expo(transition_progress_t p);
+transition_progress_t easing_func_out_expo(transition_progress_t p);
+transition_progress_t easing_func_in_out_expo(transition_progress_t p);
+transition_progress_t easing_func_in_elastic(transition_progress_t p);
+transition_progress_t easing_func_out_elastic(transition_progress_t p);
+transition_progress_t easing_func_in_out_elastic(transition_progress_t p);
+transition_progress_t easing_func_in_back(transition_progress_t p);
+transition_progress_t easing_func_out_back(transition_progress_t p);
+transition_progress_t easing_func_in_out_back(transition_progress_t p);
+transition_progress_t easing_func_in_bounce(transition_progress_t p);
+transition_progress_t easing_func_out_bounce(transition_progress_t p);
+transition_progress_t easing_func_in_out_bounce(transition_progress_t p);
+
 transition_progress_t easing_func_linear(transition_progress_t p) {
   return p;
 }

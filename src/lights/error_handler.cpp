@@ -6,7 +6,7 @@
 class DoNothingErrorHandler : public ErrorHandler {
 public:
   DoNothingErrorHandler() : ErrorHandler() {};
-  virtual void handleError(Errors::Code code) {};
+  virtual void handleError(Errors::Code code) override {};
 
 private:
   /**

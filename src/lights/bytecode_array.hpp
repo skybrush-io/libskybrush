@@ -27,17 +27,17 @@ public:
   ArrayBytecodeStore(const uint8_t *data, uint16_t size)
       : m_data(data), m_nextIndex(0), m_size(size) {}
 
-  unsigned int capacity() const
+  unsigned int capacity() const override
   {
     return 0; /* read only */
   }
 
-  virtual bool empty() const
+  virtual bool empty() const override
   {
     return m_size == 0;
   }
 
-  uint8_t next()
+  uint8_t next() override
   {
     if (suspended())
     {
@@ -49,23 +49,23 @@ public:
     }
   }
 
-  void rewind()
+  void rewind() override
   {
     m_nextIndex = 0;
   }
 
-  void seek(bytecode_location_t location)
+  void seek(bytecode_location_t location) override
   {
     assert(location >= 0);
     m_nextIndex = location;
   }
 
-  bytecode_location_t tell() const
+  bytecode_location_t tell() const override
   {
     return m_nextIndex;
   }
 
-  int write(uint8_t value)
+  int write(uint8_t value) override
   {
     return 0;
   }

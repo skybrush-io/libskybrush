@@ -98,7 +98,7 @@ public:
    * \return  the starting address of the innermost loop if it has any
    *          iterations left, \c BYTECODE_LOCATION_NOWHERE otherwise
    */
-  const bytecode_location_t end();
+  bytecode_location_t end();
 
   /**
    * Returns the number of active loops in the stack.

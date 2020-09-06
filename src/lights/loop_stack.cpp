@@ -20,7 +20,7 @@ bool LoopStack::begin(bytecode_location_t location, uint8_t iterations)
   return true;
 }
 
-const bytecode_location_t LoopStack::end()
+bytecode_location_t LoopStack::end()
 {
   uint8_t iterationsLeftPlusOne;
 
