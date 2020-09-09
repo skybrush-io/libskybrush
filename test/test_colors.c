@@ -10,6 +10,40 @@ void tearDown()
 {
 }
 
+void test_decode_rgb565()
+{
+    sb_rgb_color_t color;
+
+    color = sb_rgb_color_decode_rgb565(0xf800);
+    TEST_ASSERT_TRUE(sb_rgb_color_equals(sb_rgb_color_make(248, 0, 0), color));
+
+    color = sb_rgb_color_decode_rgb565(0x07e0);
+    TEST_ASSERT_TRUE(sb_rgb_color_equals(sb_rgb_color_make(0, 252, 0), color));
+
+    color = sb_rgb_color_decode_rgb565(0x001f);
+    TEST_ASSERT_TRUE(sb_rgb_color_equals(sb_rgb_color_make(0, 0, 248), color));
+
+    color = sb_rgb_color_decode_rgb565(0xfc08);
+    TEST_ASSERT_TRUE(sb_rgb_color_equals(sb_rgb_color_make(248, 128, 64), color));
+}
+
+void test_encode_rgb565()
+{
+    sb_rgb_color_t color;
+
+    color = sb_rgb_color_make(255, 0, 0);
+    TEST_ASSERT_EQUAL_UINT16(0xf800, sb_rgb_color_encode_rgb565(color));
+
+    color = sb_rgb_color_make(0, 255, 0);
+    TEST_ASSERT_EQUAL_UINT16(0x07e0, sb_rgb_color_encode_rgb565(color));
+
+    color = sb_rgb_color_make(0, 0, 255);
+    TEST_ASSERT_EQUAL_UINT16(0x001f, sb_rgb_color_encode_rgb565(color));
+
+    color = sb_rgb_color_make(255, 128, 64);
+    TEST_ASSERT_EQUAL_UINT16(0xfc08, sb_rgb_color_encode_rgb565(color));
+}
+
 void test_equals()
 {
     sb_rgb_color_t red = {255, 0, 0};
@@ -27,6 +61,8 @@ int main(int argc, char *argv[])
 {
     UNITY_BEGIN();
 
+    RUN_TEST(test_decode_rgb565);
+    RUN_TEST(test_encode_rgb565);
     RUN_TEST(test_equals);
 
     return UNITY_END();

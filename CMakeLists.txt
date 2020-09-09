@@ -17,9 +17,13 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/etc/cmake)
 # include(CheckFunctionExists)
 # check_function_exists(fileno HAVE_FILENO)
 
+# Set C and C++ standard levels
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 11)
+
 # Turn on all compiler warnings and ensure that frame pointers are not omitted
 # so we can debug properly even when the binary is compiled with optimizations
-set(CMAKE_C_FLAGS "-std=c99 -Wall -Werror -Wno-unknown-pragmas -fno-omit-frame-pointer -funwind-tables")
+set(CMAKE_C_FLAGS "-Wall -Werror -Wno-unknown-pragmas -fno-omit-frame-pointer -funwind-tables")
 
 # Force colored output when using Ninja
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
