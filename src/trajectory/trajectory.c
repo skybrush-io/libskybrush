@@ -516,6 +516,9 @@ static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *pl
             {
                 /* assert that we really moved forward in the buffer */
                 assert(player->current_segment.start > offset);
+                /* make production builds happy by referencing offset even if
+                 * asserts are disabled */
+                ((void)offset);
             }
         }
         else
