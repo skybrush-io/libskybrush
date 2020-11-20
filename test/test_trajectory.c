@@ -5,12 +5,25 @@
 
 sb_trajectory_t trajectory;
 
+void loadFixture(const char *fname);
+void closeFixture();
+
 void setUp()
+{
+    loadFixture("fixtures/test.skyb");
+}
+
+void tearDown()
+{
+    closeFixture();
+}
+
+void loadFixture(const char *fname)
 {
     FILE *fp;
     int fd;
 
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen(fname, "rb");
     if (fp == 0)
     {
         abort();
@@ -27,7 +40,7 @@ void setUp()
     fclose(fp);
 }
 
-void tearDown()
+void closeFixture()
 {
     sb_trajectory_destroy(&trajectory);
 }
@@ -67,7 +80,7 @@ void test_clear()
 
 void test_init_empty()
 {
-    sb_trajectory_destroy(&trajectory); /* was created in setUp() */
+    closeFixture(); /* was created in setUp() */
     sb_trajectory_init_empty(&trajectory);
     test_trajectory_is_really_empty();
 }
@@ -162,10 +175,25 @@ void test_propose_landing_time()
         sb_trajectory_propose_landing_time_sec(&trajectory, 200000 /* mm */));
 }
 
+void test_propose_takeoff_time_hover_3m()
+{
+    closeFixture();
+    loadFixture("fixtures/hover_3m.skyb");
+
+    /* drone reaches 2.97m in 5.87s, so it crosses 2.5m at t=4.941s. Takeoff
+     * speed is 1 m/s on average, so we need to take off at 2.441s. Since we
+     * sample the trajectory in increments of 1/16s, the effective takeoff
+     * time is at 2.5s */
+    TEST_ASSERT_EQUAL_FLOAT(
+        2.5,
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2500 /* mm */, 1000 /* mm/sec */));
+}
+
 int main(int argc, char *argv[])
 {
     UNITY_BEGIN();
 
+    /* basic tests with test.skyb */
     RUN_TEST(test_init_empty);
     RUN_TEST(test_clear);
     RUN_TEST(test_get_start_position);
@@ -173,6 +201,9 @@ int main(int argc, char *argv[])
     RUN_TEST(test_get_total_duration);
     RUN_TEST(test_propose_takeoff_time);
     RUN_TEST(test_propose_landing_time);
+
+    /* regression tests */
+    RUN_TEST(test_propose_takeoff_time_hover_3m);
 
     return UNITY_END();
 }

@@ -6,12 +6,25 @@
 sb_trajectory_t trajectory;
 sb_trajectory_player_t player;
 
+void loadFixture(const char *fname);
+void closeFixture();
+
 void setUp()
+{
+    loadFixture("fixtures/test.skyb");
+}
+
+void tearDown()
+{
+    closeFixture();
+}
+
+void loadFixture(const char *fname)
 {
     FILE *fp;
     int fd;
 
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen(fname, "rb");
     if (fp == 0)
     {
         abort();
@@ -29,7 +42,7 @@ void setUp()
     fclose(fp);
 }
 
-void tearDown()
+void closeFixture()
 {
     sb_trajectory_player_destroy(&player);
     sb_trajectory_destroy(&trajectory);

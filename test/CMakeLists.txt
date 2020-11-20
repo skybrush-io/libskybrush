@@ -9,6 +9,7 @@ function(add_fixture NAME)
 endfunction()
 
 add_fixture(test.skyb)
+add_fixture(hover_3m.skyb)
 
 add_unity_test(binary_parser)
 add_unity_test(colors)
