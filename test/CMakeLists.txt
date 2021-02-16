@@ -10,6 +10,7 @@ endfunction()
 
 add_fixture(test.skyb)
 add_fixture(hover_3m.skyb)
+add_fixture(forward_left_back.skyb)
 
 add_unity_test(binary_parser)
 add_unity_test(colors)
@@ -18,4 +19,4 @@ add_unity_test(light_player)
 add_unity_test(poly)
 add_unity_test(trajectory)
 add_unity_test(trajectory_player)
-
+add_unity_test(trajectory_player_2)
