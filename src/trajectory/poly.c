@@ -1,5 +1,6 @@
 #include <float.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <skybrush/memory.h>
@@ -9,6 +10,8 @@ static sb_error_t sb_i_poly_solve_1d(const sb_poly_t *poly, float *roots, uint8_
 static sb_error_t sb_i_poly_solve_2d(const sb_poly_t *poly, float *roots, uint8_t *num_roots);
 static sb_error_t sb_i_poly_solve_3d(const sb_poly_t *poly, float *roots, uint8_t *num_roots);
 static sb_error_t sb_i_poly_solve_generic(const sb_poly_t *poly, float *roots, uint8_t *num_roots);
+
+#define IS_ZERO(x) fabsf(x) < FLT_MIN
 
 void sb_poly_make(sb_poly_t *poly, float *xs, uint8_t num_coeffs)
 {
@@ -34,7 +37,7 @@ void sb_poly_make_linear(sb_poly_t *poly, float duration, float x0, float x1)
     memset(poly, 0, sizeof(sb_poly_t));
     poly->num_coeffs = 2;
 
-    if (fabsf(duration) > 1.0e-6f)
+    if (fabsf(duration) >= FLT_EPSILON)
     {
         poly->coeffs[0] = x0;
         poly->coeffs[1] = (x1 - x0) / duration;
@@ -69,7 +72,6 @@ void sb_poly_make_bezier(sb_poly_t *poly, float duration, float *xs, uint8_t num
         n = ((num_points < SB_MAX_POLY_COEFFS) ? num_points : SB_MAX_POLY_COEFFS) - 1;
         poly->num_coeffs = n + 1;
 
-        sign = 1;
         for (j = 0; j <= n; j++)
         {
             coeff = 0;
@@ -128,6 +130,81 @@ uint8_t sb_poly_get_degree(const sb_poly_t *poly)
     return poly->num_coeffs >= 1 ? poly->num_coeffs - 1 : 0;
 }
 
+sb_error_t sb_poly_get_extrema(const sb_poly_t *poly, sb_interval_t *result)
+{
+    uint8_t coeffs;
+
+    if (!result)
+    {
+        return SB_SUCCESS;
+    }
+
+    coeffs = poly->num_coeffs;
+    while (coeffs > 2 && IS_ZERO(poly->coeffs[coeffs - 1]))
+    {
+        coeffs--;
+    }
+
+    switch (coeffs)
+    {
+    case 0:
+        result->min = result->max = 0;
+        break;
+
+    case 1:
+        result->min = result->max = poly->coeffs[0];
+        break;
+
+    case 2:
+        if (poly->coeffs[1] > 0)
+        {
+            result->min = poly->coeffs[0];
+            result->max = result->min + poly->coeffs[1];
+        }
+        else
+        {
+            result->max = poly->coeffs[0];
+            result->min = result->max + poly->coeffs[1];
+        }
+        break;
+
+    case 3:
+    {
+        /* it is guaranteed that poly->coeffs[2] is not zero, otherwise
+         * we would have caught it above before entering the switch */
+        float x, y;
+
+        x = -poly->coeffs[1] / (2 * poly->coeffs[2]);
+        result->min = sb_poly_eval(poly, 0);
+        result->max = sb_poly_eval(poly, 1);
+        if (result->min > result->max)
+        {
+            y = result->min;
+            result->min = result->max;
+            result->max = y;
+        }
+        if (x >= 0 && x <= 1)
+        {
+            y = sb_poly_eval(poly, x);
+            if (y < result->min)
+            {
+                result->min = y;
+            }
+            if (y > result->max)
+            {
+                result->max = y;
+            }
+        }
+    }
+    break;
+
+    default:
+        return SB_EUNIMPLEMENTED;
+    }
+
+    return SB_SUCCESS;
+}
+
 void sb_poly_deriv(sb_poly_t *poly)
 {
     if (poly->num_coeffs > 1)
@@ -182,7 +259,7 @@ sb_error_t sb_poly_solve(const sb_poly_t *poly, float *roots, uint8_t *num_roots
     {
         for (
             num_significant_coeffs = poly->num_coeffs;
-            num_significant_coeffs > 1 && fabsf(poly->coeffs[num_significant_coeffs - 1]) < FLT_MIN;
+            num_significant_coeffs > 1 && IS_ZERO(poly->coeffs[num_significant_coeffs - 1]);
             num_significant_coeffs--)
             ;
     }
@@ -247,8 +324,6 @@ void sb_poly_stretch(sb_poly_t *poly, float factor)
 
 /* ************************************************************************* */
 
-#define IS_ZERO(x) fabsf(x) < FLT_MIN
-
 static sb_error_t sb_i_poly_solve_1d(const sb_poly_t *poly, float *roots, uint8_t *num_roots)
 {
     if (IS_ZERO(poly->coeffs[0]))
@@ -270,7 +345,7 @@ static sb_error_t sb_i_poly_solve_2d(const sb_poly_t *poly, float *roots, uint8_
 
     if (IS_ZERO(a))
     {
-        *num_roots = 0;
+        *num_roots = 0; /* LCOV_EXCL_LINE */
     }
     else
     {
@@ -290,7 +365,7 @@ static sb_error_t sb_i_poly_solve_3d(const sb_poly_t *poly, float *roots, uint8_
 
     if (IS_ZERO(a))
     {
-        return sb_i_poly_solve_2d(poly, roots, num_roots);
+        return sb_i_poly_solve_2d(poly, roots, num_roots); /* LCOV_EXCL_LINE */
     }
 
     d = (b * b - 4 * a * c);

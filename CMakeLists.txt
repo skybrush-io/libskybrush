@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.5)
 
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
-	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 
 project(libskybrush C CXX)
@@ -39,6 +39,30 @@ set(CMAKE_CXX_FLAGS_PROFILE "-g -pg")
 # Add switches to include sanitizers
 include(sanitizers)
 
+# Check for code coverage support
+option(LIBSKYBRUSH_ENABLE_CODE_COVERAGE "Enable code coverage calculation" OFF)
+if(LIBSKYBRUSH_ENABLE_CODE_COVERAGE)
+  include(CodeCoverage)
+  append_coverage_compiler_flags()
+  setup_target_for_coverage_lcov(
+    NAME coverage
+    EXECUTABLE "${CMAKE_COMMAND}" "--build" "${CMAKE_BINARY_DIR}" "--target" "test"
+    EXCLUDE "/Applications/Xcode*" "test/*" "vendor/unity/*"
+  )
+endif()
+
+# Use cppcheck for static checks if available
+option(LIBSKYBRUSH_ENABLE_CODE_ANALYSIS "Enable code analysis" OFF)
+if(LIBSKYBRUSH_ENABLE_CODE_ANALYSIS)
+  find_program(CPPCHECK cppcheck)
+  if(CPPCHECK)
+    set(CMAKE_C_CPPCHECK "${CPPCHECK}" "--enable=warning,style" "--inconclusive" "--inline-suppr"
+        "--template='{file}:{line}: warning: {id} ({severity}): {message}'")
+    set(CMAKE_CXX_CPPCHECK "${CPPCHECK}" "--enable=warning,style" "--inconclusive" "--inline-suppr"
+        "--template='{file}:{line}: warning: {id} ({severity}): {message}'")
+  endif()
+endif()
+
 # Traverse source code
 add_subdirectory(src)
 add_subdirectory(vendor)
@@ -46,7 +70,7 @@ add_subdirectory(vendor)
 # Enable unit test support
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   include(CTest)
-	if(BUILD_TESTING)
+    if(BUILD_TESTING)
     add_subdirectory(test)
   endif()
 endif()

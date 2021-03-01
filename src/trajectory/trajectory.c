@@ -49,15 +49,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     sb_trajectory_player_t *player, size_t offset, uint32_t start_time_msec,
     sb_vector3_with_yaw_t start);
 
-static sb_error_t sb_i_trajectory_player_build_next_segment(
-    sb_trajectory_player_t *player);
-
-/**
- * Returns whether the trajectory player has more segments in the trajectory.
- */
-static sb_bool_t sb_i_trajectory_player_has_more_segments(
-    sb_trajectory_player_t *player);
-
 /**
  * Resets the internal state of the trajectory and rewinds it to time zero.
  */
@@ -166,10 +157,10 @@ sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t *trajectory, sb_bina
     return SB_SUCCESS;
 }
 
-sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t *trajectory, uint8_t *buf, size_t size)
+sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t *trajectory, uint8_t *buf, size_t nbytes)
 {
     trajectory->buffer = buf;
-    trajectory->buffer_length = size;
+    trajectory->buffer_length = nbytes;
     trajectory->owner = 0;
 
     trajectory->header_length = sb_i_trajectory_parse_header(trajectory);
@@ -188,6 +179,54 @@ sb_error_t sb_trajectory_init_empty(sb_trajectory_t *trajectory)
     trajectory->scale = 1;
     trajectory->use_yaw = 0;
     trajectory->header_length = 0;
+
+    return SB_SUCCESS;
+}
+
+sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
+    const sb_trajectory_t *trajectory, sb_bounding_box_t *result)
+{
+    sb_trajectory_player_t player;
+
+    if (!result)
+    {
+        return SB_SUCCESS;
+    }
+
+    result->x.min = result->y.min = result->z.min = INFINITY;
+    result->x.max = result->y.max = result->z.max = -INFINITY;
+
+    SB_CHECK(sb_trajectory_player_init(&player, trajectory));
+
+    while (sb_trajectory_player_has_more_segments(&player))
+    {
+        const sb_trajectory_segment_t *segment =
+            sb_trajectory_player_get_current_segment(&player);
+        sb_interval_t interval;
+
+#define CHECK_DIM(DIM)                                      \
+    {                                                       \
+        sb_poly_get_extrema(&segment->poly.DIM, &interval); \
+        if (interval.min < result->DIM.min)                 \
+        {                                                   \
+            result->DIM.min = interval.min;                 \
+        }                                                   \
+        if (interval.max > result->DIM.max)                 \
+        {                                                   \
+            result->DIM.max = interval.max;                 \
+        }                                                   \
+    }
+
+        CHECK_DIM(x);
+        CHECK_DIM(y);
+        CHECK_DIM(z);
+
+#undef CHECK_DIM
+
+        SB_CHECK(sb_trajectory_player_build_next_segment(&player));
+    }
+
+    sb_trajectory_player_destroy(&player);
 
     return SB_SUCCESS;
 }
@@ -399,32 +438,50 @@ void sb_trajectory_player_destroy(sb_trajectory_player_t *player)
     memset(player, 0, sizeof(sb_trajectory_player_t));
 }
 
+sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t *player)
+{
+    sb_trajectory_segment_t *segment = &player->current_segment.data;
+
+    return sb_i_trajectory_player_build_current_segment(
+        player,
+        player->current_segment.start + player->current_segment.length,
+        player->current_segment.data.end_time_msec,
+        sb_poly_4d_eval(&segment->poly, 1));
+}
+
 void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t *player)
 {
     sb_vector3_with_yaw_t pos, vel;
+    const sb_trajectory_segment_t *current = sb_trajectory_player_get_current_segment(player);
 
     printf("Start offset = %ld bytes\n", (long int)player->current_segment.start);
     printf("Length = %ld bytes\n", (long int)player->current_segment.length);
-    printf("Start time = %.3fs\n", player->current_segment.data.start_time_sec);
-    printf("Duration = %.3fs\n", player->current_segment.data.duration_sec);
+    printf("Start time = %.3fs\n", current->start_time_sec);
+    printf("Duration = %.3fs\n", current->duration_sec);
 
-    pos = sb_poly_4d_eval(&player->current_segment.data.poly, 0);
-    vel = sb_poly_4d_eval(&player->current_segment.data.deriv, 0);
+    pos = sb_poly_4d_eval(&current->poly, 0);
+    vel = sb_poly_4d_eval(&current->deriv, 0);
     printf(
         "Starts at = (%.2f, %.2f, %.2f) yaw=%.2f, velocity = (%.2f, %.2f, %.2f)\n",
         pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z);
 
-    pos = sb_poly_4d_eval(&player->current_segment.data.poly, 0.5);
-    vel = sb_poly_4d_eval(&player->current_segment.data.deriv, 0.5);
+    pos = sb_poly_4d_eval(&current->poly, 0.5);
+    vel = sb_poly_4d_eval(&current->deriv, 0.5);
     printf(
         "Midpoint at = (%.2f, %.2f, %.2f) yaw=%.2f, velocity = (%.2f, %.2f, %.2f)\n",
         pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z);
 
-    pos = sb_poly_4d_eval(&player->current_segment.data.poly, 1.0);
-    vel = sb_poly_4d_eval(&player->current_segment.data.deriv, 1.0);
+    pos = sb_poly_4d_eval(&current->poly, 1.0);
+    vel = sb_poly_4d_eval(&current->deriv, 1.0);
     printf(
         "Ends at = (%.2f, %.2f, %.2f) yaw=%.2f, velocity = (%.2f, %.2f, %.2f)\n",
         pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z);
+}
+
+const sb_trajectory_segment_t *sb_trajectory_player_get_current_segment(
+    const sb_trajectory_player_t *player)
+{
+    return &player->current_segment.data;
 }
 
 sb_error_t sb_trajectory_player_get_position_at(sb_trajectory_player_t *player, float t, sb_vector3_with_yaw_t *result)
@@ -462,10 +519,10 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
 
     SB_CHECK(sb_i_trajectory_player_rewind(player));
 
-    while (sb_i_trajectory_player_has_more_segments(player))
+    while (sb_trajectory_player_has_more_segments(player))
     {
         result += player->current_segment.data.duration_msec;
-        SB_CHECK(sb_i_trajectory_player_build_next_segment(player));
+        SB_CHECK(sb_trajectory_player_build_next_segment(player));
     }
 
     if (duration)
@@ -476,16 +533,15 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
     return SB_SUCCESS;
 }
 
-/* ************************************************************************** */
-
-static sb_bool_t sb_i_trajectory_player_has_more_segments(sb_trajectory_player_t *player)
+sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t *player)
 {
     return player->current_segment.length > 0;
 }
 
+/* ************************************************************************** */
+
 static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *player, float t, float *rel_t)
 {
-    sb_trajectory_segment_t *segment;
     size_t offset;
 
     if (t <= 0)
@@ -495,7 +551,7 @@ static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *pl
 
     while (1)
     {
-        segment = &player->current_segment.data;
+        sb_trajectory_segment_t *segment = &player->current_segment.data;
 
         if (segment->start_time_sec > t)
         {
@@ -507,8 +563,8 @@ static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t *pl
         else if (segment->end_time_sec < t)
         {
             offset = player->current_segment.start;
-            SB_CHECK(sb_i_trajectory_player_build_next_segment(player));
-            if (!sb_i_trajectory_player_has_more_segments(player))
+            SB_CHECK(sb_trajectory_player_build_next_segment(player));
+            if (!sb_trajectory_player_has_more_segments(player))
             {
                 /* reached end of trajectory */
             }
@@ -719,17 +775,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     return SB_SUCCESS;
 }
 
-static sb_error_t sb_i_trajectory_player_build_next_segment(sb_trajectory_player_t *player)
-{
-    sb_trajectory_segment_t *segment = &player->current_segment.data;
-
-    return sb_i_trajectory_player_build_current_segment(
-        player,
-        player->current_segment.start + player->current_segment.length,
-        player->current_segment.data.end_time_msec,
-        sb_poly_4d_eval(&segment->poly, 1));
-}
-
 static sb_error_t sb_i_trajectory_player_rewind(sb_trajectory_player_t *player)
 {
     return sb_i_trajectory_player_build_current_segment(
@@ -747,7 +792,7 @@ static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
     SB_CHECK(sb_i_trajectory_player_rewind(player));
 
     t = 0.0f;
-    while (sb_i_trajectory_player_has_more_segments(player))
+    while (sb_trajectory_player_has_more_segments(player))
     {
         SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
         current_altitude = sb_poly_eval(&player->current_segment.data.poly.z, rel_t);

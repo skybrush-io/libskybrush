@@ -1,3 +1,4 @@
+#include <float.h>
 #include <skybrush/poly.h>
 
 #include "unity.h"
@@ -17,9 +18,14 @@ void test_zero()
     sb_poly_make_zero(&poly);
 
     TEST_ASSERT_EQUAL(0, sb_poly_get_degree(&poly));
+
     TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, 0));
     TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, -2));
     TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, 1));
+
+    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(&poly, 0));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(&poly, -2));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(&poly, 1));
 }
 
 void test_constant()
@@ -29,9 +35,14 @@ void test_constant()
     sb_poly_make_constant(&poly, 3);
 
     TEST_ASSERT_EQUAL(0, sb_poly_get_degree(&poly));
+
     TEST_ASSERT_EQUAL(3, sb_poly_eval(&poly, 0));
     TEST_ASSERT_EQUAL(3, sb_poly_eval(&poly, -2));
     TEST_ASSERT_EQUAL(3, sb_poly_eval(&poly, 1));
+
+    TEST_ASSERT_EQUAL(3, sb_poly_eval_double(&poly, 0));
+    TEST_ASSERT_EQUAL(3, sb_poly_eval_double(&poly, -2));
+    TEST_ASSERT_EQUAL(3, sb_poly_eval_double(&poly, 1));
 }
 
 void test_linear()
@@ -41,6 +52,7 @@ void test_linear()
     sb_poly_make_linear(&poly, 5, 10, 20);
 
     TEST_ASSERT_EQUAL(1, sb_poly_get_degree(&poly));
+
     TEST_ASSERT_EQUAL(8, sb_poly_eval(&poly, -1));
     TEST_ASSERT_EQUAL(10, sb_poly_eval(&poly, 0));
     TEST_ASSERT_EQUAL(12, sb_poly_eval(&poly, 1));
@@ -49,11 +61,53 @@ void test_linear()
     TEST_ASSERT_EQUAL(18, sb_poly_eval(&poly, 4));
     TEST_ASSERT_EQUAL(20, sb_poly_eval(&poly, 5));
     TEST_ASSERT_EQUAL(22, sb_poly_eval(&poly, 6));
+
+    TEST_ASSERT_EQUAL(8, sb_poly_eval_double(&poly, -1));
+    TEST_ASSERT_EQUAL(10, sb_poly_eval_double(&poly, 0));
+    TEST_ASSERT_EQUAL(12, sb_poly_eval_double(&poly, 1));
+    TEST_ASSERT_EQUAL(14, sb_poly_eval_double(&poly, 2));
+    TEST_ASSERT_EQUAL(16, sb_poly_eval_double(&poly, 3));
+    TEST_ASSERT_EQUAL(18, sb_poly_eval_double(&poly, 4));
+    TEST_ASSERT_EQUAL(20, sb_poly_eval_double(&poly, 5));
+    TEST_ASSERT_EQUAL(22, sb_poly_eval_double(&poly, 6));
+}
+
+void test_linear_small_durations()
+{
+    sb_poly_t poly;
+
+    sb_poly_make_linear(&poly, FLT_EPSILON, 10, 20);
+    TEST_ASSERT_EQUAL(10, sb_poly_eval(&poly, 0));
+    TEST_ASSERT_EQUAL(20, sb_poly_eval(&poly, FLT_EPSILON));
+
+    sb_poly_make_linear(&poly, FLT_EPSILON, 1, 1 + 2 * FLT_EPSILON);
+    TEST_ASSERT_EQUAL(1, sb_poly_eval(&poly, 0));
+    TEST_ASSERT_EQUAL(1 + FLT_EPSILON, sb_poly_eval(&poly, FLT_EPSILON / 2));
+    TEST_ASSERT_EQUAL(1 + 2 * FLT_EPSILON, sb_poly_eval(&poly, FLT_EPSILON));
+
+    sb_poly_make_linear(&poly, FLT_MIN, 1, 1 + 2 * FLT_EPSILON);
+    TEST_ASSERT_EQUAL(1 + FLT_EPSILON, sb_poly_eval(&poly, 0));
+    TEST_ASSERT_EQUAL(1 + FLT_EPSILON, sb_poly_eval(&poly, FLT_MIN));
+
+    sb_poly_make_linear(&poly, FLT_EPSILON, 1, 1 + FLT_EPSILON);
+    TEST_ASSERT_EQUAL(1, sb_poly_eval(&poly, 0));
+    TEST_ASSERT_EQUAL(1, sb_poly_eval(&poly, FLT_EPSILON));
+    TEST_ASSERT_EQUAL(2, sb_poly_eval(&poly, 1));
+
+    sb_poly_make_linear(&poly, FLT_EPSILON / 2, 1, 1 + FLT_EPSILON);
+    TEST_ASSERT_EQUAL(1, sb_poly_eval(&poly, 0));
+    TEST_ASSERT_EQUAL(1, sb_poly_eval(&poly, FLT_EPSILON / 2));
 }
 
 void test_bezier()
 {
     sb_poly_t poly;
+    float xs;
+
+    sb_poly_make_bezier(&poly, 10, &xs, 0);
+    TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, 0));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, 5));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, -3));
 
     sb_poly_make_cubic_bezier(&poly, 4, 0, 0, 5, 5);
 
@@ -72,6 +126,13 @@ void test_bezier()
     TEST_ASSERT_EQUAL(3.75, sb_poly_eval(&poly, 2));
     TEST_ASSERT_EQUAL(2.8125, sb_poly_eval(&poly, 3));
     TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, 4));
+
+    TEST_ASSERT_EQUAL(3, sb_poly_get_degree(&poly));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(&poly, 0));
+    TEST_ASSERT_EQUAL(2.8125, sb_poly_eval_double(&poly, 1));
+    TEST_ASSERT_EQUAL(3.75, sb_poly_eval_double(&poly, 2));
+    TEST_ASSERT_EQUAL(2.8125, sb_poly_eval_double(&poly, 3));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(&poly, 4));
 }
 
 void test_add_constant()
@@ -139,6 +200,75 @@ void test_get_degree()
     TEST_ASSERT_EQUAL(0, sb_poly_get_degree(&poly));
 }
 
+void test_get_extrema()
+{
+    sb_poly_t poly;
+    sb_interval_t result;
+    float xs[4] = {0, 7, 13, 61};
+    float quadratic_convex[3] = {7, -4, 1};                   /* x^2 - 4x + 7 */
+    float quadratic_convex_2[3] = {41 / 16.0f, -3 / 2.0f, 1}; /* x^2 - 3/2*x + 41/16 */
+    float quadratic_concave[3] = {63 / 16.0f, 1 / 2.0f, -1};  /* -x^2 + x/2 + 63/16 */
+    float linear[5] = {8, 2, 0, 0, 0};
+
+    /* ignored result */
+
+    sb_poly_make_bezier(&poly, 10, xs, sizeof(xs) / sizeof(xs[0]));
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, 0));
+
+    /* pathologic case */
+
+    sb_poly_make(&poly, xs, 0);
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_EQUAL(0, result.min);
+    TEST_ASSERT_EQUAL(0, result.max);
+
+    /* constant */
+
+    sb_poly_make_constant(&poly, 2);
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_EQUAL(2, result.min);
+    TEST_ASSERT_EQUAL(2, result.max);
+
+    /* linear */
+
+    sb_poly_make_linear(&poly, 5, 10, 20);
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_EQUAL(10, result.min);
+    TEST_ASSERT_EQUAL(12, result.max);
+
+    sb_poly_make_linear(&poly, 5, 20, 10);
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_EQUAL(18, result.min);
+    TEST_ASSERT_EQUAL(20, result.max);
+
+    sb_poly_make_linear(&poly, 5, 15, 15);
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_EQUAL(15, result.min);
+    TEST_ASSERT_EQUAL(15, result.max);
+
+    sb_poly_make(&poly, linear, sizeof(linear) / sizeof(linear[0]));
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_EQUAL(8, result.min);
+    TEST_ASSERT_EQUAL(10, result.max);
+
+    /* quadratic */
+
+    sb_poly_make(&poly, quadratic_convex, sizeof(quadratic_convex) / sizeof(quadratic_convex[0]));
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_EQUAL(4, result.min);
+    TEST_ASSERT_EQUAL(7, result.max);
+
+    sb_poly_make(&poly, quadratic_convex_2, sizeof(quadratic_convex_2) / sizeof(quadratic_convex_2[0]));
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_EQUAL(2, result.min);
+    TEST_ASSERT_EQUAL(41 / 16.0f, result.max);
+
+    sb_poly_make(&poly, quadratic_concave, sizeof(quadratic_concave) / sizeof(quadratic_concave[0]));
+    TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 55 / 16.0f, result.min);
+    TEST_ASSERT_EQUAL(4, result.max);
+}
+
 void test_stretch()
 {
     sb_poly_t poly;
@@ -193,6 +323,12 @@ void test_solve_simple()
     float roots[8];
     uint8_t num_roots;
 
+    /* pathologic case */
+
+    sb_poly_make(&poly, xs, 0);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(0, num_roots);
+
     /* constants */
 
     sb_poly_make_zero(&poly);
@@ -241,6 +377,46 @@ void test_solve_simple()
     TEST_ASSERT_EQUAL(2, num_roots);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 1, roots[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 5, roots[1]);
+
+    xs[0] = 6;
+    xs[1] = -3;
+    xs[2] = 0;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, &num_roots));
+    TEST_ASSERT_EQUAL(1, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 2, roots[0]);
+}
+
+void test_solve_roots_not_needed()
+{
+    sb_poly_t poly;
+    float xs[8];
+    uint8_t num_roots;
+
+    /* quadratic */
+
+    xs[0] = 9;
+    xs[1] = -6;
+    xs[2] = 1;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, /* roots = */ 0, &num_roots));
+    TEST_ASSERT_EQUAL(1, num_roots);
+}
+
+void test_solve_root_count_not_needed()
+{
+    sb_poly_t poly;
+    float xs[8];
+    float roots[8];
+
+    /* quadratic */
+
+    xs[0] = 9;
+    xs[1] = -6;
+    xs[2] = 1;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, roots, /* num_roots = */ 0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 3, roots[0]);
 }
 
 void test_solve_generic()
@@ -309,15 +485,19 @@ int main(int argc, char *argv[])
     RUN_TEST(test_zero);
     RUN_TEST(test_constant);
     RUN_TEST(test_linear);
+    RUN_TEST(test_linear_small_durations);
     RUN_TEST(test_bezier);
 
     RUN_TEST(test_add_constant);
     RUN_TEST(test_scale);
     RUN_TEST(test_get_degree);
+    RUN_TEST(test_get_extrema);
     RUN_TEST(test_stretch);
     RUN_TEST(test_deriv);
 
     RUN_TEST(test_solve_simple);
+    RUN_TEST(test_solve_roots_not_needed);
+    RUN_TEST(test_solve_root_count_not_needed);
     // RUN_TEST(test_solve_generic);
 
     return UNITY_END();

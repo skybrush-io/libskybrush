@@ -80,13 +80,13 @@ sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t *trajectory, int 
  * binary format, already loaded into memory.
  */
 sb_error_t sb_trajectory_init_from_binary_file_in_memory(
-    sb_trajectory_t *trajectory, uint8_t *buf, size_t length);
+    sb_trajectory_t *trajectory, uint8_t *buf, size_t nbytes);
 
 /**
  * Initializes a trajectory object from the contents of a memory buffer.
  */
 sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t *trajectory,
-                                          uint8_t *buf, size_t length);
+                                          uint8_t *buf, size_t nbytes);
 
 /**
  * Initializes an empty trajectory.
@@ -103,6 +103,12 @@ void sb_trajectory_destroy(sb_trajectory_t *trajectory);
  * any memory that the trajectory owns.
  */
 void sb_trajectory_clear(sb_trajectory_t *trajectory);
+
+/**
+ * Returns the axis-aligned bounding box of the trajectory.
+ */
+sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
+    const sb_trajectory_t *trajectory, sb_bounding_box_t *result);
 
 /**
  * Returns the end position of the trajectory.
@@ -192,9 +198,21 @@ sb_error_t sb_trajectory_player_init(sb_trajectory_player_t *player, const sb_tr
 void sb_trajectory_player_destroy(sb_trajectory_player_t *player);
 
 /**
+ * Builds the next segment in the trajectory player. Used to move on to the next
+ * segment during an iteration over the segments of the trajectory.
+ */
+sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t *player);
+
+/**
  * Dumps the details of the current trajectory segment for debugging purposes.
  */
 void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t *player);
+
+/**
+ * Returns a pointer to the current trajectory segment of thr trajectory player.
+ */
+const sb_trajectory_segment_t *sb_trajectory_player_get_current_segment(
+    const sb_trajectory_player_t *player);
 
 /**
  * Returns the position on the trajectory associated to the player at the given
@@ -215,6 +233,12 @@ sb_error_t sb_trajectory_player_get_velocity_at(
  */
 sb_error_t sb_trajectory_player_get_total_duration_msec(
     sb_trajectory_player_t *player, uint32_t *duration);
+
+/**
+ * Returns whether the trajectory player has more segments to play. Used to detect
+ * the end of iteration when iterating over the segments of the trajectory.
+ */
+sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t *player);
 
 __END_DECLS
 

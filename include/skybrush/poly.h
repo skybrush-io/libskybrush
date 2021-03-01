@@ -85,6 +85,14 @@ sb_error_t sb_poly_solve(const sb_poly_t *poly, float *roots, uint8_t *num_roots
 uint8_t sb_poly_get_degree(const sb_poly_t *poly);
 
 /**
+ * Computes the minimum and maximum of a polynomial on the [0; 1] interval.
+ * 
+ * Works if and only if the degree of the polynomial is at most 3; returns
+ * \c SB_EUNIMPLEMENTED for higher-degree polynomials.
+ */
+sb_error_t sb_poly_get_extrema(const sb_poly_t *poly, sb_interval_t *result);
+
+/**
  * Adds a constant to the polynomial in-place.
  */
 void sb_poly_add_constant(sb_poly_t *poly, float constant);

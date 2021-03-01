@@ -246,10 +246,11 @@ static off_t sb_i_binary_file_get_current_offset(sb_binary_file_parser_t *parser
 static ssize_t sb_i_binary_file_read(sb_binary_file_parser_t *parser, void *buf, size_t nbytes)
 {
     const uint8_t *new_ptr;
-    size_t to_read;
 
     if (parser->buf)
     {
+        size_t to_read;
+
         /* Reading in-memory file */
         if (parser->buf_ptr < parser->buf)
         {
