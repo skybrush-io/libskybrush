@@ -168,38 +168,45 @@ sb_error_t sb_poly_get_extrema(const sb_poly_t *poly, sb_interval_t *result)
         }
         break;
 
-    case 3:
+    default:
     {
-        /* it is guaranteed that poly->coeffs[2] is not zero, otherwise
-         * we would have caught it above before entering the switch */
-        float x, y;
+        float roots[4], y;
 
-        x = -poly->coeffs[1] / (2 * poly->coeffs[2]);
-        result->min = sb_poly_eval(poly, 0);
-        result->max = sb_poly_eval(poly, 1);
-        if (result->min > result->max)
+        if (coeffs <= sizeof(roots) / sizeof(roots[0]))
         {
-            y = result->min;
-            result->min = result->max;
-            result->max = y;
-        }
-        if (x >= 0 && x <= 1)
-        {
-            y = sb_poly_eval(poly, x);
-            if (y < result->min)
+            sb_poly_t deriv = *poly;
+            uint8_t num_roots;
+
+            sb_poly_deriv(&deriv);
+            SB_CHECK(sb_poly_solve(&deriv, roots, &num_roots));
+
+            result->min = sb_poly_eval(poly, 0);
+            result->max = sb_poly_eval(poly, 1);
+            if (result->min > result->max)
             {
-                result->min = y;
-            }
-            if (y > result->max)
-            {
+                y = result->min;
+                result->min = result->max;
                 result->max = y;
+            }
+
+            while (num_roots > 0)
+            {
+                y = roots[--num_roots];
+                if (y >= 0 && y <= 1)
+                {
+                    y = sb_poly_eval(poly, y);
+                    if (y < result->min)
+                    {
+                        result->min = y;
+                    }
+                    if (y > result->max)
+                    {
+                        result->max = y;
+                    }
+                }
             }
         }
     }
-    break;
-
-    default:
-        return SB_EUNIMPLEMENTED;
     }
 
     return SB_SUCCESS;
