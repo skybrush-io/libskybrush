@@ -1,5 +1,7 @@
 add_library(
     skybrush
+
+    crc32.c
     error.c
 
     formats/binary.c

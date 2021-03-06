@@ -28,7 +28,8 @@ typedef enum
     SB_EFULL,          /**< Some internal buffer is full */
     SB_EEMPTY,         /**< Some internal buffer is empty */
     SB_EAGAIN,         /**< Resource temporarily unavailable */
-    SB_ENOENT          /**< File does not exist */
+    SB_ENOENT,         /**< File does not exist */
+    SB_ECORRUPTED      /**< Corrupted data */
 } sb_error_t;
 
 #define SB_CHECK(func)                   \

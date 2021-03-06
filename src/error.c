@@ -21,7 +21,8 @@ static char *sb_i_error_messages[] = {
     "Buffer is full",                                      /* SB_EFULL */
     "Buffer is empty",                                     /* SB_EEMPTY */
     "Resource temporarily unavailable",                    /* SB_EAGAIN */
-    "File does not exist"                                  /* SB_ENOENT */
+    "File does not exist",                                 /* SB_ENOENT */
+    "Corrupted data"                                       /* SB_ECORRUPTED */
 };
 
 const char *sb_error_to_string(int code)

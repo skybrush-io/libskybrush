@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <skybrush/error.h>
 #include <skybrush/formats/binary.h>
+#include <skybrush/utils.h>
 
 /**
  * Common part of the different \c "sb_binary_file_parser_init_*" methods.
@@ -13,6 +14,7 @@ static sb_error_t sb_i_binary_file_parser_init_common(sb_binary_file_parser_t *p
  */
 static sb_error_t sb_i_binary_file_read_next_block_header(sb_binary_file_parser_t *parser);
 
+static sb_error_t sb_i_binary_file_get_crc32(sb_binary_file_parser_t *parser, uint32_t *result);
 static off_t sb_i_binary_file_get_current_offset(sb_binary_file_parser_t *parser);
 static ssize_t sb_i_binary_file_read(sb_binary_file_parser_t *parser, void *buf, size_t nbytes);
 static sb_error_t sb_i_binary_file_seek(sb_binary_file_parser_t *parser, off_t offset);
@@ -147,7 +149,9 @@ sb_error_t sb_binary_file_find_first_block_by_type(
 static sb_error_t sb_i_binary_file_parser_init_common(sb_binary_file_parser_t *parser)
 {
     char buf[4];
+    unsigned char unsigned_buf[4];
     long int offset;
+    uint32_t expected_crc32 = 0, observed_crc32;
 
     /* read and check the header */
     if (sb_i_binary_file_read(parser, buf, 4) != 4)
@@ -166,11 +170,46 @@ static sb_error_t sb_i_binary_file_parser_init_common(sb_binary_file_parser_t *p
         return SB_EPARSE;
     }
 
-    if (parser->version != 1)
+    if (parser->version != 1 && parser->version != 2)
     {
         return SB_EPARSE;
     }
 
+    /* Version 2 files have 8 "feature bits" coming right after the version
+     * number that describe whether certain additional features (checksum etc)
+     * are present in the header. Version 1 files are equivalent to version 2
+     * files with all feature bits set to zero. */
+    if (parser->version == 2)
+    {
+        if (sb_i_binary_file_read(parser, &parser->features, 1) != 1)
+        {
+            return SB_EPARSE;
+        }
+    }
+    else
+    {
+        parser->features = 0;
+    }
+
+    /* Read the CRC32 from the header if it is there */
+    if (parser->features & SB_BINARY_FEATURE_CRC32)
+    {
+        if (sb_i_binary_file_read(parser, unsigned_buf, 4) != 4)
+        {
+            return SB_EPARSE;
+        }
+
+        expected_crc32 = 0;
+        expected_crc32 |= unsigned_buf[3];
+        expected_crc32 <<= 8;
+        expected_crc32 |= unsigned_buf[2];
+        expected_crc32 <<= 8;
+        expected_crc32 |= unsigned_buf[1];
+        expected_crc32 <<= 8;
+        expected_crc32 |= unsigned_buf[0];
+    }
+
+    /* Remember where the "real" data starts in the file or buffer */
     offset = sb_i_binary_file_get_current_offset(parser);
     if (offset < 0)
     {
@@ -178,6 +217,17 @@ static sb_error_t sb_i_binary_file_parser_init_common(sb_binary_file_parser_t *p
     }
     parser->start_of_first_block = offset;
 
+    /* Validate the CRC32 checksum if we have one */
+    if (parser->features & SB_BINARY_FEATURE_CRC32)
+    {
+        SB_CHECK(sb_i_binary_file_get_crc32(parser, &observed_crc32));
+        if (expected_crc32 != observed_crc32)
+        {
+            return SB_ECORRUPTED;
+        }
+    }
+
+    /* Rewind the file or buffer and read the header of the first block */
     SB_CHECK(sb_binary_file_rewind(parser));
 
     return SB_SUCCESS;
@@ -228,6 +278,57 @@ static sb_error_t sb_i_binary_file_read_next_block_header(sb_binary_file_parser_
 
 /* File operation abstraction layer so we can support in-memory files and
  * file descriptors as well */
+
+static sb_error_t sb_i_binary_file_get_crc32(sb_binary_file_parser_t *parser, uint32_t *result)
+{
+    off_t original_offset = sb_i_binary_file_get_current_offset(parser);
+    uint8_t buf[256];
+    ssize_t bytes_read;
+    uint32_t checksum;
+    uint32_t offset;
+
+    SB_CHECK(sb_i_binary_file_seek(parser, 0));
+
+    checksum = 0;
+    offset = 0;
+    while (1)
+    {
+        bytes_read = sb_i_binary_file_read(parser, buf, sizeof(buf));
+        if (bytes_read < 0)
+        {
+            return SB_EREAD;
+        }
+
+        /* replace the checksum in the file with zeros. If there is a checksum,
+         * it is at bytes 6-10 */
+        if (offset == 0 && bytes_read >= 10)
+        {
+            buf[6] = buf[7] = buf[8] = buf[9] = 0;
+        }
+
+        offset += bytes_read;
+
+        if (bytes_read > 0)
+        {
+            checksum = sb_ap_crc32_update(checksum, buf, bytes_read);
+        }
+
+        if (bytes_read < sizeof(buf))
+        {
+            /* end of file reached */
+            break;
+        }
+    }
+
+    SB_CHECK(sb_i_binary_file_seek(parser, original_offset));
+
+    if (result)
+    {
+        *result = checksum;
+    }
+
+    return SB_SUCCESS;
+}
 
 static off_t sb_i_binary_file_get_current_offset(sb_binary_file_parser_t *parser)
 {

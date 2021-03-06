@@ -27,6 +27,18 @@ typedef enum
 } sb_binary_block_type_t;
 
 /**
+ * Enum representing the additional pieces of information that may be present
+ * in the header of a Skybrush binary file.
+ * 
+ * The features bitfield of version 2 files is a bitwise OR of the members of
+ * this enum.
+ */
+typedef enum
+{
+    SB_BINARY_FEATURE_CRC32 = 1
+} sb_binary_header_feature_t;
+
+/**
  * Struct representing a single block in the Skybrush binary file format.
  */
 typedef struct
@@ -47,7 +59,8 @@ typedef struct
     const uint8_t *buf_ptr; /**< Read pointer into the in-memory buffer being parsed by the parser; null if the parser uses a file */
     const uint8_t *buf_end; /**< End of the in-memory buffer being parsed by the parser; null if the parser uses a file */
 
-    uint8_t version; /**< The schema version number of the file being parsed */
+    uint8_t version;  /**< The schema version number of the file being parsed */
+    uint8_t features; /**< The feature bits that describe the additional info present in the header (checksums etc) */
 
     long int start_of_first_block;   /**< Start position of the first block in the file */
     sb_binary_block_t current_block; /**< The current block in the file */

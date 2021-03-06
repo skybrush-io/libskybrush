@@ -113,6 +113,10 @@ void test_get_total_duration()
     TEST_ASSERT_EQUAL_FLOAT(50, sb_trajectory_get_total_duration_sec(&trajectory));
 }
 
+void test_get_axis_aligned_bounding_box()
+{
+}
+
 void test_propose_takeoff_time()
 {
     /* Test invalid values first */
@@ -199,6 +203,7 @@ int main(int argc, char *argv[])
     RUN_TEST(test_get_start_position);
     RUN_TEST(test_get_end_position);
     RUN_TEST(test_get_total_duration);
+    RUN_TEST(test_get_axis_aligned_bounding_box);
     RUN_TEST(test_propose_takeoff_time);
     RUN_TEST(test_propose_landing_time);
 
