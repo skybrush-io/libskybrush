@@ -2,6 +2,7 @@
 #define SKYBRUSH_UTILS_H
 
 #include <stdint.h>
+#include <skybrush/decls.h>
 
 __BEGIN_DECLS
 
