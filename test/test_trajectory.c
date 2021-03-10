@@ -115,6 +115,15 @@ void test_get_total_duration()
 
 void test_get_axis_aligned_bounding_box()
 {
+    sb_bounding_box_t box;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(&trajectory, &box));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.x.min);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.x.max);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.y.min);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.y.max);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.z.min);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.z.max);
 }
 
 void test_propose_takeoff_time()

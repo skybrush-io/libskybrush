@@ -451,6 +451,7 @@ sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t *playe
 
 void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t *player)
 {
+#ifdef LIBSKYBRUSH_DEBUG
     sb_vector3_with_yaw_t pos, vel;
     const sb_trajectory_segment_t *current = sb_trajectory_player_get_current_segment(player);
 
@@ -476,6 +477,7 @@ void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t *pla
     printf(
         "Ends at = (%.2f, %.2f, %.2f) yaw=%.2f, velocity = (%.2f, %.2f, %.2f)\n",
         pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z);
+#endif
 }
 
 const sb_trajectory_segment_t *sb_trajectory_player_get_current_segment(
