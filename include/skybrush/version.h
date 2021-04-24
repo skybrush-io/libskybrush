@@ -16,7 +16,7 @@
  * \def SKYBRUSH_VERSION_MINOR
  * Minor version number of \c libskybrush
  */
-#define SKYBRUSH_VERSION_MINOR 1
+#define SKYBRUSH_VERSION_MINOR 3
 
 /**
  * \def SKYBRUSH_VERSION_PATCH
