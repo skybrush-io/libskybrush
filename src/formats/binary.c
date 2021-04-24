@@ -131,7 +131,7 @@ sb_error_t sb_binary_file_find_first_block_by_type(
     {
         if (!sb_binary_file_is_current_block_valid(parser))
         {
-            return SB_FAILURE;
+            return SB_ENOENT;
         }
 
         block = sb_binary_file_get_current_block(parser);

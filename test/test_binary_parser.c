@@ -133,7 +133,7 @@ void test_find_first_block_by_type()
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init_from_file(&parser, fd));
 
-    TEST_ASSERT_EQUAL(SB_FAILURE,
+    TEST_ASSERT_EQUAL(SB_ENOENT,
                       sb_binary_file_find_first_block_by_type(
                           &parser, SB_BINARY_BLOCK_NONE));
 

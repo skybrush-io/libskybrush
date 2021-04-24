@@ -94,7 +94,7 @@ void sb_binary_file_parser_destroy(sb_binary_file_parser_t *parser);
  * block type.
  *
  * The function returns \c SB_SUCCESS if a block of the given type was found
- * or \c SB_FAILURE if no such block was found.
+ * or \c SB_ENOENT if no such block was found.
  */
 sb_error_t sb_binary_file_find_first_block_by_type(
     sb_binary_file_parser_t *parser, sb_binary_block_type_t block_type);
