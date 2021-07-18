@@ -3,6 +3,7 @@ add_library(
 
     crc32.c
     error.c
+    utils.c
 
     formats/binary.c
 
