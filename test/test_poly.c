@@ -181,7 +181,7 @@ void test_scale()
 void test_get_degree()
 {
     sb_poly_t poly;
-    float xs[4] = {0, 7, 13, 61};
+    float xs[4] = { 0, 7, 13, 61 };
 
     sb_poly_make_bezier(&poly, 10, xs, sizeof(xs) / sizeof(xs[0]));
 
@@ -204,11 +204,11 @@ void test_get_extrema()
 {
     sb_poly_t poly;
     sb_interval_t result;
-    float xs[4] = {0, 7, 13, 61};
-    float quadratic_convex[3] = {7, -4, 1};                   /* x^2 - 4x + 7 */
-    float quadratic_convex_2[3] = {41 / 16.0f, -3 / 2.0f, 1}; /* x^2 - 3/2*x + 41/16 */
-    float quadratic_concave[3] = {63 / 16.0f, 1 / 2.0f, -1};  /* -x^2 + x/2 + 63/16 */
-    float linear[5] = {8, 2, 0, 0, 0};
+    float xs[4] = { 0, 7, 13, 61 };
+    float quadratic_convex[3] = { 7, -4, 1 }; /* x^2 - 4x + 7 */
+    float quadratic_convex_2[3] = { 41 / 16.0f, -3 / 2.0f, 1 }; /* x^2 - 3/2*x + 41/16 */
+    float quadratic_concave[3] = { 63 / 16.0f, 1 / 2.0f, -1 }; /* -x^2 + x/2 + 63/16 */
+    float linear[5] = { 8, 2, 0, 0, 0 };
 
     /* ignored result */
 
@@ -273,15 +273,14 @@ void test_stretch()
 {
     sb_poly_t poly;
     sb_poly_t poly2;
-    float xs[4] = {0, 7, 13, 61};
+    float xs[4] = { 0, 7, 13, 61 };
 
     sb_poly_make_bezier(&poly, 10, xs, sizeof(xs) / sizeof(xs[0]));
 
     poly2 = poly;
     sb_poly_stretch(&poly2, 5);
 
-    for (int i = 0; i <= 10; i++)
-    {
+    for (int i = 0; i <= 10; i++) {
         TEST_ASSERT_FLOAT_WITHIN(1e-3, sb_poly_eval(&poly, i), sb_poly_eval(&poly2, i * 5));
     }
 }
@@ -289,11 +288,11 @@ void test_stretch()
 void test_deriv()
 {
     sb_poly_t poly;
-    float xs[4] = {0, 7, 13, 61};
-    float xs1[3] = {7, 26, 183};
-    float xs2[2] = {26, 366};
-    float xs3[1] = {366};
-    float xs4[1] = {0};
+    float xs[4] = { 0, 7, 13, 61 };
+    float xs1[3] = { 7, 26, 183 };
+    float xs2[2] = { 26, 366 };
+    float xs3[1] = { 366 };
+    float xs4[1] = { 0 };
 
     sb_poly_make(&poly, xs, 4);
 
@@ -478,7 +477,7 @@ void test_solve_generic()
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[2]);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

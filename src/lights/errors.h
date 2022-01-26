@@ -6,13 +6,13 @@
 #ifndef LIGHT_PLAYER_ERRORS_H
 #define LIGHT_PLAYER_ERRORS_H
 
-namespace Errors
-{
+namespace Errors {
+
+// clang-format off
   /**
    * Error codes emitted by the LED controller.
    */
-  enum Code
-  {
+  enum Code {
     SUCCESS,                        /**< No error */
     INVALID_COMMAND_CODE,           /**< Invalid command code found */
     NO_BYTECODE_SUPPORT,            /**< No bytecode store is configured for the command executor */
@@ -33,6 +33,8 @@ namespace Errors
     GENERIC_ERROR,                  /**< Unspecified, generic error condition */
     NUMBER_OF_ERRORS
   };
+// clang-format on
+
 } // namespace Errors
 
 #endif

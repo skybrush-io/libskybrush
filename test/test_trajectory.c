@@ -5,7 +5,7 @@
 
 sb_trajectory_t trajectory;
 
-void loadFixture(const char *fname);
+void loadFixture(const char* fname);
 void closeFixture();
 
 void setUp()
@@ -18,20 +18,18 @@ void tearDown()
     closeFixture();
 }
 
-void loadFixture(const char *fname)
+void loadFixture(const char* fname)
 {
-    FILE *fp;
+    FILE* fp;
     int fd;
 
     fp = fopen(fname, "rb");
-    if (fp == 0)
-    {
+    if (fp == 0) {
         abort();
     }
 
     fd = fileno(fp);
-    if (fd < 0)
-    {
+    if (fd < 0) {
         abort();
     }
 
@@ -47,15 +45,14 @@ void closeFixture()
 
 void test_trajectory_is_really_empty()
 {
-    float t[] = {-10, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60};
+    float t[] = { -10, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60 };
     int i, n = sizeof(t) / sizeof(t[0]);
     sb_vector3_with_yaw_t vec;
     sb_trajectory_player_t player;
 
     sb_trajectory_player_init(&player, &trajectory);
 
-    for (i = 0; i < n; i++)
-    {
+    for (i = 0; i < n; i++) {
         sb_trajectory_player_get_position_at(&player, t[i], &vec);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.x);
         TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, vec.y);
@@ -202,7 +199,7 @@ void test_propose_takeoff_time_hover_3m()
         sb_trajectory_propose_takeoff_time_sec(&trajectory, 2500 /* mm */, 1000 /* mm/sec */));
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

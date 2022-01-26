@@ -13,7 +13,7 @@ void tearDown()
 void test_open_file()
 {
     sb_binary_file_parser_t parser;
-    FILE *fp;
+    FILE* fp;
     int fd;
 
     fp = fopen("fixtures/test.skyb", "rb");
@@ -30,7 +30,7 @@ void test_open_file()
     fclose(fp);
 }
 
-void test_read_blocks_from_parser(sb_binary_file_parser_t *parser)
+void test_read_blocks_from_parser(sb_binary_file_parser_t* parser)
 {
     sb_binary_block_t block;
     char buf[32];
@@ -57,7 +57,7 @@ void test_read_blocks_from_parser(sb_binary_file_parser_t *parser)
     TEST_ASSERT_EQUAL(19, block.length);
     TEST_ASSERT_EQUAL(47, block.start_of_body);
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_read_current_block(parser, (uint8_t *)buf));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_read_current_block(parser, (uint8_t*)buf));
     buf[block.length] = 0;
     TEST_ASSERT_EQUAL_STRING("this is a test file", buf);
 
@@ -85,7 +85,7 @@ void test_read_blocks_from_parser(sb_binary_file_parser_t *parser)
 void test_read_blocks_from_file()
 {
     sb_binary_file_parser_t parser;
-    FILE *fp;
+    FILE* fp;
     int fd;
 
     fp = fopen("fixtures/test.skyb", "rb");
@@ -104,7 +104,7 @@ void test_read_blocks_from_file()
 void test_read_blocks_from_memory()
 {
     sb_binary_file_parser_t parser;
-    FILE *fp;
+    FILE* fp;
     uint8_t buf[4096];
     size_t nbytes;
 
@@ -122,7 +122,7 @@ void test_read_blocks_from_memory()
 void test_find_first_block_by_type()
 {
     sb_binary_file_parser_t parser;
-    FILE *fp;
+    FILE* fp;
     int fd;
 
     fp = fopen("fixtures/test.skyb", "rb");
@@ -134,32 +134,32 @@ void test_find_first_block_by_type()
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init_from_file(&parser, fd));
 
     TEST_ASSERT_EQUAL(SB_ENOENT,
-                      sb_binary_file_find_first_block_by_type(
-                          &parser, SB_BINARY_BLOCK_NONE));
+        sb_binary_file_find_first_block_by_type(
+            &parser, SB_BINARY_BLOCK_NONE));
 
     TEST_ASSERT_EQUAL(SB_SUCCESS,
-                      sb_binary_file_find_first_block_by_type(
-                          &parser, SB_BINARY_BLOCK_COMMENT));
+        sb_binary_file_find_first_block_by_type(
+            &parser, SB_BINARY_BLOCK_COMMENT));
     TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_COMMENT,
-                      sb_binary_file_get_current_block(&parser).type);
+        sb_binary_file_get_current_block(&parser).type);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS,
-                      sb_binary_file_find_first_block_by_type(
-                          &parser, SB_BINARY_BLOCK_LIGHT_PROGRAM));
+        sb_binary_file_find_first_block_by_type(
+            &parser, SB_BINARY_BLOCK_LIGHT_PROGRAM));
     TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_LIGHT_PROGRAM,
-                      sb_binary_file_get_current_block(&parser).type);
+        sb_binary_file_get_current_block(&parser).type);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS,
-                      sb_binary_file_find_first_block_by_type(
-                          &parser, SB_BINARY_BLOCK_TRAJECTORY));
+        sb_binary_file_find_first_block_by_type(
+            &parser, SB_BINARY_BLOCK_TRAJECTORY));
     TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_TRAJECTORY,
-                      sb_binary_file_get_current_block(&parser).type);
+        sb_binary_file_get_current_block(&parser).type);
 
     sb_binary_file_parser_destroy(&parser);
     fclose(fp);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

@@ -5,11 +5,11 @@
 
 __BEGIN_DECLS
 
+// clang-format off
 /**
  * Error codes used throughout \c libskybrush.
  */
-typedef enum
-{
+typedef enum {
     SB_SUCCESS = 0,    /**< No error */
     SB_ENOMEM,         /**< Not enough memory */
     SB_EINVAL,         /**< Invalid value */
@@ -31,12 +31,12 @@ typedef enum
     SB_ENOENT,         /**< File does not exist */
     SB_ECORRUPTED      /**< Corrupted data */
 } sb_error_t;
+// clang-format on
 
 #define SB_CHECK(func)                   \
     {                                    \
         sb_error_t __sb_retval = (func); \
-        if (__sb_retval != SB_SUCCESS)   \
-        {                                \
+        if (__sb_retval != SB_SUCCESS) { \
             return __sb_retval;          \
         }                                \
     }
@@ -47,7 +47,7 @@ typedef enum
  * \return  a pointer to the string containing the error message. This string
  *          should not be modified under any circumstances.
  */
-const char *sb_error_to_string(int code);
+const char* sb_error_to_string(int code);
 
 __END_DECLS
 

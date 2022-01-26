@@ -6,19 +6,21 @@
 #ifndef SKYBRUSH_LIGHTS_EDGE_DETECTOR_H
 #define SKYBRUSH_LIGHTS_EDGE_DETECTOR_H
 
+#include <cstdint>
+
 /**
  * State constants for the edge detector class.
  */
-namespace EdgeDetectorState
-{
-  enum Enum
-  {
-    START = 0,         ///< Signal state unknown yet
-    SIGNAL_LOW = 1,    ///< Signal is in the LOW state
-    SIGNAL_HIGH = 3,   ///< Signal is in the HIGH state
+namespace EdgeDetectorState {
+
+enum Enum {
+    START = 0, ///< Signal state unknown yet
+    SIGNAL_LOW = 1, ///< Signal is in the LOW state
+    SIGNAL_HIGH = 3, ///< Signal is in the HIGH state
     SIGNAL_RISING = 5, ///< Signal is rising from LOW to HIGH
     SIGNAL_FALLING = 7 ///< Signal is falling from HIGH to LOW
-  };
+};
+
 }
 
 class EdgeDetector;
@@ -26,22 +28,22 @@ class EdgeDetector;
 /**
  * Typedef for a callback function of an edge detector.
  */
-typedef void EdgeDetectorCallback(EdgeDetector *detector, long time, void *data);
+typedef void EdgeDetectorCallback(EdgeDetector* detector, long time, void* data);
 
 /**
  * Structure holding the callback functions of an edge detector.
  */
 typedef struct
 {
-  /**
-   * Callback function that will be called for each detected rising edge.
-   */
-  EdgeDetectorCallback *rising;
+    /**
+     * Callback function that will be called for each detected rising edge.
+     */
+    EdgeDetectorCallback* rising;
 
-  /**
-   * Callback function that will be called for each detected falling edge.
-   */
-  EdgeDetectorCallback *falling;
+    /**
+     * Callback function that will be called for each detected falling edge.
+     */
+    EdgeDetectorCallback* falling;
 } EdgeDetectorCallbacks;
 
 /**
@@ -74,198 +76,191 @@ typedef struct
  * same state for this period). Normal operation is resumed after at least
  * \c m_debounceMs milliseconds have passed.
  */
-class EdgeDetector
-{
+class EdgeDetector {
 private:
-  /**
-   * Start of the \c MID range (inclusive).
-   */
-  uint8_t m_midRangeStart;
+    /**
+     * Start of the \c MID range (inclusive).
+     */
+    uint8_t m_midRangeStart;
 
-  /**
-   * End of the \c MID range (exclusive).
-   */
-  uint8_t m_midRangeEnd;
+    /**
+     * End of the \c MID range (exclusive).
+     */
+    uint8_t m_midRangeEnd;
 
-  /**
-   * Debouncing interval in milliseconds. Use zero to disable debouncing.
-   */
-  uint16_t m_debounceMs;
+    /**
+     * Debouncing interval in milliseconds. Use zero to disable debouncing.
+     */
+    uint16_t m_debounceMs;
 
-  /**
-   * Timestamp of the last transition. Used for debouncing.
-   */
-  long m_lastTransition;
+    /**
+     * Timestamp of the last transition. Used for debouncing.
+     */
+    long m_lastTransition;
 
-  /**
-   * State of the edge detector.
-   */
-  EdgeDetectorState::Enum m_state;
+    /**
+     * State of the edge detector.
+     */
+    EdgeDetectorState::Enum m_state;
 
 public:
-  /**
-   * Callback functions of the edge detector.
-   */
-  EdgeDetectorCallbacks callbacks;
+    /**
+     * Callback functions of the edge detector.
+     */
+    EdgeDetectorCallbacks callbacks;
 
-  /**
-   * Additional data pointer to pass to the callbacks.
-   */
-  void *callbackData;
+    /**
+     * Additional data pointer to pass to the callbacks.
+     */
+    void* callbackData;
 
-  /**
-   * Constructor.
-   *
-   * \param  midRangeStart  the start of the \c MID range (inclusive)
-   * \param  midRangeEnd    the end of the \c MID range (exclusive)
-   * \param  debounceMs     the length of the debouncing interval.
-   */
-  explicit EdgeDetector(uint8_t midRangeStart = 64, uint8_t midRangeEnd = 192, uint16_t debounceMs = 0)
-      : m_midRangeStart(midRangeStart), m_midRangeEnd(midRangeEnd),
-        m_debounceMs(debounceMs), callbackData(0)
-  {
-    reset();
-  }
-
-  /**
-   * Disables the debouncing filter.
-   */
-  void disableDebouncing()
-  {
-    enableDebouncing(0);
-  }
-
-  /**
-   * Sets the debouncing interval.
-   */
-  void enableDebouncing(uint16_t debounceMs)
-  {
-    m_debounceMs = debounceMs;
-  }
-
-  /**
-   * Feeds the edge detector with the state of the analog signal at the given
-   * time instant.
-   *
-   * The function assumes that the time instant being used here will be
-   * monotonously increasing.
-   *
-   * \param  signal  the current state of the analog signal
-   * \param  time    the timestamp
-   * \return whether at least one callback function was fired
-   */
-  bool feedAnalogSignal(uint8_t signal, long time)
-  {
-    bool result = false;
-
-    if (m_debounceMs > 0 && m_lastTransition + m_debounceMs < time)
+    /**
+     * Constructor.
+     *
+     * \param  midRangeStart  the start of the \c MID range (inclusive)
+     * \param  midRangeEnd    the end of the \c MID range (exclusive)
+     * \param  debounceMs     the length of the debouncing interval.
+     */
+    explicit EdgeDetector(uint8_t midRangeStart = 64, uint8_t midRangeEnd = 192, uint16_t debounceMs = 0)
+        : m_midRangeStart(midRangeStart)
+        , m_midRangeEnd(midRangeEnd)
+        , m_debounceMs(debounceMs)
+        , callbacks()
+        , callbackData(0)
     {
-      // Debounce filter active; do nothing.
-      return false;
+        reset();
     }
 
-    switch (m_state)
+    /**
+     * Disables the debouncing filter.
+     */
+    void disableDebouncing()
     {
-    case EdgeDetectorState::START:
-      // Initial state; we just move to LOW or HIGH if we get the
-      // first value from the LOW or the HIGH range. No rising or
-      // falling edge is assumed.
-      if (signal < m_midRangeStart)
-      {
-        m_state = EdgeDetectorState::SIGNAL_LOW;
-      }
-      else if (signal >= m_midRangeEnd)
-      {
-        m_state = EdgeDetectorState::SIGNAL_HIGH;
-      }
-      break;
-
-    case EdgeDetectorState::SIGNAL_LOW:
-      if (signal >= m_midRangeEnd)
-      {
-        m_state = EdgeDetectorState::SIGNAL_HIGH;
-        result = handleRisingEdge(time);
-      }
-      break;
-
-    case EdgeDetectorState::SIGNAL_RISING:
-      // TODO: not implemented yet.
-      reset();
-      break;
-
-    case EdgeDetectorState::SIGNAL_HIGH:
-      if (signal < m_midRangeStart)
-      {
-        m_state = EdgeDetectorState::SIGNAL_LOW;
-        result = handleFallingEdge(time);
-      }
-      break;
-
-    case EdgeDetectorState::SIGNAL_FALLING:
-      // TODO: not implemented yet.
-      reset();
-      break;
-
-    default:
-      // Invalid state; let's just reset ourselves.
-      reset();
-      break;
+        enableDebouncing(0);
     }
 
-    return result;
-  }
+    /**
+     * Sets the debouncing interval.
+     */
+    void enableDebouncing(uint16_t debounceMs)
+    {
+        m_debounceMs = debounceMs;
+    }
 
-  /**
-   * Resets the edge detector to its ground state.
-   */
-  void reset()
-  {
-    m_lastTransition = 0;
-    m_state = EdgeDetectorState::START;
-  }
+    /**
+     * Feeds the edge detector with the state of the analog signal at the given
+     * time instant.
+     *
+     * The function assumes that the time instant being used here will be
+     * monotonously increasing.
+     *
+     * \param  signal  the current state of the analog signal
+     * \param  time    the timestamp
+     * \return whether at least one callback function was fired
+     */
+    bool feedAnalogSignal(uint8_t signal, long time)
+    {
+        bool result = false;
 
-  /**
-   * Returns the current (predicted) state of the digital signal.
-   *
-   * \return  0 if the signal is assumed to be \c LOW, 1 if the signal is
-   *          assumed to be \c HIGH, -1 if the signal state is not known
-   *          yet
-   */
-  int8_t value() const
-  {
-    return m_state == EdgeDetectorState::SIGNAL_HIGH ? 1 : (m_state == EdgeDetectorState::SIGNAL_LOW ? 0 : -1);
-  }
+        if (m_debounceMs > 0 && m_lastTransition + m_debounceMs < time) {
+            // Debounce filter active; do nothing.
+            return false;
+        }
+
+        switch (m_state) {
+        case EdgeDetectorState::START:
+            // Initial state; we just move to LOW or HIGH if we get the
+            // first value from the LOW or the HIGH range. No rising or
+            // falling edge is assumed.
+            if (signal < m_midRangeStart) {
+                m_state = EdgeDetectorState::SIGNAL_LOW;
+            } else if (signal >= m_midRangeEnd) {
+                m_state = EdgeDetectorState::SIGNAL_HIGH;
+            }
+            break;
+
+        case EdgeDetectorState::SIGNAL_LOW:
+            if (signal >= m_midRangeEnd) {
+                m_state = EdgeDetectorState::SIGNAL_HIGH;
+                result = handleRisingEdge(time);
+            }
+            break;
+
+        case EdgeDetectorState::SIGNAL_RISING:
+            // TODO: not implemented yet.
+            reset();
+            break;
+
+        case EdgeDetectorState::SIGNAL_HIGH:
+            if (signal < m_midRangeStart) {
+                m_state = EdgeDetectorState::SIGNAL_LOW;
+                result = handleFallingEdge(time);
+            }
+            break;
+
+        case EdgeDetectorState::SIGNAL_FALLING:
+            // TODO: not implemented yet.
+            reset();
+            break;
+
+        default:
+            // Invalid state; let's just reset ourselves.
+            reset();
+            break;
+        }
+
+        return result;
+    }
+
+    /**
+     * Resets the edge detector to its ground state.
+     */
+    void reset()
+    {
+        m_lastTransition = 0;
+        m_state = EdgeDetectorState::START;
+    }
+
+    /**
+     * Returns the current (predicted) state of the digital signal.
+     *
+     * \return  0 if the signal is assumed to be \c LOW, 1 if the signal is
+     *          assumed to be \c HIGH, -1 if the signal state is not known
+     *          yet
+     */
+    int8_t value() const
+    {
+        return m_state == EdgeDetectorState::SIGNAL_HIGH ? 1 : (m_state == EdgeDetectorState::SIGNAL_LOW ? 0 : -1);
+    }
 
 private:
-  /**
-   * Handles a falling edge detected on the input signal at the given time.
-   *
-   * \return whether the falling edge clalback function was called.
-   */
-  bool handleFallingEdge(long time)
-  {
-    m_lastTransition = time;
-    if (callbacks.falling != 0)
+    /**
+     * Handles a falling edge detected on the input signal at the given time.
+     *
+     * \return whether the falling edge clalback function was called.
+     */
+    bool handleFallingEdge(long time)
     {
-      callbacks.falling(this, time, callbackData);
-      return true;
+        m_lastTransition = time;
+        if (callbacks.falling != 0) {
+            callbacks.falling(this, time, callbackData);
+            return true;
+        }
+        return false;
     }
-    return false;
-  }
 
-  /**
-   * Handles a rising edge detected on the input signal at the given time.
-   */
-  bool handleRisingEdge(long time)
-  {
-    m_lastTransition = time;
-    if (callbacks.rising != 0)
+    /**
+     * Handles a rising edge detected on the input signal at the given time.
+     */
+    bool handleRisingEdge(long time)
     {
-      callbacks.rising(this, time, callbackData);
-      return true;
+        m_lastTransition = time;
+        if (callbacks.rising != 0) {
+            callbacks.rising(this, time, callbackData);
+            return true;
+        }
+        return false;
     }
-    return false;
-  }
 };
 
 #endif

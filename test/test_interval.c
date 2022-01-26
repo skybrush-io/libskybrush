@@ -12,7 +12,7 @@ void tearDown()
 
 void test_interval_expand()
 {
-    sb_interval_t interval = {/* .min = */ 3, /* .max = */ 11};
+    sb_interval_t interval = { /* .min = */ 3, /* .max = */ 11 };
 
     sb_interval_expand(&interval, 3);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, interval.min);
@@ -27,7 +27,7 @@ void test_interval_expand()
     TEST_ASSERT_EQUAL_FLOAT(7.0f, interval.max);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

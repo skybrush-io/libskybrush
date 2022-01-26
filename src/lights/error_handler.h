@@ -13,62 +13,63 @@
  * \brief Interface specification for objects that are used to handle error conditions
  * signalled from the light player part of the library.
  */
-class ErrorHandler
-{
+class ErrorHandler {
 protected:
-  /**
-   * Code of the last error that happened during execution.
-   */
-  Errors::Code m_error;
+    /**
+     * Code of the last error that happened during execution.
+     */
+    Errors::Code m_error;
 
 public:
-  /**
-   * Constructor. This should not be called directly as we don't want the user to
-   * instantiate this object.
-   */
-  ErrorHandler() : m_error(Errors::SUCCESS) {}
-
-  /**
-   * Tells the error handler that there is no error condition at the moment.
-   */
-  void clearError()
-  {
-    setError(Errors::SUCCESS);
-  }
-
-  /**
-   * Asks the error handler to set a new error code.
-   *
-   * The implementation of this function will call \c handleError() if the
-   * error code is different from the previous one.
-   */
-  void setError(Errors::Code code)
-  {
-    if (m_error != code)
+    /**
+     * Constructor. This should not be called directly as we don't want the user to
+     * instantiate this object.
+     */
+    ErrorHandler()
+        : m_error(Errors::SUCCESS)
     {
-      m_error = code;
-      handleError(code);
     }
-  }
+
+    /**
+     * Tells the error handler that there is no error condition at the moment.
+     */
+    void clearError()
+    {
+        setError(Errors::SUCCESS);
+    }
+
+    /**
+     * Asks the error handler to set a new error code.
+     *
+     * The implementation of this function will call \c handleError() if the
+     * error code is different from the previous one.
+     */
+    void setError(Errors::Code code)
+    {
+        if (m_error != code) {
+            m_error = code;
+            handleError(code);
+        }
+    }
 
 protected:
-  /**
-   * Asks the error handler to handle the given error condition.
-   *
-   * \param  code  the code of the error
-   */
-  virtual void handleError(Errors::Code code) = 0;
+    /**
+     * Asks the error handler to handle the given error condition.
+     *
+     * \param  code  the code of the error
+     */
+    virtual void handleError(Errors::Code code) = 0;
 };
 
 /**
  * Returns a pointer to the current instance of the error handler.
  */
-ErrorHandler *getErrorHandler();
+ErrorHandler* getErrorHandler();
 
 /**
  * Sets a new error handler.
  */
-void setErrorHandler(ErrorHandler *handler);
+void setErrorHandler(ErrorHandler* handler);
 
 /**
  * \def SET_ERROR

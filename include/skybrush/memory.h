@@ -9,7 +9,7 @@
 /**
  * Friendlier form of calloc.
  */
-#define sb_calloc(type, count) ((type *)calloc(count, sizeof(type)))
+#define sb_calloc(type, count) ((type*)calloc(count, sizeof(type)))
 
 /**
  * Macro that frees a pointer and resets it to null.
@@ -32,6 +32,6 @@
 /**
  * Friendlier form of realloc.
  */
-#define sb_realloc(ptr, type, count) ((type *)realloc(ptr, sizeof(type) * (count)))
+#define sb_realloc(ptr, type, count) ((type*)realloc(ptr, sizeof(type) * (count)))
 
 #endif

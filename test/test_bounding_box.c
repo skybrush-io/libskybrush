@@ -13,9 +13,10 @@ void tearDown()
 void test_boudning_box_expand()
 {
     sb_bounding_box_t box = {
-        /* .x = */ {/* .min = */ 3, /* .max = */ 11},
-        /* .y = */ {/* .min = */ -2, /* .max = */ -2},
-        /* .z = */ {/* .min = */ 0, /* .max = */ 5}};
+        /* .x = */ { /* .min = */ 3, /* .max = */ 11 },
+        /* .y = */ { /* .min = */ -2, /* .max = */ -2 },
+        /* .z = */ { /* .min = */ 0, /* .max = */ 5 }
+    };
 
     sb_bounding_box_expand(&box, 2);
     TEST_ASSERT_EQUAL_FLOAT(1.0f, box.x.min);
@@ -34,7 +35,7 @@ void test_boudning_box_expand()
     TEST_ASSERT_EQUAL_FLOAT(4.0f, box.z.max);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

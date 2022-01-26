@@ -8,18 +8,16 @@ sb_light_program_t program;
 
 void setUp()
 {
-    FILE *fp;
+    FILE* fp;
     int fd;
 
     fp = fopen("fixtures/test.skyb", "rb");
-    if (fp == 0)
-    {
+    if (fp == 0) {
         abort();
     }
 
     fd = fileno(fp);
-    if (fd < 0)
-    {
+    if (fd < 0) {
         abort();
     }
 
@@ -35,15 +33,14 @@ void tearDown()
 
 void test_light_program_is_really_empty()
 {
-    float t[] = {0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60};
+    float t[] = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60 };
     int i, n = sizeof(t) / sizeof(t[0]);
     sb_rgb_color_t color;
     sb_light_player_t player;
 
     sb_light_player_init(&player, &program);
 
-    for (i = 0; i < n; i++)
-    {
+    for (i = 0; i < n; i++) {
         color = sb_light_player_get_color_at(&player, t[i] * 1000);
         TEST_ASSERT_EQUAL_COLOR(SB_COLOR_BLACK, color);
     }
@@ -64,7 +61,7 @@ void test_init_empty()
     test_light_program_is_really_empty();
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

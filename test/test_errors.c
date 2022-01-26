@@ -18,7 +18,7 @@ void test_error_to_string()
     TEST_ASSERT_EQUAL_STRING("Unspecified failure", sb_error_to_string(31999));
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

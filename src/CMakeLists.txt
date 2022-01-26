@@ -34,5 +34,3 @@ target_include_directories(
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libskybrush.a DESTINATION lib)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/skybrush DESTINATION include)
-
-

@@ -2,6 +2,7 @@
 
 #include <skybrush/error.h>
 
+/* clang-format off */
 static char *sb_i_error_messages[] = {
     "No error",                                            /* SB_SUCCESS */
     "Not enough memory",                                   /* SB_ENOMEM */
@@ -24,8 +25,9 @@ static char *sb_i_error_messages[] = {
     "File does not exist",                                 /* SB_ENOENT */
     "Corrupted data"                                       /* SB_ECORRUPTED */
 };
+/* clang-format on */
 
-const char *sb_error_to_string(int code)
+const char* sb_error_to_string(int code)
 {
     if (code >= 0 && code < (int)(sizeof(sb_i_error_messages) / sizeof(sb_i_error_messages[0])))
         return sb_i_error_messages[code];

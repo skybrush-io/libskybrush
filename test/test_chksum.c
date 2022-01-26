@@ -6,7 +6,7 @@
 sb_trajectory_t trajectory;
 sb_trajectory_player_t player;
 
-void loadFixture(const char *fname);
+void loadFixture(const char* fname);
 void closeFixture();
 
 void setUp()
@@ -17,21 +17,19 @@ void tearDown()
 {
 }
 
-void loadFixtureAndValidate(const char *fname, sb_error_t expected_retval)
+void loadFixtureAndValidate(const char* fname, sb_error_t expected_retval)
 {
-    FILE *fp;
+    FILE* fp;
     int fd;
     sb_error_t retval;
 
     fp = fopen(fname, "rb");
-    if (fp == 0)
-    {
+    if (fp == 0) {
         abort();
     }
 
     fd = fileno(fp);
-    if (fd < 0)
-    {
+    if (fd < 0) {
         abort();
     }
 
@@ -52,7 +50,7 @@ void test_invalid_checksum()
     loadFixtureAndValidate("fixtures/forward_left_back_v2_invalid_chksum.skyb", SB_ECORRUPTED);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

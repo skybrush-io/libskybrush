@@ -11,6 +11,8 @@
 
 __BEGIN_DECLS
 
+// clang-format off
+
 /**
  * Enum containing codes for the different commands in the low-level
  * bytecode of the LED strip program.
@@ -42,6 +44,8 @@ typedef enum
   NUMBER_OF_COMMANDS,
 } command_t;
 
+// clang-format on
+
 /**
  * Structure that defines the extra information we provide about each
  * command such as the number of arguments that we expect for the
@@ -49,8 +53,8 @@ typedef enum
  */
 typedef struct
 {
-  uint8_t arg_count;
-  uint8_t flags;
+    uint8_t arg_count;
+    uint8_t flags;
 } command_info_t;
 
 /**

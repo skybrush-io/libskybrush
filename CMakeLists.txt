@@ -47,7 +47,7 @@ if(LIBSKYBRUSH_ENABLE_CODE_COVERAGE)
   setup_target_for_coverage_lcov(
     NAME coverage
     EXECUTABLE "${CMAKE_COMMAND}" "--build" "${CMAKE_BINARY_DIR}" "--target" "test"
-    EXCLUDE "/Applications/Xcode*" "test/*" "vendor/unity/*"
+    EXCLUDE "/Applications/Xcode*" "/Library/Developer*" "test/*" "vendor/unity/*"
   )
 endif()
 
@@ -74,4 +74,3 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     add_subdirectory(test)
   endif()
 endif()
-

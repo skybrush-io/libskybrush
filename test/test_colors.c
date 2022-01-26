@@ -46,9 +46,9 @@ void test_encode_rgb565()
 
 void test_equals()
 {
-    sb_rgb_color_t red = {255, 0, 0};
-    sb_rgb_color_t another_red = {255, 0, 0};
-    sb_rgb_color_t white = {255, 255, 255};
+    sb_rgb_color_t red = { 255, 0, 0 };
+    sb_rgb_color_t another_red = { 255, 0, 0 };
+    sb_rgb_color_t white = { 255, 255, 255 };
 
     TEST_ASSERT_TRUE(sb_rgb_color_equals(red, another_red));
     TEST_ASSERT_TRUE(sb_rgb_color_equals(white, SB_COLOR_WHITE));
@@ -57,7 +57,7 @@ void test_equals()
     TEST_ASSERT_FALSE(sb_rgb_color_equals(SB_COLOR_WHITE, SB_COLOR_BLACK));
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

@@ -17,13 +17,12 @@ void test_file_without_light_program()
     sb_light_program_t program;
     sb_error_t retval;
 
-    FILE *fp;
+    FILE* fp;
     int fd;
 
     fp = fopen("fixtures/forward_left_back_no_lights.skyb", "rb");
     fd = fp != 0 ? fileno(fp) : -1;
-    if (fd < 0)
-    {
+    if (fd < 0) {
         abort();
     }
 
@@ -34,7 +33,7 @@ void test_file_without_light_program()
     TEST_ASSERT_EQUAL(SB_ENOENT, retval);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 

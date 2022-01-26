@@ -24,47 +24,47 @@ typedef struct
 /**
  * Creates a polynomial from its coefficients.
  */
-void sb_poly_make(sb_poly_t *poly, float *xs, uint8_t num_coeffs);
+void sb_poly_make(sb_poly_t* poly, float* xs, uint8_t num_coeffs);
 
 /**
  * Creates a constant zero polynomial.
  */
-void sb_poly_make_zero(sb_poly_t *poly);
+void sb_poly_make_zero(sb_poly_t* poly);
 
 /**
  * Creates a constant polynomial.
  */
-void sb_poly_make_constant(sb_poly_t *poly, float x);
+void sb_poly_make_constant(sb_poly_t* poly, float x);
 
 /**
  * Creates a linear polynomial from p(0) = x0 to p(duration) = x1.
  */
-void sb_poly_make_linear(sb_poly_t *poly, float duration, float x0, float x1);
+void sb_poly_make_linear(sb_poly_t* poly, float duration, float x0, float x1);
 
 /**
  * Creates a polynomial from Bezier control points.
  */
-void sb_poly_make_bezier(sb_poly_t *poly, float duration, float *xs, uint8_t num_points);
+void sb_poly_make_bezier(sb_poly_t* poly, float duration, float* xs, uint8_t num_points);
 
 /**
  * Creates a cubic polynomial from Bezier control points.
  */
-void sb_poly_make_cubic_bezier(sb_poly_t *poly, float duration, float u, float v, float w, float x);
+void sb_poly_make_cubic_bezier(sb_poly_t* poly, float duration, float u, float v, float w, float x);
 
 /**
  * Creates a quadratic polynomial from Bezier control points.
  */
-void sb_poly_make_quadratic_bezier(sb_poly_t *poly, float duration, float u, float v, float w);
+void sb_poly_make_quadratic_bezier(sb_poly_t* poly, float duration, float u, float v, float w);
 
 /**
  * Evaluates a polynomial using Horner's rule.
  */
-float sb_poly_eval(const sb_poly_t *poly, float t);
+float sb_poly_eval(const sb_poly_t* poly, float t);
 
 /**
  * Evaluates a polynomial using Horner's rule with double precision.
  */
-double sb_poly_eval_double(const sb_poly_t *poly, double t);
+double sb_poly_eval_double(const sb_poly_t* poly, double t);
 
 /**
  * Finds the real roots of a polynomial.
@@ -77,40 +77,40 @@ double sb_poly_eval_double(const sb_poly_t *poly, double t);
  *         \c SB_EUNIMPLEMENTED if polynomial solving is not implemented for the
  *         given degree
  */
-sb_error_t sb_poly_solve(const sb_poly_t *poly, float *roots, uint8_t *num_roots);
+sb_error_t sb_poly_solve(const sb_poly_t* poly, float* roots, uint8_t* num_roots);
 
 /**
  * Returns the degree of a polynomial.
  */
-uint8_t sb_poly_get_degree(const sb_poly_t *poly);
+uint8_t sb_poly_get_degree(const sb_poly_t* poly);
 
 /**
  * Computes the minimum and maximum of a polynomial on the [0; 1] interval.
- * 
+ *
  * Works if and only if the degree of the polynomial is at most 3; returns
  * \c SB_EUNIMPLEMENTED for higher-degree polynomials.
  */
-sb_error_t sb_poly_get_extrema(const sb_poly_t *poly, sb_interval_t *result);
+sb_error_t sb_poly_get_extrema(const sb_poly_t* poly, sb_interval_t* result);
 
 /**
  * Adds a constant to the polynomial in-place.
  */
-void sb_poly_add_constant(sb_poly_t *poly, float constant);
+void sb_poly_add_constant(sb_poly_t* poly, float constant);
 
 /**
  * Scales a polynomial in-place.
  */
-void sb_poly_scale(sb_poly_t *poly, float factor);
+void sb_poly_scale(sb_poly_t* poly, float factor);
 
 /**
  * Computes the derivative of a polynomial in-place.
  */
-void sb_poly_deriv(sb_poly_t *poly);
+void sb_poly_deriv(sb_poly_t* poly);
 
 /**
  * Stretches the time dimension of a polynomial in-place.
  */
-void sb_poly_stretch(sb_poly_t *poly, float factor);
+void sb_poly_stretch(sb_poly_t* poly, float factor);
 
 /* ************************************************************************* */
 
@@ -128,27 +128,27 @@ typedef struct
 /**
  * Creates a constant 4D polynomial.
  */
-void sb_poly_4d_make_constant(sb_poly_4d_t *poly, sb_vector3_with_yaw_t vec);
+void sb_poly_4d_make_constant(sb_poly_4d_t* poly, sb_vector3_with_yaw_t vec);
 
 /**
  * Creates a constant zero 4D polynomial.
  */
-void sb_poly_4d_make_zero(sb_poly_4d_t *poly);
+void sb_poly_4d_make_zero(sb_poly_4d_t* poly);
 
 /**
  * Evaluates a 4D polynomial and returns an x-y-z-yaw vector.
  */
-sb_vector3_with_yaw_t sb_poly_4d_eval(const sb_poly_4d_t *poly, float t);
+sb_vector3_with_yaw_t sb_poly_4d_eval(const sb_poly_4d_t* poly, float t);
 
 /**
  * Calculates the derivative of a 4D polynomial in-place.
  */
-void sb_poly_4d_deriv(sb_poly_4d_t *poly);
+void sb_poly_4d_deriv(sb_poly_4d_t* poly);
 
 /**
  * Scales a 4D polynomial in-place.
  */
-void sb_poly_4d_scale(sb_poly_4d_t *poly, float factor);
+void sb_poly_4d_scale(sb_poly_4d_t* poly, float factor);
 
 __END_DECLS
 
