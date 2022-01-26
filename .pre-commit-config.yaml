@@ -14,3 +14,13 @@ repos:
     hooks:
       - id: clang-format
         exclude: "vendor"
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.1.10
+    hooks:
+      - id: insert-license
+        files: \.(c|cpp|h|hpp)$
+        args:
+        - --fuzzy-match-generates-todo
+        - --comment-style
+        - /*| *| */
+        exclude: "vendor"
