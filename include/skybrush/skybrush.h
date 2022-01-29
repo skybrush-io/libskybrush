@@ -20,6 +20,11 @@
 #ifndef SKYBRUSH_H
 #define SKYBRUSH_H
 
+/**
+ * @file skybrush.h
+ * @brief Main include file that defines the public API of the library.
+ */
+
 #include <skybrush/basic_types.h>
 #include <skybrush/colors.h>
 #include <skybrush/error.h>

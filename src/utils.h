@@ -19,7 +19,12 @@
 
 /**
  * \file utils.h
- * \brief Utility functions and macros that do not fit elsewhere
+ * \brief Internal utility functions and macros that do not fit elsewhere
+ */
+
+/**
+ * \def clamp(value, low, high)
+ * \brief Clamps a value between a lower and an upper limit (both inclusive).
  */
 
 #ifndef UTILS_H
@@ -29,11 +34,7 @@
 
 __BEGIN_DECLS
 
-/**
- * \def clamp
- * \brief Clamps a value between a lower and an upper limit (both inclusive).
- */
-#define clamp(amt, low, high) ((amt) < (low) ? (low) : ((amt) > (high) ? (high) : (amt)))
+#define clamp(value, low, high) ((value) < (low) ? (low) : ((value) > (high) ? (high) : (value)))
 
 __END_DECLS
 

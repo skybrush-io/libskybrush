@@ -91,6 +91,11 @@ public:
         m_pExecutor = value;
     }
 
+    /**
+     * @brief Invokes the \c setColor() method of the executor with an interpolated color.
+     *
+     * @param value  the interpolation factor between the start and end color
+     */
     void operator()(float value) const;
 };
 

@@ -20,6 +20,12 @@
 #ifndef SKYBRUSH_TRAJECTORY_H
 #define SKYBRUSH_TRAJECTORY_H
 
+/**
+ * @file trajectory.h
+ * @brief Functions and structures to evaluate \c libskybrush trajectories at
+ * arbitrary points in time
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +38,10 @@
 
 __BEGIN_DECLS
 
+/** Enum containing constants that help the interpretation of the header byte
+ * before each trajectory segment in the binary representation of the
+ * trajectory.
+ */
 typedef enum {
     SB_X_CONSTANT = 0,
     SB_X_LINEAR = 0x01,
@@ -59,15 +69,41 @@ typedef enum {
  */
 typedef struct
 {
+    /** The start time of the trajectory segment since the start of the mission,
+     * in milliseconds */
     uint32_t start_time_msec;
+
+    /** The end time of the trajectory segment since the start of the mission,
+     * in milliseconds */
     uint32_t end_time_msec;
+
+    /** The duration of the trajectory segment, in milliseconds. */
     uint16_t duration_msec;
 
+    /** The start time of the trajectory segment since the start of the mission,
+     * in seconds */
     float start_time_sec;
+
+    /** The end time of the trajectory segment since the start of the mission,
+     * in seconds */
     float end_time_sec;
+
+    /** The duration of the trajectory segment, in seconds. */
     float duration_sec;
 
+    /** @brief The polynomial that describes the current trajectory segment.
+     *
+     * The interval [0; 1] of the polynomial is mapped to the time interval
+     * between the start and end time of the trajectory.
+     */
     sb_poly_4d_t poly;
+
+    /** @brief The polynomial that describes derivative of the current
+     * trajectory segment.
+     *
+     * The interval [0; 1] of the polynomial is mapped to the time interval
+     * between the start and end time of the trajectory.
+     */
     sb_poly_4d_t deriv;
 } sb_trajectory_segment_t;
 
@@ -203,6 +239,7 @@ float sb_trajectory_propose_landing_time_sec(
 typedef struct sb_trajectory_player_s {
     const sb_trajectory_t* trajectory; /**< The trajectory that the player plays */
 
+    /** The current segment that is being evaluated by the player */
     struct
     {
         size_t start; /**< Start offset of the current segment */

@@ -31,11 +31,11 @@
 
 class SignalSource;
 
+namespace TriggerActionType {
+
 /**
  * Enum that describes the set of actions that may happen when a trigger is fired.
  */
-namespace TriggerActionType {
-
 enum Enum {
     RESUME, ///< Resume execution (if the trigger suspended execution)
     JUMP_TO_ADDRESS, ///< Jump to a given address
@@ -43,11 +43,11 @@ enum Enum {
 
 };
 
+namespace TriggerEdge {
+
 /**
  * Enum that describes the edge conditions that the trigger can handle.
  */
-namespace TriggerEdge {
-
 enum Enum {
     TRIGGER_NONE = 0,
     TRIGGER_CHANGE = 1,
@@ -62,7 +62,10 @@ enum Enum {
  */
 typedef struct
 {
-    TriggerActionType::Enum type; ///< The type of the action
+    /** The type of the action */
+    TriggerActionType::Enum type;
+
+    /** The arguments of the action */
     union {
         uint16_t address; ///< The jump address for a JUMP_TO_ADDRESS action
     } arguments;

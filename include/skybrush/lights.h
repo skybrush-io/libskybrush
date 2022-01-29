@@ -30,6 +30,11 @@
 __BEGIN_DECLS
 
 /**
+ * @file lights.h
+ * @brief Functions and structures to interpret and "play" a \c libskybrush light program
+ */
+
+/**
  * Structure that represents a \c libskybrush light program.
  */
 typedef struct sb_light_program_s {

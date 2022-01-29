@@ -27,6 +27,11 @@
 __BEGIN_DECLS
 
 /**
+ * @file utils.h
+ * @brief Utility functions that do not fit elsewhere.
+ */
+
+/**
  * Updates the given AP-CRC32 value with the contents of the given buffer.
  *
  * AP-CRC32 is a variant of the CRC32 checksum that is implemented in a way

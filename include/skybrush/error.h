@@ -22,6 +22,19 @@
 
 #include <skybrush/decls.h>
 
+/**
+ * @file error.h
+ * @brief Error codes and error handling related functions
+ *
+ * @def SB_CHECK(func)
+ * @brief Executes the given function and checks its return code.
+ *
+ * This macro should be used in functions that return an \ref sb_error_t
+ * error code. The function argument is also expected to return an \ref sb_error_t
+ * error code. Any return value from the function that is not equal to
+ * \ref SB_SUCCESS is returned intact to the caller.
+ */
+
 __BEGIN_DECLS
 
 // clang-format off

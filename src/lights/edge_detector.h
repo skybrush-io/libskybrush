@@ -27,11 +27,11 @@
 
 #include <cstdint>
 
+namespace EdgeDetectorState {
+
 /**
  * State constants for the edge detector class.
  */
-namespace EdgeDetectorState {
-
 enum Enum {
     START = 0, ///< Signal state unknown yet
     SIGNAL_LOW = 1, ///< Signal is in the LOW state

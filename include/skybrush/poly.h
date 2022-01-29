@@ -17,6 +17,16 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file poly.h
+ * @brief Handling of real-valued polynomials of finite order.
+ *
+ * @def SB_MAX_POLY_DEGREE
+ * @brief The maximum degree of polynomials handled by this module.
+ *
+ * @def SB_MAX_POLY_COEFFS
+ * @brief The maximum number of coefficients of a polynomial handled by this module.
+ */
 #ifndef SKYBRUSH_POLY_H
 #define SKYBRUSH_POLY_H
 
@@ -36,7 +46,14 @@ __BEGIN_DECLS
  */
 typedef struct
 {
+    /** The coefficients of the polynomial */
     float coeffs[SB_MAX_POLY_COEFFS];
+
+    /** \brief The number of coefficients to consider from the \c coeffs array.
+     *
+     * Zero means an all-zero polynomial, 1 means a constant term, 2
+     * means a linear segment, 3 means a quadratic polynomial and so on.
+     */
     uint8_t num_coeffs;
 } sb_poly_t;
 
@@ -138,9 +155,16 @@ void sb_poly_stretch(sb_poly_t* poly, float factor);
  */
 typedef struct
 {
+    /** The polynomial along the X coordinate */
     sb_poly_t x;
+
+    /** The polynomial along the Y coordinate */
     sb_poly_t y;
+
+    /** The polynomial along the Z coordinate */
     sb_poly_t z;
+
+    /** The polynomial along the yaw coordinate */
     sb_poly_t yaw;
 } sb_poly_4d_t;
 

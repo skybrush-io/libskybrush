@@ -20,6 +20,11 @@
 #ifndef SKYBRUSH_MEMORY_H
 #define SKYBRUSH_MEMORY_H
 
+/**
+ * @file memory.h
+ * @brief Basic macros related to memory management
+ */
+
 #include <memory.h>
 #include <stdlib.h>
 

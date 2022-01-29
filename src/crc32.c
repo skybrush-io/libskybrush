@@ -19,6 +19,32 @@
 
 #include <skybrush/utils.h>
 
+/**
+ * @file crc32.c
+ * @brief Calculation of the CRC32 variant used by ArduPilot.
+ *
+ * In this module, we will refer to the CRC32 variant used by ArduPilot as
+ * AP-CRC32.
+ *
+ * AP-CRC32 has the following properties:
+ *
+ *   - Generator polynomial: \c 0x104C11DB7
+ *   - Initial shift register value: 0
+ *   - Bit reversed algorithm: yes
+ *
+ * When using the \c crcmod module from Python, you can generate the CRC
+ * function as follows:
+ *
+ * \code{.py}
+ * from crcmod import mkCrcFun
+ *
+ * ap_crc32 = mkCrcFun(0x104C11DB7, initCrc=0, rev=True, xorOut=0)
+ * \endcode
+ */
+
+/**
+ * @brief Helper table for calculating the variant of CRC32 that is used by ArduPilot.
+ */
 static const uint32_t crc32_tab[] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,

@@ -27,6 +27,11 @@
 __BEGIN_DECLS
 
 /**
+ * @file basic_types.h
+ * @brief Basic data types used throughout the library
+ */
+
+/**
  * Type alias for booleans.
  */
 typedef uint8_t sb_bool_t;
@@ -36,7 +41,10 @@ typedef uint8_t sb_bool_t;
  */
 typedef struct
 {
+    /** The lower limit, inclusive. */
     float min;
+
+    /** The upper limit, inclusive. */
     float max;
 } sb_interval_t;
 
@@ -45,9 +53,16 @@ typedef struct
  */
 typedef struct
 {
+    /** The X coordinate of the vector */
     float x;
+
+    /** The Y coordinate of the vector */
     float y;
+
+    /** The Z coordinate of the vector */
     float z;
+
+    /** The yaw angle corresponding to the vector */
     float yaw;
 } sb_vector3_with_yaw_t;
 
@@ -56,8 +71,13 @@ typedef struct
  */
 typedef struct
 {
+    /** The minimum and maximum X coordinates of the bounding box */
     sb_interval_t x;
+
+    /** The minimum and maximum Y coordinates of the bounding box */
     sb_interval_t y;
+
+    /** The minimum and maximum Z coordinates of the bounding box */
     sb_interval_t z;
 } sb_bounding_box_t;
 

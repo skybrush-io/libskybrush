@@ -38,29 +38,29 @@ __BEGIN_DECLS
  */
 typedef enum
 {
-  CMD_END,           /**< 0x00 = End of program */
-  CMD_NOP,           /**< 0x01 = No operation */
-  CMD_SLEEP,         /**< 0x02 = Sleep */
-  CMD_WAIT_UNTIL,    /**< 0x03 = Wait until */
-  CMD_SET_COLOR,     /**< 0x04 = Set color */
-  CMD_SET_GRAY,      /**< 0x05 = Set grayscale color */
-  CMD_SET_BLACK,     /**< 0x06 = Set color to black */
-  CMD_SET_WHITE,     /**< 0x07 = Set color to white */
-  CMD_FADE_TO_COLOR, /**< 0x08 = Fade to color */
-  CMD_FADE_TO_GRAY,  /**< 0x09 = Fade to grayscale color */
-  CMD_FADE_TO_BLACK, /**< 0x0A = Fade to black */
-  CMD_FADE_TO_WHITE, /**< 0x0B = Fade to white */
-  CMD_LOOP_BEGIN,    /**< 0x0C = Mark the beginning of a loop */
-  CMD_LOOP_END,      /**< 0x0D = Mark the end of a loop */
-  CMD_RESET_CLOCK,   /**< 0x0E = Reset the internal clock */
-  CMD_UNUSED_1,
-  CMD_SET_COLOR_FROM_CHANNELS,     /**< 0x10 = Set color from channels */
-  CMD_FADE_TO_COLOR_FROM_CHANNELS, /**< 0x11 = Fade to color from channels */
-  CMD_JUMP,                        /**< 0x12 = Jump to address */
-  CMD_TRIGGERED_JUMP,              /**< 0x13 = Triggered jump to address */
-  CMD_SET_PYRO,                    /**< 0x14 = Turn on or off some pyro channels */
-  CMD_SET_PYRO_ALL,                /**< 0x15 = Set exact value for all pyro channels */
-  NUMBER_OF_COMMANDS,
+    CMD_END,           /**< 0x00 = End of program */
+    CMD_NOP,           /**< 0x01 = No operation */
+    CMD_SLEEP,         /**< 0x02 = Sleep */
+    CMD_WAIT_UNTIL,    /**< 0x03 = Wait until */
+    CMD_SET_COLOR,     /**< 0x04 = Set color */
+    CMD_SET_GRAY,      /**< 0x05 = Set grayscale color */
+    CMD_SET_BLACK,     /**< 0x06 = Set color to black */
+    CMD_SET_WHITE,     /**< 0x07 = Set color to white */
+    CMD_FADE_TO_COLOR, /**< 0x08 = Fade to color */
+    CMD_FADE_TO_GRAY,  /**< 0x09 = Fade to grayscale color */
+    CMD_FADE_TO_BLACK, /**< 0x0A = Fade to black */
+    CMD_FADE_TO_WHITE, /**< 0x0B = Fade to white */
+    CMD_LOOP_BEGIN,    /**< 0x0C = Mark the beginning of a loop */
+    CMD_LOOP_END,      /**< 0x0D = Mark the end of a loop */
+    CMD_RESET_CLOCK,   /**< 0x0E = Reset the internal clock */
+    CMD_UNUSED_1,
+    CMD_SET_COLOR_FROM_CHANNELS,     /**< 0x10 = Set color from channels */
+    CMD_FADE_TO_COLOR_FROM_CHANNELS, /**< 0x11 = Fade to color from channels */
+    CMD_JUMP,                        /**< 0x12 = Jump to address */
+    CMD_TRIGGERED_JUMP,              /**< 0x13 = Triggered jump to address */
+    CMD_SET_PYRO,                    /**< 0x14 = Turn on or off some pyro channels */
+    CMD_SET_PYRO_ALL,                /**< 0x15 = Set exact value for all pyro channels */
+    NUMBER_OF_COMMANDS,
 } command_t;
 
 // clang-format on
@@ -72,7 +72,15 @@ typedef enum
  */
 typedef struct
 {
+    /**
+     * \brief Number of arguments of the command.
+     *
+     * MSB is set to 1 if the last argument of the command is a variable-length
+     * integer.
+     */
     uint8_t arg_count;
+
+    /** Additiona flags; currently unused */
     uint8_t flags;
 } command_info_t;
 

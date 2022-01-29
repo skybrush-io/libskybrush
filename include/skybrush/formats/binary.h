@@ -17,30 +17,37 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/**
- * \file Include file describing the interface used to access trajectories and
- * light programs stored in the Skybrush binary file format.
- */
-
 #ifndef SKYBRUSH_FORMATS_BINARY_H
 #define SKYBRUSH_FORMATS_BINARY_H
 
-#include <skybrush/basic_types.h>
-#include <skybrush/error.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <skybrush/basic_types.h>
 #include <skybrush/decls.h>
+#include <skybrush/error.h>
 
 __BEGIN_DECLS
+
+/**
+ * @file binary.h
+ * Functions related to the parsing of the Skybrush binary show file format.
+ */
 
 /**
  * Enum representing the known block types in the Skybrush binary file format.
  */
 typedef enum {
+    /** Invalid block type */
     SB_BINARY_BLOCK_NONE = 0,
+
+    /** Block that contains a trajectory */
     SB_BINARY_BLOCK_TRAJECTORY = 1,
+
+    /** Block that contains a light program */
     SB_BINARY_BLOCK_LIGHT_PROGRAM = 2,
+
+    /** Comment block that contains arbitrary text */
     SB_BINARY_BLOCK_COMMENT = 3
 } sb_binary_block_type_t;
 
@@ -52,6 +59,8 @@ typedef enum {
  * this enum.
  */
 typedef enum {
+    /** Bit indicating that the header of a Skybrush binary file contains an
+     * AP-CRC32 checksum of the entire file */
     SB_BINARY_FEATURE_CRC32 = 1
 } sb_binary_header_feature_t;
 

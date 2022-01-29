@@ -69,13 +69,14 @@ sb_bool_t sb_rgb_color_equals(
 }
 
 /**
- * @brief Linearly interpolates between two RGB colors
+ * \brief Linearly interpolates between two colors
  *
- * @param first   the first color
- * @param second  the second color
- * @param ratio   the interpolation ratio; 0 will return the first color, 1
- *        will return the second color
- * @return the interpolated color
+ * \param  first   the first color
+ * \param  second  the second color
+ * \param  ratio   the interpolation ratio; zero means the first color, 1 means
+ *                 the second color. Values less than zero or greater than 1
+ *                 are allowed.
+ * \return the interpolated color
  */
 sb_rgb_color_t sb_rgb_color_linear_interpolation(
     sb_rgb_color_t first, sb_rgb_color_t second, float ratio)

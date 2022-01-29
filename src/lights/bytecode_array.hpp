@@ -42,6 +42,12 @@ private:
     uint16_t m_size;
 
 public:
+    /**
+     * @brief Constructs a new array-based bytecode store.
+     *
+     * @param data  The array that the bytecode store wraps.
+     * @param size  The size of the array.
+     */
     ArrayBytecodeStore(const uint8_t* data, uint16_t size)
         : m_data(data)
         , m_nextIndex(0)
