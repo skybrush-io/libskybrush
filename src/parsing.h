@@ -17,23 +17,27 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef SKYBRUSH_H
-#define SKYBRUSH_H
+#ifndef FORMATS_PARSING_H
+#define FORMATS_PARSING_H
+
+#include <skybrush/decls.h>
+#include <skybrush/error.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+__BEGIN_DECLS
 
 /**
- * @file skybrush.h
- * @brief Main include file that defines the public API of the library.
+ * @file parsing.h
+ * @brief Basic parsing functions.
  */
 
-#include <skybrush/basic_types.h>
-#include <skybrush/colors.h>
-#include <skybrush/error.h>
-#include <skybrush/lights.h>
-#include <skybrush/poly.h>
-#include <skybrush/rth_plan.h>
-#include <skybrush/trajectory.h>
-#include <skybrush/version.h>
+int16_t sb_parse_int16(const uint8_t* buf, size_t* offset);
+uint16_t sb_parse_uint16(const uint8_t* buf, size_t* offset);
+int32_t sb_parse_int32(const uint8_t* buf, size_t* offset);
+uint32_t sb_parse_uint32(const uint8_t* buf, size_t* offset);
+sb_error_t sb_parse_varuint32(const uint8_t* buf, size_t num_bytes, size_t* offset, uint32_t* result);
 
-#include <skybrush/formats/binary.h>
+__END_DECLS
 
 #endif

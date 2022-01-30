@@ -49,6 +49,18 @@ typedef struct
 } sb_interval_t;
 
 /**
+ * A simple 2D vector.
+ */
+typedef struct
+{
+    /** The X coordinate of the vector */
+    float x;
+
+    /** The Y coordinate of the vector */
+    float y;
+} sb_vector2_t;
+
+/**
  * A simple 3D vector with an extra yaw component.
  */
 typedef struct

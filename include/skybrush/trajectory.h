@@ -126,6 +126,9 @@ typedef struct sb_trajectory_s {
  * Initializes a trajectory object from the contents of a Skybrush file in
  * binary format.
  *
+ * \param trajectory  the trajectory to initialize
+ * \param fd  handle to the low-level file object to initialize the trajectory from
+ *
  * \return \c SB_SUCCESS if the object was initialized successfully,
  *         \c SB_ENOENT if the file did not contain a trajectory block,
  *         \c SB_EREAD for read errors
@@ -136,6 +139,10 @@ sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int 
  * Initializes a trajectory object from the contents of a Skybrush file in
  * binary format, already loaded into memory.
  *
+ * \param trajectory  the trajectory to initialize
+ * \param buf   the buffer holding the loaded Skybrush file in binary format
+ * \param nbytes  the length of the buffer
+ *
  * \return \c SB_SUCCESS if the object was initialized successfully,
  *         \c SB_ENOENT if the memory block did not contain a trajectory
  */
@@ -144,6 +151,10 @@ sb_error_t sb_trajectory_init_from_binary_file_in_memory(
 
 /**
  * Initializes a trajectory object from the contents of a memory buffer.
+ *
+ * \param trajectory  the trajectory to initialize
+ * \param buf   the buffer holding the encoded trajectory object
+ * \param nbytes  the length of the buffer
  *
  * \return \c SB_SUCCESS if the object was initialized successfully,
  *         \c SB_ENOENT if the memory buffer did not contain a trajectory

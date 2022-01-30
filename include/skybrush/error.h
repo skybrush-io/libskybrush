@@ -61,7 +61,8 @@ typedef enum {
     SB_EEMPTY,         /**< Some internal buffer is empty */
     SB_EAGAIN,         /**< Resource temporarily unavailable */
     SB_ENOENT,         /**< File does not exist */
-    SB_ECORRUPTED      /**< Corrupted data */
+    SB_ECORRUPTED,     /**< Corrupted data */
+    SB_EOVERFLOW       /**< Overflow error */
 } sb_error_t;
 // clang-format on
 

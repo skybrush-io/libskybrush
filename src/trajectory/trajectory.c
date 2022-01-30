@@ -26,28 +26,24 @@
 #include <skybrush/memory.h>
 #include <skybrush/trajectory.h>
 
-sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser);
+#include "../parsing.h"
+
+static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser);
 
 /**
- * Parses an angle from the memory block that defines the trajectory,
+ * Parses an angle from the memory block that defines the trajectory.
+ *
+ * The offset is automatically advanced after reading the angle.
  */
-static float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size_t offset);
+static float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size_t* offset);
 
 /**
  * Parses a coordinate from the memory block that defines the trajectory,
  * scaling it up with the appropriate scaling factor as needed.
+ *
+ * The offset is automatically advanced after reading the coordinate.
  */
-static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory, size_t offset);
-
-/**
- * Parses a signed 16-bit integer from the memory block that defines the trajectory.
- */
-static int16_t sb_i_trajectory_parse_int16(const sb_trajectory_t* trajectory, size_t offset);
-
-/**
- * Parses an unsigned 16-bit integer from the memory block that defines the trajectory.
- */
-static uint16_t sb_i_trajectory_parse_uint16(const sb_trajectory_t* trajectory, size_t offset);
+static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory, size_t* offset);
 
 /**
  * Parses the header of the memory block that defines the trajectory.
@@ -140,7 +136,7 @@ sb_error_t sb_trajectory_init_from_binary_file_in_memory(
     return retval;
 }
 
-sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser)
+static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
     sb_binary_block_t block;
@@ -362,18 +358,20 @@ float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t* trajectory, 
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory)
 {
     uint8_t* buf = trajectory->buffer;
+    size_t offset;
 
     assert(buf != 0);
 
     trajectory->use_yaw = (buf[0] & 0x80) ? 1 : 0;
     trajectory->scale = (float)((buf[0] & 0x7f));
 
-    trajectory->start.x = sb_i_trajectory_parse_coordinate(trajectory, 1);
-    trajectory->start.y = sb_i_trajectory_parse_coordinate(trajectory, 3);
-    trajectory->start.z = sb_i_trajectory_parse_coordinate(trajectory, 5);
-    trajectory->start.yaw = sb_i_trajectory_parse_angle(trajectory, 7);
+    offset = 1;
+    trajectory->start.x = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+    trajectory->start.y = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+    trajectory->start.z = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+    trajectory->start.yaw = sb_i_trajectory_parse_angle(trajectory, &offset);
 
-    return 9; /* size of the header */
+    return offset; /* size of the header */
 }
 
 static void sb_i_trajectory_take_ownership(sb_trajectory_t* trajectory)
@@ -381,9 +379,9 @@ static void sb_i_trajectory_take_ownership(sb_trajectory_t* trajectory)
     trajectory->owner = 1;
 }
 
-static float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size_t offset)
+static float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size_t* offset)
 {
-    int16_t angle = sb_i_trajectory_parse_int16(trajectory, offset) % 3600;
+    int16_t angle = sb_parse_int16(trajectory->buffer, offset) % 3600;
 
     if (angle < 0) {
         angle += 3600;
@@ -392,24 +390,9 @@ static float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size
     return angle / 10.0f;
 }
 
-static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory, size_t offset)
+static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory, size_t* offset)
 {
-    return sb_i_trajectory_parse_int16(trajectory, offset) * trajectory->scale;
-}
-
-static int16_t sb_i_trajectory_parse_int16(const sb_trajectory_t* trajectory, size_t offset)
-{
-    return (int16_t)(sb_i_trajectory_parse_uint16(trajectory, offset));
-}
-
-static uint16_t sb_i_trajectory_parse_uint16(const sb_trajectory_t* trajectory, size_t offset)
-{
-    uint8_t msb, lsb;
-
-    msb = trajectory->buffer[offset + 1];
-    lsb = trajectory->buffer[offset];
-
-    return ((msb << 8) + lsb);
+    return sb_parse_int16(trajectory->buffer, offset) * trajectory->scale;
 }
 
 /* ************************************************************************** */
@@ -617,11 +600,10 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     header = buf[offset++];
 
     /* Parse duration and calculate end time */
-    data->duration_msec = sb_i_trajectory_parse_uint16(trajectory, offset);
+    data->duration_msec = sb_parse_uint16(trajectory->buffer, &offset);
     data->duration_sec = data->duration_msec / 1000.0f;
     data->end_time_msec = data->start_time_msec + data->duration_msec;
     data->end_time_sec = data->end_time_msec / 1000.0f;
-    offset += 2;
 
     /* Parse X coordinates */
     poly = &data->poly.x;
@@ -645,8 +627,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     coords[0] = start.x;
     num_coords++;
     for (i = 1; i < num_coords; i++) {
-        coords[i] = sb_i_trajectory_parse_coordinate(trajectory, offset);
-        offset += 2;
+        coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 
@@ -672,8 +653,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     coords[0] = start.y;
     num_coords++;
     for (i = 1; i < num_coords; i++) {
-        coords[i] = sb_i_trajectory_parse_coordinate(trajectory, offset);
-        offset += 2;
+        coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 
@@ -699,8 +679,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     coords[0] = start.z;
     num_coords++;
     for (i = 1; i < num_coords; i++) {
-        coords[i] = sb_i_trajectory_parse_coordinate(trajectory, offset);
-        offset += 2;
+        coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 
@@ -726,8 +705,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     coords[0] = start.yaw;
     num_coords++;
     for (i = 1; i < num_coords; i++) {
-        coords[i + 1] = sb_i_trajectory_parse_angle(trajectory, offset);
-        offset += 2;
+        coords[i + 1] = sb_i_trajectory_parse_angle(trajectory, &offset);
     }
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 

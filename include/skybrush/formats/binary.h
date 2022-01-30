@@ -48,7 +48,10 @@ typedef enum {
     SB_BINARY_BLOCK_LIGHT_PROGRAM = 2,
 
     /** Comment block that contains arbitrary text */
-    SB_BINARY_BLOCK_COMMENT = 3
+    SB_BINARY_BLOCK_COMMENT = 3,
+
+    /** Block that contains a return-to-home plan */
+    SB_BINARY_BLOCK_RTH_PLAN = 4
 } sb_binary_block_type_t;
 
 /**

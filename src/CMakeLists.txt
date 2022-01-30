@@ -3,6 +3,7 @@ add_library(
 
     crc32.c
     error.c
+    parsing.c
     utils.c
 
     formats/binary.c
@@ -14,6 +15,8 @@ add_library(
     lights/program.cpp
     lights/transition.cpp
     lights/trigger.cpp
+
+    rth_plan/rth_plan.c
 
     trajectory/poly.c
     trajectory/trajectory.c

@@ -30,21 +30,36 @@ void tearDown()
 {
 }
 
+void check_if_poly_is_all_zero(sb_poly_t* poly)
+{
+    TEST_ASSERT_EQUAL(0, sb_poly_get_degree(poly));
+
+    TEST_ASSERT_EQUAL(0, sb_poly_eval(poly, 0));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval(poly, -2));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval(poly, 1));
+
+    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(poly, 0));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(poly, -2));
+    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(poly, 1));
+}
+
 void test_zero()
 {
     sb_poly_t poly;
 
     sb_poly_make_zero(&poly);
+    check_if_poly_is_all_zero(&poly);
+}
 
-    TEST_ASSERT_EQUAL(0, sb_poly_get_degree(&poly));
+void test_zero_4d()
+{
+    sb_poly_4d_t poly;
 
-    TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, 0));
-    TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, -2));
-    TEST_ASSERT_EQUAL(0, sb_poly_eval(&poly, 1));
-
-    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(&poly, 0));
-    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(&poly, -2));
-    TEST_ASSERT_EQUAL(0, sb_poly_eval_double(&poly, 1));
+    sb_poly_4d_make_zero(&poly);
+    check_if_poly_is_all_zero(&poly.x);
+    check_if_poly_is_all_zero(&poly.y);
+    check_if_poly_is_all_zero(&poly.z);
+    check_if_poly_is_all_zero(&poly.yaw);
 }
 
 void test_constant()
@@ -501,6 +516,7 @@ int main(int argc, char* argv[])
     UNITY_BEGIN();
 
     RUN_TEST(test_zero);
+    RUN_TEST(test_zero_4d);
     RUN_TEST(test_constant);
     RUN_TEST(test_linear);
     RUN_TEST(test_linear_small_durations);
