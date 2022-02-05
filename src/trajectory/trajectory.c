@@ -431,7 +431,7 @@ sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* playe
 void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* player)
 {
 #ifdef LIBSKYBRUSH_DEBUG
-    sb_vector3_with_yaw_t pos, vel;
+    sb_vector3_with_yaw_t pos, vel, acc;
     const sb_trajectory_segment_t* current = sb_trajectory_player_get_current_segment(player);
 
     printf("Start offset = %ld bytes\n", (long int)player->current_segment.start);
@@ -440,22 +440,25 @@ void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* pla
     printf("Duration = %.3fs\n", current->duration_sec);
 
     pos = sb_poly_4d_eval(&current->poly, 0);
-    vel = sb_poly_4d_eval(&current->deriv, 0);
+    vel = sb_poly_4d_eval(&current->dpoly, 0);
+    acc = sb_poly_4d_eval(&current->ddpoly, 0);
     printf(
-        "Starts at = (%.2f, %.2f, %.2f) yaw=%.2f, velocity = (%.2f, %.2f, %.2f)\n",
-        pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z);
+        "Starts at = (%.2f, %.2f, %.2f) yaw=%.2f, vel = (%.2f, %.2f, %.2f), acc = (%.2f, %.2f, %.2f)\n",
+        pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z, acc.x, acc.y, acc.z);
 
     pos = sb_poly_4d_eval(&current->poly, 0.5);
-    vel = sb_poly_4d_eval(&current->deriv, 0.5);
+    vel = sb_poly_4d_eval(&current->dpoly, 0.5);
+    acc = sb_poly_4d_eval(&current->ddpoly, 0.5);
     printf(
-        "Midpoint at = (%.2f, %.2f, %.2f) yaw=%.2f, velocity = (%.2f, %.2f, %.2f)\n",
-        pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z);
+        "Midpoint at = (%.2f, %.2f, %.2f) yaw=%.2f, vel = (%.2f, %.2f, %.2f), acc = (%.2f, %.2f, %.2f)\n",
+        pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z, acc.x, acc.y, acc.z);
 
     pos = sb_poly_4d_eval(&current->poly, 1.0);
-    vel = sb_poly_4d_eval(&current->deriv, 1.0);
+    vel = sb_poly_4d_eval(&current->dpoly, 1.0);
+    acc = sb_poly_4d_eval(&current->ddpoly, 1.0);
     printf(
-        "Ends at = (%.2f, %.2f, %.2f) yaw=%.2f, velocity = (%.2f, %.2f, %.2f)\n",
-        pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z);
+        "Ends at = (%.2f, %.2f, %.2f) yaw=%.2f, vel = (%.2f, %.2f, %.2f), acc = (%.2f, %.2f, %.2f)\n",
+        pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z, acc.x, acc.y, acc.z);
 #endif
 }
 
@@ -485,7 +488,20 @@ sb_error_t sb_trajectory_player_get_velocity_at(sb_trajectory_player_t* player, 
     SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
 
     if (result) {
-        *result = sb_poly_4d_eval(&player->current_segment.data.deriv, rel_t);
+        *result = sb_poly_4d_eval(&player->current_segment.data.dpoly, rel_t);
+    }
+
+    return SB_SUCCESS;
+}
+
+sb_error_t sb_trajectory_player_get_acceleration_at(sb_trajectory_player_t* player, float t, sb_vector3_with_yaw_t* result)
+{
+    float rel_t;
+
+    SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
+
+    if (result) {
+        *result = sb_poly_4d_eval(&player->current_segment.data.ddpoly, rel_t);
     }
 
     return SB_SUCCESS;
@@ -709,11 +725,18 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     }
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 
-    /* Calculate derivatives for velocity */
-    data->deriv = data->poly;
-    sb_poly_4d_deriv(&data->deriv);
+    /* Calculate first derivatives for velocity */
+    data->dpoly = data->poly;
+    sb_poly_4d_deriv(&data->dpoly);
     if (fabsf(data->duration_sec) > 1.0e-6f) {
-        sb_poly_4d_scale(&data->deriv, 1.0f / data->duration_sec);
+        sb_poly_4d_scale(&data->dpoly, 1.0f / data->duration_sec);
+    }
+
+    /* Calculate second derivatives for acceleration */
+    data->ddpoly = data->dpoly;
+    sb_poly_4d_deriv(&data->ddpoly);
+    if (fabsf(data->duration_sec) > 1.0e-6f) {
+        sb_poly_4d_scale(&data->ddpoly, 1.0f / data->duration_sec);
     }
 
     player->current_segment.length = offset - player->current_segment.start;

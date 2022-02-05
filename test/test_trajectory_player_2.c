@@ -172,7 +172,7 @@ void test_position_at()
 
 void test_velocity_at()
 {
-    sb_vector3_with_yaw_t pos;
+    sb_vector3_with_yaw_t vel;
     float t[] = {
         0, 1, 2, 5, 8, 9, 10, 11, 12, 15, 18, 19, 20, 21, 22, 25, 28, 29, 30,
         31, 32, 33, 34, 35, 38, 41, 42, 43, 44, 45, 48, 51, 52, 53
@@ -221,30 +221,113 @@ void test_velocity_at()
 
     /* test querying forward */
     for (i = 0; i < n; i++) {
-        sb_trajectory_player_get_velocity_at(&player, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, pos.yaw);
+        sb_trajectory_player_get_velocity_at(&player, t[i], &vel);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, vel.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, vel.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, vel.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, vel.yaw);
     }
 
     /* test querying backward */
     for (i = n - 1; i >= 0; i--) {
-        sb_trajectory_player_get_velocity_at(&player, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, pos.yaw);
+        sb_trajectory_player_get_velocity_at(&player, t[i], &vel);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, vel.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, vel.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, vel.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, vel.yaw);
     }
 
     /* test (pseudo)random access */
     for (j = 0; j < n; j++) {
         i = random_order[j];
-        sb_trajectory_player_get_velocity_at(&player, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, pos.yaw);
+        sb_trajectory_player_get_velocity_at(&player, t[i], &vel);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, vel.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, vel.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, vel.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, vel.yaw);
+    }
+}
+
+void test_acceleration_at()
+{
+    sb_vector3_with_yaw_t acc;
+    /* Don't query at t=10, t=20 and t=30 because in these places the result
+     * depends on whether we are moving forward or backward (the acceleration
+     * curve is not smooth) */
+    float t[] = {
+        0, 1, 2, 5, 8, 9, 11, 12, 15, 18, 19, 21, 22, 25, 28, 29,
+        31, 32, 34, 35, 38, 41, 42, 44, 45, 48, 51, 52, 53
+    };
+
+    /* Acceleration is a constant 1 m/s/s for the non-constant-velocity
+     * travel segments. Due to roundoff errors and numerical inaccuracies,
+     * the exact result is not 1000.0; this is because, e.g., the input file
+     * already contains Z=640 mm as the first control point and not Z=635
+     * (due to how the .skyc --> .skyb conversion works). These numbers were
+     * verified independently */
+    sb_vector3_with_yaw_t expected[] = {
+        { 0, 0, 1006.2, 0 },
+        { 0, 0, 1010.4, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, -1010.4, 0 },
+        { 1010.4, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { -1010.4, 0, 0, 0 },
+        { 0, 1010.4, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, -1010.4, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { -709.1, -709.1, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 709.1, 709.1, 0, 0 },
+        { 0, 0, -1010.4, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 1010.4, 0 },
+        { 0, 0, 1006.2, 0 }
+    };
+    int i, j, n = sizeof(t) / sizeof(t[0]);
+    const int random_order[] = {
+        26, 22, 10, 0, 21, 19, 11, 6, 3, 23, 24, 20, 1, 25, 2, 9,
+        27, 7, 13, 18, 4, 8, 15, 14, 17, 12, 28, 5, 16
+    };
+
+    /* test querying forward */
+    for (i = 0; i < n; i++) {
+        sb_trajectory_player_get_acceleration_at(&player, t[i], &acc);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, acc.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, acc.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, acc.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, acc.yaw);
+    }
+
+    /* test querying backward */
+    for (i = n - 1; i >= 0; i--) {
+        sb_trajectory_player_get_acceleration_at(&player, t[i], &acc);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, acc.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, acc.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, acc.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, acc.yaw);
+    }
+
+    /* test (pseudo)random access */
+    for (j = 0; j < n; j++) {
+        i = random_order[j];
+        sb_trajectory_player_get_acceleration_at(&player, t[i], &acc);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, acc.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, acc.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, acc.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, acc.yaw);
     }
 }
 
@@ -254,6 +337,7 @@ int main(int argc, char* argv[])
 
     RUN_TEST(test_position_at);
     RUN_TEST(test_velocity_at);
+    RUN_TEST(test_acceleration_at);
 
     return UNITY_END();
 }

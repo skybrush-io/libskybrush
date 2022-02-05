@@ -118,7 +118,7 @@ void test_position_at()
 
 void test_velocity_at()
 {
-    sb_vector3_with_yaw_t pos;
+    sb_vector3_with_yaw_t vel;
     float t[] = { 5, 15, 25, 35, 45, 55 };
     sb_vector3_with_yaw_t expected[] = {
         { 0, 0, 1000, 0 },
@@ -133,30 +133,77 @@ void test_velocity_at()
 
     /* test querying forward */
     for (i = 0; i < n; i++) {
-        sb_trajectory_player_get_velocity_at(&player, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, pos.yaw);
+        sb_trajectory_player_get_velocity_at(&player, t[i], &vel);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, vel.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, vel.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, vel.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, vel.yaw);
     }
 
     /* test querying backward */
     for (i = n - 1; i >= 0; i--) {
-        sb_trajectory_player_get_velocity_at(&player, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, pos.yaw);
+        sb_trajectory_player_get_velocity_at(&player, t[i], &vel);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, vel.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, vel.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, vel.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, vel.yaw);
     }
 
     /* test (pseudo)random access */
     for (j = 0; j < n; j++) {
         i = random_order[j];
-        sb_trajectory_player_get_velocity_at(&player, t[i], &pos);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, pos.x);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, pos.y);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, pos.z);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, pos.yaw);
+        sb_trajectory_player_get_velocity_at(&player, t[i], &vel);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].x, vel.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].y, vel.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].z, vel.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-1, expected[i].yaw, vel.yaw);
+    }
+}
+
+void test_acceleration_at()
+{
+    sb_vector3_with_yaw_t acc;
+    float t[] = { 5, 15, 25, 35, 45, 55 };
+
+    /* We have linear segments only in this test file so the accelerations
+     * will be zeros everywhere */
+    sb_vector3_with_yaw_t expected[] = {
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 },
+        { 0, 0, 0, 0 }
+    };
+    int i, j, n = sizeof(t) / sizeof(t[0]);
+    const int random_order[] = { 5, 4, 1, 3, 0, 2 };
+
+    /* test querying forward */
+    for (i = 0; i < n; i++) {
+        sb_trajectory_player_get_acceleration_at(&player, t[i], &acc);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, acc.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, acc.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, acc.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, acc.yaw);
+    }
+
+    /* test querying backward */
+    for (i = n - 1; i >= 0; i--) {
+        sb_trajectory_player_get_acceleration_at(&player, t[i], &acc);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, acc.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, acc.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, acc.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, acc.yaw);
+    }
+
+    /* test (pseudo)random access */
+    for (j = 0; j < n; j++) {
+        i = random_order[j];
+        sb_trajectory_player_get_acceleration_at(&player, t[i], &acc);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].x, acc.x);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].y, acc.y);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].z, acc.z);
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i].yaw, acc.yaw);
     }
 }
 
@@ -166,6 +213,7 @@ int main(int argc, char* argv[])
 
     RUN_TEST(test_position_at);
     RUN_TEST(test_velocity_at);
+    RUN_TEST(test_acceleration_at);
 
     return UNITY_END();
 }

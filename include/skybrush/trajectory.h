@@ -98,13 +98,21 @@ typedef struct
      */
     sb_poly_4d_t poly;
 
-    /** @brief The polynomial that describes derivative of the current
+    /** @brief The polynomial that describes the first derivative of the current
      * trajectory segment.
      *
      * The interval [0; 1] of the polynomial is mapped to the time interval
      * between the start and end time of the trajectory.
      */
-    sb_poly_4d_t deriv;
+    sb_poly_4d_t dpoly;
+
+    /** @brief The polynomial that describes the second derivative of the current
+     * trajectory segment.
+     *
+     * The interval [0; 1] of the polynomial is mapped to the time interval
+     * between the start and end time of the trajectory.
+     */
+    sb_poly_4d_t ddpoly;
 } sb_trajectory_segment_t;
 
 /**
@@ -300,6 +308,13 @@ sb_error_t sb_trajectory_player_get_position_at(
  * time instant.
  */
 sb_error_t sb_trajectory_player_get_velocity_at(
+    sb_trajectory_player_t* player, float t, sb_vector3_with_yaw_t* result);
+
+/**
+ * Returns the acceleration on the trajectory associated to the player at the given
+ * time instant.
+ */
+sb_error_t sb_trajectory_player_get_acceleration_at(
     sb_trajectory_player_t* player, float t, sb_vector3_with_yaw_t* result);
 
 /**
