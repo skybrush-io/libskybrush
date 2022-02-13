@@ -186,6 +186,11 @@ void sb_trajectory_destroy(sb_trajectory_t* trajectory);
 sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
 
 /**
+ * Returns whether the trajectory is empty (i.e. has no start position yet).
+ */
+sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory);
+
+/**
  * Returns the axis-aligned bounding box of the trajectory.
  */
 sb_error_t sb_trajectory_get_axis_aligned_bounding_box(

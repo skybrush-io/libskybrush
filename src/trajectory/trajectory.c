@@ -354,6 +354,11 @@ float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t* trajectory, 
     return isfinite(result) ? result : -INFINITY;
 }
 
+sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
+{
+    return sb_buffer_size(&trajectory->buffer) == 0;
+}
+
 /* ************************************************************************** */
 
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory)

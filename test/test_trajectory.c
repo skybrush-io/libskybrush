@@ -99,6 +99,8 @@ void test_trajectory_is_really_empty()
     sb_vector3_with_yaw_t vec;
     sb_trajectory_player_t player;
 
+    TEST_ASSERT(sb_trajectory_is_empty(&trajectory));
+
     sb_trajectory_player_init(&player, &trajectory);
 
     for (i = 0; i < n; i++) {
@@ -297,6 +299,8 @@ int main(int argc, char* argv[])
     RUN_TEST(test_get_axis_aligned_bounding_box_from_trajectory_in_memory);
     RUN_TEST(test_propose_takeoff_time);
     RUN_TEST(test_propose_landing_time);
+
+    /* editing tests */
 
     /* regression tests */
     RUN_TEST(test_propose_takeoff_time_hover_3m);
