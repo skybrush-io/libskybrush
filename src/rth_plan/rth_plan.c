@@ -148,7 +148,7 @@ sb_error_t sb_i_rth_plan_init_from_parser(sb_rth_plan_t* plan, sb_binary_file_pa
 
     buf = sb_calloc(uint8_t, block.length);
     if (buf == 0) {
-        return SB_ENOMEM;
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
     }
 
     retval = sb_binary_file_read_current_block(parser, buf);

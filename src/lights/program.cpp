@@ -90,7 +90,7 @@ sb_error_t sb_i_light_program_init_from_parser(
 
     buf = sb_calloc(uint8_t, block.length);
     if (buf == 0) {
-        return SB_ENOMEM;
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
     }
 
     retval = sb_binary_file_read_current_block(parser, buf);
@@ -151,13 +151,13 @@ sb_error_t sb_light_player_init(sb_light_player_t* player, const sb_light_progra
 
     new_player = new BytecodePlayer();
     if (new_player == 0) {
-        return SB_ENOMEM;
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
     }
 
     new_store = new ArrayBytecodeStore(program->buffer, program->buffer_length);
     if (new_store == 0) {
         delete new_player;
-        return SB_ENOMEM;
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
     }
 
     player->program = program;

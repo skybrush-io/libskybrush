@@ -26,6 +26,7 @@
  */
 
 #include <skybrush/basic_types.h>
+#include <skybrush/buffer.h>
 #include <skybrush/colors.h>
 #include <skybrush/error.h>
 #include <skybrush/lights.h>

@@ -28,6 +28,7 @@
 
 #include "../parsing.h"
 
+static sb_error_t sb_i_trajectory_init_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser);
 
 /**
@@ -49,11 +50,6 @@ static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory,
  * Parses the header of the memory block that defines the trajectory.
  */
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory);
-
-/**
- * Instructs the trajectory object to take ownership of its inner memory buffer.
- */
-static void sb_i_trajectory_take_ownership(sb_trajectory_t* trajectory);
 
 /**
  * Builds the current trajectory segment from the wrapped buffer, starting from
@@ -91,24 +87,26 @@ static sb_error_t sb_i_trajectory_player_find_latest_time_above_altitude(
 
 void sb_trajectory_destroy(sb_trajectory_t* trajectory)
 {
-    sb_trajectory_clear(trajectory);
+    sb_trajectory_clear(trajectory); /* will not fail here */
+    sb_buffer_destroy(trajectory->buffer);
 }
 
-void sb_trajectory_clear(sb_trajectory_t* trajectory)
+sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory)
 {
-    if (trajectory->owner) {
-        sb_free(trajectory->buffer);
+    if (sb_buffer_is_view(&trajectory->buffer)) {
+        sb_buffer_destroy(&trajectory->buffer);
+        SB_CHECK(sb_buffer_init(&trajectory->buffer, 0));
+    } else {
+        SB_CHECK(sb_buffer_clear(&trajectory->buffer));
     }
-
-    trajectory->buffer = 0;
-    trajectory->buffer_length = 0;
-    trajectory->owner = 0;
 
     memset(&trajectory->start, 0, sizeof(trajectory->start));
 
     trajectory->scale = 1;
     trajectory->use_yaw = 0;
     trajectory->header_length = 0;
+
+    return SB_SUCCESS;
 }
 
 sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int fd)
@@ -136,6 +134,17 @@ sb_error_t sb_trajectory_init_from_binary_file_in_memory(
     return retval;
 }
 
+sb_error_t sb_i_trajectory_init_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes, sb_bool_t owned)
+{
+    if (owned) {
+        SB_CHECK(sb_buffer_init_from_bytes(&trajectory->buffer, buf, nbytes));
+    } else {
+        sb_buffer_init_view(&trajectory->buffer, buf, nbytes);
+    }
+    trajectory->header_length = sb_i_trajectory_parse_header(trajectory);
+    return SB_SUCCESS;
+}
+
 static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
@@ -148,7 +157,7 @@ static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, 
 
     buf = sb_calloc(uint8_t, block.length);
     if (buf == 0) {
-        return SB_ENOMEM;
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
     }
 
     retval = sb_binary_file_read_current_block(parser, buf);
@@ -157,33 +166,25 @@ static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, 
         return retval;
     }
 
-    retval = sb_trajectory_init_from_buffer(trajectory, buf, block.length);
+    retval = sb_i_trajectory_init_from_bytes(trajectory, buf, block.length, /* owned = */ 1);
     if (retval != SB_SUCCESS) {
         sb_free(buf);
         return retval;
     }
 
-    sb_i_trajectory_take_ownership(trajectory);
+    /* ownership of 'buf' taken by the trajectory */
 
     return SB_SUCCESS;
 }
 
 sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
 {
-    trajectory->buffer = buf;
-    trajectory->buffer_length = nbytes;
-    trajectory->owner = 0;
-
-    trajectory->header_length = sb_i_trajectory_parse_header(trajectory);
-
-    return SB_SUCCESS;
+    return sb_i_trajectory_init_from_bytes(trajectory, buf, nbytes, /* owned = */ 0);
 }
 
 sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory)
 {
-    trajectory->buffer = 0;
-    trajectory->buffer_length = 0;
-    trajectory->owner = 0;
+    SB_CHECK(sb_buffer_init(&trajectory->buffer, 0));
 
     memset(&trajectory->start, 0, sizeof(trajectory->start));
 
@@ -357,7 +358,7 @@ float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t* trajectory, 
 
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory)
 {
-    uint8_t* buf = trajectory->buffer;
+    uint8_t* buf = SB_BUFFER(trajectory->buffer);
     size_t offset;
 
     assert(buf != 0);
@@ -374,14 +375,9 @@ static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory)
     return offset; /* size of the header */
 }
 
-static void sb_i_trajectory_take_ownership(sb_trajectory_t* trajectory)
-{
-    trajectory->owner = 1;
-}
-
 static float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size_t* offset)
 {
-    int16_t angle = sb_parse_int16(trajectory->buffer, offset) % 3600;
+    int16_t angle = sb_parse_int16(SB_BUFFER(trajectory->buffer), offset) % 3600;
 
     if (angle < 0) {
         angle += 3600;
@@ -392,7 +388,7 @@ static float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size
 
 static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory, size_t* offset)
 {
-    return sb_parse_int16(trajectory->buffer, offset) * trajectory->scale;
+    return sb_parse_int16(SB_BUFFER(trajectory->buffer), offset) * trajectory->scale;
 }
 
 /* ************************************************************************** */
@@ -581,8 +577,8 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     sb_vector3_with_yaw_t start)
 {
     const sb_trajectory_t* trajectory = player->trajectory;
-    uint8_t* buf = trajectory->buffer;
-    size_t buffer_length = trajectory->buffer_length;
+    uint8_t* buf = SB_BUFFER(trajectory->buffer);
+    size_t buffer_length = sb_buffer_size(&trajectory->buffer);
     sb_trajectory_segment_t* data = &player->current_segment.data;
     sb_poly_t* poly;
     float coords[8];
@@ -616,7 +612,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     header = buf[offset++];
 
     /* Parse duration and calculate end time */
-    data->duration_msec = sb_parse_uint16(trajectory->buffer, &offset);
+    data->duration_msec = sb_parse_uint16(SB_BUFFER(trajectory->buffer), &offset);
     data->duration_sec = data->duration_msec / 1000.0f;
     data->end_time_msec = data->start_time_msec + data->duration_msec;
     data->end_time_sec = data->end_time_msec / 1000.0f;

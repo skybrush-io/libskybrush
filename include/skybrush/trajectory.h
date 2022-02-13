@@ -31,6 +31,7 @@
 #include <stdlib.h>
 
 #include <skybrush/basic_types.h>
+#include <skybrush/buffer.h>
 #include <skybrush/error.h>
 #include <skybrush/poly.h>
 
@@ -120,9 +121,7 @@ typedef struct
  * mission.
  */
 typedef struct sb_trajectory_s {
-    uint8_t* buffer; /**< Pointer to the buffer holding the trajectory */
-    size_t buffer_length; /**< Number of bytes in the buffer */
-    sb_bool_t owner; /**< Whether the object owns the buffer */
+    sb_buffer_t buffer; /**< The buffer holding the trajectory */
 
     sb_vector3_with_yaw_t start; /**< The start coordinate of the trajectory */
     float scale; /**< Scaling factor for the coordinates */
@@ -184,7 +183,7 @@ void sb_trajectory_destroy(sb_trajectory_t* trajectory);
  * Clears the trajectory object and removes all segments from it. Also releases
  * any memory that the trajectory owns.
  */
-void sb_trajectory_clear(sb_trajectory_t* trajectory);
+sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
 
 /**
  * Returns the axis-aligned bounding box of the trajectory.

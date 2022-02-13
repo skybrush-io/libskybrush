@@ -57,6 +57,36 @@ void loadFixture(const char* fname)
     fclose(fp);
 }
 
+void loadFixtureInMemory(const char* fname)
+{
+    FILE* fp;
+    uint8_t* buf;
+    ssize_t num_bytes;
+
+    fp = fopen(fname, "rb");
+    if (fp == 0) {
+        abort();
+    }
+
+    buf = (uint8_t*)malloc(65536);
+    if (buf == 0) {
+        abort();
+    }
+
+    num_bytes = fread(buf, sizeof(uint8_t), 65536, fp);
+    if (ferror(fp)) {
+        abort();
+    }
+
+    fclose(fp);
+
+    sb_trajectory_init_from_binary_file_in_memory(&trajectory, buf, num_bytes);
+
+    /* sb_trajectory_init_from_binary_file_in_memory() copied the data so we
+     * must free it */
+    free(buf);
+}
+
 void closeFixture()
 {
     sb_trajectory_destroy(&trajectory);
@@ -90,6 +120,21 @@ void test_trajectory_is_really_empty()
 
 void test_clear()
 {
+    sb_trajectory_clear(&trajectory);
+    test_trajectory_is_really_empty();
+}
+
+void test_clear_view()
+{
+    uint8_t buf[] = {
+        0x01, 0x64, 0x00, 0x64, 0x00, 0x64, 0x00, 0x00, 0x00,
+        0x10, 0xe8, 0x03, 0xc8, 0x00
+    };
+
+    closeFixture();
+
+    sb_trajectory_init_from_buffer(&trajectory, buf, sizeof(buf) / sizeof(buf)[0]);
+
     sb_trajectory_clear(&trajectory);
     test_trajectory_is_really_empty();
 }
@@ -132,6 +177,25 @@ void test_get_total_duration()
 void test_get_axis_aligned_bounding_box()
 {
     sb_bounding_box_t box;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(&trajectory, &box));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.x.min);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.x.max);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.y.min);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.y.max);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.z.min);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.z.max);
+
+    /* Check that the function does not freak out if box == NULL */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(&trajectory, NULL));
+}
+
+void test_get_axis_aligned_bounding_box_from_trajectory_in_memory()
+{
+    sb_bounding_box_t box;
+
+    closeFixture();
+    loadFixtureInMemory("fixtures/test.skyb");
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(&trajectory, &box));
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.x.min);
@@ -225,10 +289,12 @@ int main(int argc, char* argv[])
     /* basic tests with test.skyb */
     RUN_TEST(test_init_empty);
     RUN_TEST(test_clear);
+    RUN_TEST(test_clear_view);
     RUN_TEST(test_get_start_position);
     RUN_TEST(test_get_end_position);
     RUN_TEST(test_get_total_duration);
     RUN_TEST(test_get_axis_aligned_bounding_box);
+    RUN_TEST(test_get_axis_aligned_bounding_box_from_trajectory_in_memory);
     RUN_TEST(test_propose_takeoff_time);
     RUN_TEST(test_propose_landing_time);
 
