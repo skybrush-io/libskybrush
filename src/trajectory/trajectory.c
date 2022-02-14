@@ -85,12 +85,19 @@ static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
 static sb_error_t sb_i_trajectory_player_find_latest_time_above_altitude(
     sb_trajectory_player_t* player, float altitude, float* time);
 
+/**
+ * Destroys a trajectory object and releases all memory that it owns.
+ */
 void sb_trajectory_destroy(sb_trajectory_t* trajectory)
 {
     sb_trajectory_clear(trajectory); /* will not fail here */
     sb_buffer_destroy(trajectory->buffer);
 }
 
+/**
+ * Clears the trajectory object and removes all segments from it. Also releases
+ * any memory that the trajectory owns.
+ */
 sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory)
 {
     if (sb_buffer_is_view(&trajectory->buffer)) {
@@ -109,6 +116,17 @@ sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory)
     return SB_SUCCESS;
 }
 
+/**
+ * Initializes a trajectory object from the contents of a Skybrush file in
+ * binary format.
+ *
+ * \param trajectory  the trajectory to initialize
+ * \param fd  handle to the low-level file object to initialize the trajectory from
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the file did not contain a trajectory block,
+ *         \c SB_EREAD for read errors
+ */
 sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int fd)
 {
     sb_binary_file_parser_t parser;
@@ -121,6 +139,17 @@ sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int 
     return retval;
 }
 
+/**
+ * Initializes a trajectory object from the contents of a Skybrush file in
+ * binary format, already loaded into memory.
+ *
+ * \param trajectory  the trajectory to initialize
+ * \param buf   the buffer holding the loaded Skybrush file in binary format
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the memory block did not contain a trajectory
+ */
 sb_error_t sb_trajectory_init_from_binary_file_in_memory(
     sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
 {
@@ -177,11 +206,24 @@ static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, 
     return SB_SUCCESS;
 }
 
+/**
+ * Initializes a trajectory object from the contents of a memory buffer.
+ *
+ * \param trajectory  the trajectory to initialize
+ * \param buf   the buffer holding the encoded trajectory object
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain a trajectory
+ */
 sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
 {
     return sb_i_trajectory_init_from_bytes(trajectory, buf, nbytes, /* owned = */ 0);
 }
 
+/**
+ * Initializes an empty trajectory.
+ */
 sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory)
 {
     SB_CHECK(sb_buffer_init(&trajectory->buffer, 0));
@@ -195,6 +237,9 @@ sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory)
     return SB_SUCCESS;
 }
 
+/**
+ * Returns the axis-aligned bounding box of the trajectory.
+ */
 sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
     const sb_trajectory_t* trajectory, sb_bounding_box_t* result)
 {
@@ -238,6 +283,9 @@ sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
     return SB_SUCCESS;
 }
 
+/**
+ * Returns the end position of the trajectory.
+ */
 sb_error_t sb_trajectory_get_end_position(
     const sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* result)
 {
@@ -251,6 +299,9 @@ sb_error_t sb_trajectory_get_end_position(
     return retval;
 }
 
+/**
+ * Returns the start position of the trajectory.
+ */
 sb_error_t sb_trajectory_get_start_position(
     const sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* result)
 {
@@ -264,6 +315,9 @@ sb_error_t sb_trajectory_get_start_position(
     return retval;
 }
 
+/**
+ * Returns the total duration of the trajectory, in milliseconds.
+ */
 uint32_t sb_trajectory_get_total_duration_msec(const sb_trajectory_t* trajectory)
 {
     uint32_t duration = 0;
@@ -282,11 +336,30 @@ uint32_t sb_trajectory_get_total_duration_msec(const sb_trajectory_t* trajectory
     return duration;
 }
 
+/**
+ * Returns the total duration of the trajectory, in seconds.
+ */
 float sb_trajectory_get_total_duration_sec(const sb_trajectory_t* trajectory)
 {
     return sb_trajectory_get_total_duration_msec(trajectory) / 1000.0f;
 }
 
+/**
+ * Proposes a takeoff time for the trajectory.
+ *
+ * The function assumes that the trajectory is specified in some common
+ * coordinate system, the drone is initially placed at the first point of the
+ * trajectory and it can take off by moving along the Z axis with a constant
+ * speed until it reaches a specified altitude _relative to the first point_
+ * of the trajectory.
+ *
+ * \param  trajectory  the trajectory to process
+ * \param  min_ascent  the minimum ascent to perform during the takeoff
+ * \param  speed       the assumed speed of the takeoff, in Z units per second
+ * \return the proposed time when the takeoff command has to be sent to the
+ *         drone, or infinity if the trajectory never reaches an altitude that
+ *         is above the starting point by the given ascent
+ */
 float sb_trajectory_propose_takeoff_time_sec(
     const sb_trajectory_t* trajectory, float min_ascent, float speed)
 {
@@ -321,6 +394,21 @@ float sb_trajectory_propose_takeoff_time_sec(
     return isfinite(result) ? result - (min_ascent / speed) : INFINITY;
 }
 
+/**
+ * Proposes a landing time for the trajectory.
+ *
+ * The function assumes that the trajectory is specified in some common
+ * coordinate system, the drone must land at the last point of the trajectory,
+ * it can land by moving downwards along the Z axis with a constant speed and
+ * it must start landing above a specified altitude _relative to the last point_
+ * of the trajectory.
+ *
+ * \param  trajectory  the trajectory to process
+ * \param  min_descent the minimum descent to perform during the landing
+ * \return the proposed time when the landing command has to be sent to the
+ *         drone, or negative infinity if the trajectory never reaches an
+ *         altitude that is above the last point by the given descent
+ */
 float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t* trajectory, float min_descent)
 {
     sb_trajectory_player_t player;
@@ -354,6 +442,9 @@ float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t* trajectory, 
     return isfinite(result) ? result : -INFINITY;
 }
 
+/**
+ * Returns whether the trajectory is empty (i.e. has no start position yet).
+ */
 sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
 {
     return sb_buffer_size(&trajectory->buffer) == 0;
@@ -398,6 +489,9 @@ static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory,
 
 /* ************************************************************************** */
 
+/**
+ * Initializes a trajectory player that plays the given trajectory.
+ */
 sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, const sb_trajectory_t* trajectory)
 {
     if (trajectory == 0) {
@@ -413,11 +507,18 @@ sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, const sb_tr
     return SB_SUCCESS;
 }
 
+/**
+ * Destroys a trajectory player object and releases all memory that it owns.
+ */
 void sb_trajectory_player_destroy(sb_trajectory_player_t* player)
 {
     memset(player, 0, sizeof(sb_trajectory_player_t));
 }
 
+/**
+ * Builds the next segment in the trajectory player. Used to move on to the next
+ * segment during an iteration over the segments of the trajectory.
+ */
 sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* player)
 {
     sb_trajectory_segment_t* segment = &player->current_segment.data;
@@ -429,6 +530,9 @@ sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* playe
         sb_poly_4d_eval(&segment->poly, 1));
 }
 
+/**
+ * Dumps the details of the current trajectory segment for debugging purposes.
+ */
 void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* player)
 {
 #ifdef LIBSKYBRUSH_DEBUG
@@ -463,12 +567,19 @@ void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* pla
 #endif
 }
 
+/**
+ * Returns a pointer to the current trajectory segment of thr trajectory player.
+ */
 const sb_trajectory_segment_t* sb_trajectory_player_get_current_segment(
     const sb_trajectory_player_t* player)
 {
     return &player->current_segment.data;
 }
 
+/**
+ * Returns the position on the trajectory associated to the player at the given
+ * time instant.
+ */
 sb_error_t sb_trajectory_player_get_position_at(sb_trajectory_player_t* player, float t, sb_vector3_with_yaw_t* result)
 {
     float rel_t;
@@ -482,6 +593,10 @@ sb_error_t sb_trajectory_player_get_position_at(sb_trajectory_player_t* player, 
     return SB_SUCCESS;
 }
 
+/**
+ * Returns the velocity on the trajectory associated to the player at the given
+ * time instant.
+ */
 sb_error_t sb_trajectory_player_get_velocity_at(sb_trajectory_player_t* player, float t, sb_vector3_with_yaw_t* result)
 {
     float rel_t;
@@ -495,6 +610,10 @@ sb_error_t sb_trajectory_player_get_velocity_at(sb_trajectory_player_t* player, 
     return SB_SUCCESS;
 }
 
+/**
+ * Returns the acceleration on the trajectory associated to the player at the given
+ * time instant.
+ */
 sb_error_t sb_trajectory_player_get_acceleration_at(sb_trajectory_player_t* player, float t, sb_vector3_with_yaw_t* result)
 {
     float rel_t;
@@ -508,6 +627,9 @@ sb_error_t sb_trajectory_player_get_acceleration_at(sb_trajectory_player_t* play
     return SB_SUCCESS;
 }
 
+/**
+ * Returns the total duration of the trajectory associated to the player, in seconds.
+ */
 sb_error_t sb_trajectory_player_get_total_duration_msec(
     sb_trajectory_player_t* player, uint32_t* duration)
 {
@@ -527,6 +649,10 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
     return SB_SUCCESS;
 }
 
+/**
+ * Returns whether the trajectory player has more segments to play. Used to detect
+ * the end of iteration when iterating over the segments of the trajectory.
+ */
 sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t* player)
 {
     return player->current_segment.length > 0;
