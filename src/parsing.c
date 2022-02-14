@@ -20,7 +20,7 @@
 #include "parsing.h"
 
 /**
- * Parses a signed 16-bit litle-endian integer from a buffer.
+ * Parses a signed 16-bit little-endian integer from a buffer.
  *
  * The offset is automatically advanced after reading the integer.
  */
@@ -30,7 +30,7 @@ int16_t sb_parse_int16(const uint8_t* buf, size_t* offset)
 }
 
 /**
- * Parses a signed 32-bit litle-endian integer from a buffer.
+ * Parses a signed 32-bit little-endian integer from a buffer.
  *
  * The offset is automatically advanced after reading the integer.
  */
@@ -40,7 +40,7 @@ int32_t sb_parse_int32(const uint8_t* buf, size_t* offset)
 }
 
 /**
- * Parses an unsigned 16-bit litle-endian integer from a buffer.
+ * Parses an unsigned 16-bit little-endian integer from a buffer.
  *
  * The offset is automatically advanced after reading the integer.
  */
@@ -57,7 +57,7 @@ uint16_t sb_parse_uint16(const uint8_t* buf, size_t* offset)
 }
 
 /**
- * Parses an unsigned 32-bit litle-endian integer from a buffer.
+ * Parses an unsigned 32-bit little-endian integer from a buffer.
  *
  * The offset is automatically advanced after reading the integer.
  */
@@ -142,4 +142,57 @@ sb_error_t sb_parse_varuint32(const uint8_t* buf, const size_t num_bytes, size_t
         byte = buf[*offset];
         (*offset)++;
     }
+}
+
+/**
+ * Writes a signed 16-bit little-endian integer to a buffer.
+ *
+ * The offset is automatically advanced after writing the integer.
+ */
+void sb_write_int16(uint8_t* buf, size_t* offset, int16_t value)
+{
+    sb_write_uint16(buf, offset, value);
+}
+
+/**
+ * Writes a signed 32-bit little-endian integer to a buffer.
+ *
+ * The offset is automatically advanced after writing the integer.
+ */
+void sb_write_int32(uint8_t* buf, size_t* offset, int32_t value)
+{
+    sb_write_uint32(buf, offset, value);
+}
+
+/**
+ * Writes an unsigned 16-bit little-endian integer to a buffer.
+ *
+ * The offset is automatically advanced after writing the integer.
+ */
+void sb_write_uint16(uint8_t* buf, size_t* offset, uint16_t value)
+{
+    buf[*offset] = value & 0xff;
+    buf[(*offset) + 1] = value >> 8;
+    *offset += 2;
+}
+
+/**
+ * Writes an unsigned 16-bit little-endian integer to a buffer.
+ *
+ * The offset is automatically advanced after writing the integer.
+ */
+void sb_write_uint32(uint8_t* buf, size_t* offset, uint32_t value)
+{
+    buf[*offset] = value & 0xff;
+    value >>= 8;
+
+    buf[(*offset) + 1] = value & 0xff;
+    value >>= 8;
+
+    buf[(*offset) + 2] = value & 0xff;
+    value >>= 8;
+
+    buf[(*offset) + 3] = value & 0xff;
+
+    *offset += 4;
 }

@@ -29,8 +29,13 @@ __BEGIN_DECLS
 
 /**
  * @file parsing.h
- * @brief Basic parsing functions.
+ * @brief Basic parsing and formatting functions.
  */
+
+void sb_write_int16(uint8_t* buf, size_t* offset, int16_t value);
+void sb_write_uint16(uint8_t* buf, size_t* offset, uint16_t value);
+void sb_write_int32(uint8_t* buf, size_t* offset, int32_t value);
+void sb_write_uint32(uint8_t* buf, size_t* offset, uint32_t value);
 
 int16_t sb_parse_int16(const uint8_t* buf, size_t* offset);
 uint16_t sb_parse_uint16(const uint8_t* buf, size_t* offset);

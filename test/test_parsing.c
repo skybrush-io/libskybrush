@@ -19,6 +19,7 @@
 
 #include "../src/parsing.h"
 #include <float.h>
+#include <string.h>
 
 #include "unity.h"
 
@@ -28,6 +29,44 @@ void setUp()
 
 void tearDown()
 {
+}
+
+void test_format_int16()
+{
+    const uint8_t expected[8] = { 0x01, 0x02, 0x03, 0x04, 0xff, 0xfe, 0x00, 0x00 };
+    uint8_t buf[8];
+    size_t offset;
+
+    memset(buf, 0, sizeof(buf));
+
+    offset = 0;
+    sb_write_int16(buf, &offset, 0x0201);
+    TEST_ASSERT_EQUAL(2, offset);
+    sb_write_int16(buf, &offset, 0x0403);
+    TEST_ASSERT_EQUAL(4, offset);
+    sb_write_int16(buf, &offset, -257);
+    TEST_ASSERT_EQUAL(6, offset);
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, sizeof(buf));
+}
+
+void test_format_uint16()
+{
+    const uint8_t expected[8] = { 0x01, 0x02, 0x03, 0x04, 0xff, 0xfe, 0x00, 0x00 };
+    uint8_t buf[8];
+    size_t offset;
+
+    memset(buf, 0, sizeof(buf));
+
+    offset = 0;
+    sb_write_uint16(buf, &offset, 0x0201);
+    TEST_ASSERT_EQUAL(2, offset);
+    sb_write_uint16(buf, &offset, 0x0403);
+    TEST_ASSERT_EQUAL(4, offset);
+    sb_write_uint16(buf, &offset, 0xfeff);
+    TEST_ASSERT_EQUAL(6, offset);
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, sizeof(buf));
 }
 
 void test_parse_int16()
@@ -70,6 +109,40 @@ void test_parse_uint16()
 
     TEST_ASSERT_EQUAL(0xfeff, sb_parse_uint16(buf, &offset));
     TEST_ASSERT_EQUAL(7, offset);
+}
+
+void test_format_int32()
+{
+    const uint8_t expected[10] = { 0x01, 0x02, 0x03, 0x04, 0x04, 0x05, 0xff, 0xfe, 0x00, 0x00 };
+    uint8_t buf[8];
+    size_t offset;
+
+    memset(buf, 0, sizeof(buf));
+
+    offset = 0;
+    sb_write_int32(buf, &offset, 0x04030201);
+    TEST_ASSERT_EQUAL(4, offset);
+    sb_write_int32(buf, &offset, -16841468);
+    TEST_ASSERT_EQUAL(8, offset);
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, sizeof(buf));
+}
+
+void test_format_uint32()
+{
+    const uint8_t expected[10] = { 0x01, 0x02, 0x03, 0x04, 0x04, 0x05, 0xff, 0xfe, 0x00, 0x00 };
+    uint8_t buf[8];
+    size_t offset;
+
+    memset(buf, 0, sizeof(buf));
+
+    offset = 0;
+    sb_write_int32(buf, &offset, 0x04030201);
+    TEST_ASSERT_EQUAL(4, offset);
+    sb_write_int32(buf, &offset, 0xfeff0504);
+    TEST_ASSERT_EQUAL(8, offset);
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, sizeof(buf));
 }
 
 void test_parse_int32()
@@ -175,6 +248,11 @@ int main(int argc, char* argv[])
     RUN_TEST(test_parse_uint16);
     RUN_TEST(test_parse_uint32);
     RUN_TEST(test_parse_varuint32);
+
+    RUN_TEST(test_format_int16);
+    RUN_TEST(test_format_uint16);
+    RUN_TEST(test_format_int32);
+    RUN_TEST(test_format_uint32);
 
     return UNITY_END();
 }
