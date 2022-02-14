@@ -65,6 +65,10 @@ typedef enum {
     SB_YAW_POLY7D = 0xC0,
 } sb_trajectory_segment_format_flags_t;
 
+typedef enum {
+    SB_TRAJECTORY_USE_YAW = 1
+} sb_trajectory_flags_t;
+
 /**
  * Structure representing a single trajectory segment in a Skybrush mission.
  */
@@ -137,7 +141,6 @@ sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t* trajectory,
 sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory);
 void sb_trajectory_destroy(sb_trajectory_t* trajectory);
 
-sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
 sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory);
 sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
     const sb_trajectory_t* trajectory, sb_bounding_box_t* result);
@@ -151,6 +154,13 @@ float sb_trajectory_propose_takeoff_time_sec(
     const sb_trajectory_t* trajectory, float min_ascent, float speed);
 float sb_trajectory_propose_landing_time_sec(
     const sb_trajectory_t* trajectory, float min_descent);
+
+sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
+sb_error_t sb_trajectory_append_header(
+    sb_trajectory_t* trajectory, const sb_vector3_with_yaw_t* start,
+    uint8_t scale, sb_bool_t flags);
+sb_error_t sb_trajectory_append_line_segment(
+    sb_trajectory_t* trajectory, const sb_vector3_with_yaw_t* start);
 
 /**
  * Structure representing a trajectory player that allows us to query the
