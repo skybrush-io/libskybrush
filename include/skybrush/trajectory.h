@@ -133,11 +133,17 @@ typedef struct sb_trajectory_s {
     size_t header_length; /**< Number of bytes in the header of the buffer */
 } sb_trajectory_t;
 
+struct sb_trajectory_builder_s;
+
 sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int fd);
 sb_error_t sb_trajectory_init_from_binary_file_in_memory(
     sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes);
 sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t* trajectory,
     uint8_t* buf, size_t nbytes);
+sb_error_t sb_trajectory_init_from_bytes(sb_trajectory_t* trajectory,
+    uint8_t* buf, size_t nbytes);
+sb_error_t sb_trajectory_init_from_builder(
+    sb_trajectory_t* trajectory, struct sb_trajectory_builder_s* builder);
 sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory);
 void sb_trajectory_destroy(sb_trajectory_t* trajectory);
 
@@ -156,11 +162,8 @@ float sb_trajectory_propose_landing_time_sec(
     const sb_trajectory_t* trajectory, float min_descent);
 
 sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
-sb_error_t sb_trajectory_append_header(
-    sb_trajectory_t* trajectory, const sb_vector3_with_yaw_t* start,
-    uint8_t scale, sb_bool_t flags);
-sb_error_t sb_trajectory_append_line_segment(
-    sb_trajectory_t* trajectory, const sb_vector3_with_yaw_t* start);
+
+/* ************************************************************************* */
 
 /**
  * Structure representing a trajectory player that allows us to query the
@@ -178,8 +181,6 @@ typedef struct sb_trajectory_player_s {
     } current_segment;
 } sb_trajectory_player_t;
 
-/* ************************************************************************* */
-
 sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, const sb_trajectory_t* trajectory);
 void sb_trajectory_player_destroy(sb_trajectory_player_t* player);
 sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* player);
@@ -195,6 +196,29 @@ sb_error_t sb_trajectory_player_get_acceleration_at(
 sb_error_t sb_trajectory_player_get_total_duration_msec(
     sb_trajectory_player_t* player, uint32_t* duration);
 sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t* player);
+
+/* ************************************************************************* */
+
+/**
+ * Structure that allows one to build a new trajectory from scratch.
+ */
+typedef struct sb_trajectory_builder_s {
+    sb_buffer_t buffer; /**< Buffer holding the binary representation of the trajectory being built */
+    sb_vector3_with_yaw_t last_position; /**< Last position in the trajectory */
+    float scale; /**< Scaling factor for the coordinates */
+} sb_trajectory_builder_t;
+
+sb_error_t sb_trajectory_builder_init(
+    sb_trajectory_builder_t* builder, uint8_t scale, uint8_t flags);
+void sb_trajectory_builder_destroy(sb_trajectory_builder_t* builder);
+
+sb_error_t sb_trajectory_builder_set_start_position(
+    sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t start);
+sb_error_t sb_trajectory_builder_append_line(
+    sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t target,
+    uint32_t duration_msec);
+sb_error_t sb_trajectory_builder_hold_position_for(
+    sb_trajectory_builder_t* builder, uint32_t duration_msec);
 
 __END_DECLS
 

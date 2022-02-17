@@ -85,8 +85,6 @@ static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
 static sb_error_t sb_i_trajectory_player_find_latest_time_above_altitude(
     sb_trajectory_player_t* player, float altitude, float* time);
 
-static sb_error_t sb_i_write_coordinate(uint8_t* buf, size_t* offset, float coordinate, uint8_t scale);
-
 /**
  * Destroys a trajectory object and releases all memory that it owns.
  */
@@ -221,6 +219,22 @@ static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, 
 sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
 {
     return sb_i_trajectory_init_from_bytes(trajectory, buf, nbytes, /* owned = */ 0);
+}
+
+/**
+ * Initializes a trajectory object from the contents of a memory buffer, taking
+ * ownership.
+ *
+ * \param trajectory  the trajectory to initialize
+ * \param buf   the buffer holding the encoded trajectory object
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain a trajectory
+ */
+sb_error_t sb_trajectory_init_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
+{
+    return sb_i_trajectory_init_from_bytes(trajectory, buf, nbytes, /* owned = */ 1);
 }
 
 /**
@@ -452,50 +466,6 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
     return sb_buffer_size(&trajectory->buffer) == 0;
 }
 
-/**
- * @brief Appends the header block to the trajectory.
- *
- * This function must be called \em only if the trajectory is empty.
- *
- * @param trajectory  the trajectory to modify
- * @param start       the start position of the trajectory
- * @param scale       the scale factor of the trajectory; coordinates in the
- *        trajectory (including the start position) will be divided by this
- *        scaling factor before storing them and will be multiplied back when
- *        reading the coordinates. The maximum supported value is 127.
- * @param flags       whether the yaw coordinates of the trajectory are relevant
- * @return \c SB_FAILURE if the trajectory is not empty, \c SB_EINVAL if the
- *         scale is too large, \c SB_SUCCESS otherwise
- */
-sb_error_t sb_trajectory_append_header(
-    sb_trajectory_t* trajectory, const sb_vector3_with_yaw_t* start,
-    uint8_t scale, sb_bool_t flags)
-{
-    uint8_t header[9];
-    size_t offset;
-
-    if (!sb_trajectory_is_empty(trajectory)) {
-        return SB_FAILURE;
-    }
-
-    if (scale > 127) {
-        return SB_EINVAL;
-    }
-
-    header[0] = scale;
-    if (flags & SB_TRAJECTORY_USE_YAW) {
-        header[0] |= 128;
-    }
-
-    offset = 1;
-    SB_CHECK(sb_i_write_coordinate(header, &offset, start->x, scale));
-    SB_CHECK(sb_i_write_coordinate(header, &offset, start->y, scale));
-    SB_CHECK(sb_i_write_coordinate(header, &offset, start->z, scale));
-    SB_CHECK(sb_i_write_coordinate(header, &offset, start->yaw, scale));
-
-    return SB_SUCCESS;
-}
-
 /* ************************************************************************** */
 
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory)
@@ -531,18 +501,6 @@ static float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size
 static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory, size_t* offset)
 {
     return sb_parse_int16(SB_BUFFER(trajectory->buffer), offset) * trajectory->scale;
-}
-
-static sb_error_t sb_i_write_coordinate(uint8_t* buf, size_t* offset, float coordinate, uint8_t scale)
-{
-    float scaled_coordinate = floor(coordinate / scale);
-    if (scaled_coordinate < INT16_MIN || scaled_coordinate > INT16_MAX) {
-        return SB_EINVAL;
-    }
-
-    sb_write_int16(buf, offset, scaled_coordinate);
-
-    return SB_SUCCESS;
 }
 
 /* ************************************************************************** */
@@ -588,6 +546,8 @@ sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* playe
         sb_poly_4d_eval(&segment->poly, 1));
 }
 
+/* LCOV_EXCL_START */
+
 /**
  * Dumps the details of the current trajectory segment for debugging purposes.
  */
@@ -624,6 +584,8 @@ void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* pla
         pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z, acc.x, acc.y, acc.z);
 #endif
 }
+
+/* LCOV_EXCL_STOP */
 
 /**
  * Returns a pointer to the current trajectory segment of thr trajectory player.
@@ -906,7 +868,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     coords[0] = start.yaw;
     num_coords++;
     for (i = 1; i < num_coords; i++) {
-        coords[i + 1] = sb_i_trajectory_parse_angle(trajectory, &offset);
+        coords[i] = sb_i_trajectory_parse_angle(trajectory, &offset);
     }
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 

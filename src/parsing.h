@@ -17,8 +17,8 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef FORMATS_PARSING_H
-#define FORMATS_PARSING_H
+#ifndef PARSING_H
+#define PARSING_H
 
 #include <skybrush/decls.h>
 #include <skybrush/error.h>

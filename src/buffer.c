@@ -257,6 +257,22 @@ sb_error_t sb_buffer_concat(sb_buffer_t* buf, const sb_buffer_t* other)
     return sb_buffer_append_bytes(buf, other->stor_begin, sb_buffer_size(other));
 }
 
+/**
+ * @brief Extends the buffer with the given number of zero bytes at the end,
+ * growing the buffer as needed.
+ *
+ * @param buf  the buffer to extend
+ * @param num_zeros  the number of zero bytes to append to the end of the buffer
+ * @return error code
+ */
+sb_error_t sb_buffer_extend_with_zeros(sb_buffer_t* buf, size_t num_zeros)
+{
+    SB_CHECK(sb_i_buffer_ensure_free_space(buf, sb_buffer_size(buf) + num_zeros));
+    memset(buf->end, 0, num_zeros);
+    buf->end += num_zeros;
+    return SB_SUCCESS;
+}
+
 /* ************************************************************************* */
 
 /**

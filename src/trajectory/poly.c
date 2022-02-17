@@ -357,10 +357,12 @@ static sb_error_t sb_i_poly_solve_3d(const sb_poly_t* poly, float* roots, uint8_
     return SB_SUCCESS;
 }
 
+/* LCOV_EXCL_START */
 static sb_error_t sb_i_poly_solve_generic(const sb_poly_t* poly, float* roots, uint8_t* num_roots)
 {
     return SB_EUNIMPLEMENTED;
 }
+/* LCOV_EXCL_STOP */
 
 #undef ZERO
 

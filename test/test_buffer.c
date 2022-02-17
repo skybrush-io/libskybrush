@@ -255,6 +255,28 @@ void test_append_zero_length()
     sb_buffer_destroy(&buf);
 }
 
+void test_extend_with_zeros()
+{
+    sb_buffer_t buf;
+    const char* str = "hello world";
+    size_t i;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init(&buf, 0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_append_bytes(&buf, str, strlen(str)));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_extend_with_zeros(&buf, 0));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&buf));
+    TEST_ASSERT_EQUAL(0, memcmp(str, SB_BUFFER(buf), strlen(str)));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_extend_with_zeros(&buf, 10));
+    TEST_ASSERT_EQUAL(strlen(str) + 10, sb_buffer_size(&buf));
+    TEST_ASSERT_EQUAL(0, strcmp(str, (char*)SB_BUFFER(buf)));
+
+    for (i = strlen(str); i < sb_buffer_size(&buf); i++) {
+        TEST_ASSERT_EQUAL(0, SB_BUFFER(buf)[i]);
+    }
+}
+
 void test_init_view()
 {
     sb_buffer_t buf;
@@ -318,6 +340,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_fill);
     RUN_TEST(test_append);
     RUN_TEST(test_append_zero_length);
+    RUN_TEST(test_extend_with_zeros);
 
     RUN_TEST(test_init_view);
     RUN_TEST(test_init_view_cannot_grow_or_shrink);

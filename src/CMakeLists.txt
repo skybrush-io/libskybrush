@@ -19,6 +19,7 @@ add_library(
 
     rth_plan/rth_plan.c
 
+    trajectory/builder.c
     trajectory/poly.c
     trajectory/trajectory.c
 )
