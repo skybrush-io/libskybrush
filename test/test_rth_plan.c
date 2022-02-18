@@ -118,8 +118,22 @@ void test_evaluate_at()
 {
     sb_rth_plan_entry_t entry;
 
-    /* Land automatically for negative time */
-    for (int i = -20; i < 0; i++) {
+    /* RTH plan from file has the following entries:
+     *
+     * T = 0: land
+     * T = 15: go to (30m, 40m) in 50s with post-delay=5s
+     * T = 45: go to (-40m, -30m) in 50s with pre-delay=2s
+     * T = 65: go to (30m, 40m) in 30s
+     * T = 80: same as previous entry
+     * T = 105: land
+     *
+     * When evaluating the RTH plan at a given time instant t, the entry that is
+     * in effect is the entry at t, or if there is no entry at t, then the
+     * _next_ entry in the list
+     */
+
+    /* Land automatically for negative time, up to and including T=0 */
+    for (int i = -20; i <= 0; i++) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
@@ -127,17 +141,9 @@ void test_evaluate_at()
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
     }
 
-    /* Command is "land" between T=0 and T=15 (exclusive) */
-    for (int i = 0; i < 150; i++) {
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
-        TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
-        TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
-        TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
-        TEST_ASSERT_EQUAL(0, entry.duration_sec);
-    }
-
-    /* Command is "go to (30m, 40m) in 50s with post-delay=5s" between T=15 and T=45 (exclusive) */
-    for (int i = 150; i < 450; i += 2) {
+    /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
+     * to T=15 (inclusive) */
+    for (int i = 2; i <= 150; i += 2) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
@@ -147,8 +153,9 @@ void test_evaluate_at()
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
     }
 
-    /* Command is "go to (-40m, -30m) in 50s with pre-delay=2s" between T=45 and T=65 (exclusive) */
-    for (int i = 450; i < 650; i += 5) {
+    /* Command is "go to (-40m, -30m) in 50s with pre-delay=2s" from T=15
+     * (exclusive) to T=45 (inclusive) */
+    for (int i = 155; i <= 450; i += 5) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(-40000, entry.target.x); /* target is in [mm] */
@@ -158,19 +165,8 @@ void test_evaluate_at()
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
     }
 
-    /* Command is "go to (30m, 40m) in 30s" between T=65 and T=80 (exclusive) */
-    for (int i = 650; i < 800; i += 5) {
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
-        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
-        TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
-        TEST_ASSERT_EQUAL(40000, entry.target.y);
-        TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
-        TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
-        TEST_ASSERT_EQUAL(30, entry.duration_sec);
-    }
-
-    /* Command is "same as previous" (i.e. "go to (30m, 40m) in 30s") between T=80 and T=105 (exclusive) */
-    for (int i = 800; i < 1050; i += 5) {
+    /* Command is "go to (30m, 40m) in 30s" from T=45 (exclusive) to T=80 (inclusive) */
+    for (int i = 455; i <= 800; i += 5) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
@@ -181,7 +177,7 @@ void test_evaluate_at()
     }
 
     /* Command is "land" afterwards */
-    for (int i = 1050; i < 1200; i += 10) {
+    for (int i = 810; i <= 1200; i += 10) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(0, entry.target.x);
@@ -207,9 +203,9 @@ void test_plan_duration_too_large()
         0x60, 0xF0, 0x48, 0xF4,
         /* Six entries */
         0x06, 0x00,
-        /* Entry 1 */
+        /* Entry 1: T = 0, land */
         0x10, 0x00,
-        /* Entry 2 */
+        /* Entry 2: T = 3s */
         0x21, 0x03, 0x00, 0x32, 0x05,
         /* Entry 3, with invalid duration (too long) */
         0x22, 0xff, 0xff, 0xff, 0xff, 0x0f, 0x01, 0x32, 0x02,
@@ -224,8 +220,8 @@ void test_plan_duration_too_large()
     closeFixture(); /* was created in setUp() */
     sb_rth_plan_init_from_binary_file_in_memory(&plan, buf, sizeof(buf));
 
-    /* Command is "land" between T=0 and T=3 (exclusive) */
-    for (int i = 0; i < 30; i++) {
+    /* Command is "land" until T=0 */
+    for (int i = -20; i <= 0; i++) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
@@ -233,8 +229,20 @@ void test_plan_duration_too_large()
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
     }
 
+    /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
+     * to T=3 (inclusive) */
+    for (int i = 2; i <= 30; i += 2) {
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
+        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
+        TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
+        TEST_ASSERT_EQUAL(40000, entry.target.y);
+        TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
+        TEST_ASSERT_EQUAL(5, entry.post_delay_sec);
+        TEST_ASSERT_EQUAL(50, entry.duration_sec);
+    }
+
     /* Next command is invalid */
-    for (int i = 30; i < 400; i += 10) {
+    for (int i = 40; i < 400; i += 10) {
         TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
     }
 

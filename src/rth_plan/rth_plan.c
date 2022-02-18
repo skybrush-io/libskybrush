@@ -284,13 +284,10 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
             return SB_EOVERFLOW;
         }
 
-        /* Check if the time interval of the _previous_ entry includes the time
-         * instant that the user is looking for. If it does, break out and
-         * return the last decoded action */
-        if (time_s <= time && time_s + time_diff_s > time) {
-            found = 1;
-            break;
-        }
+        /* Okay, no overflow, we can increase time_s */
+        time_s += time_diff_s;
+
+        /* Now, decode the rest of the entry */
 
         /* Parse flags */
         encoded_action = (flags >> 4) & 0x03;
@@ -351,8 +348,12 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
             }
         }
 
-        /* Keep on searching */
-        time_s += time_diff_s;
+        /* Check if the time of this entry is at least as large as the the
+         * instant that the user is looking for. If it is not, continue the
+         * iteration with the next entry */
+        if (time_s >= time) {
+            break;
+        }
     }
 
     if (sb_i_rth_action_has_target(entry.action)) {
