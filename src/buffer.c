@@ -103,7 +103,7 @@ void sb_buffer_init_view(sb_buffer_t* buf, void* bytes, size_t num_bytes)
 {
     assert(bytes != 0);
     buf->stor_begin = bytes;
-    buf->stor_end = buf->end = bytes + num_bytes;
+    buf->stor_end = buf->end = buf->stor_begin + num_bytes;
     buf->owned = 0;
 }
 
