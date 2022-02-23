@@ -32,6 +32,12 @@ target_include_directories(
     ${CMAKE_SOURCE_DIR}/include
 )
 
+target_compile_options(
+	skybrush
+	PRIVATE
+	-Wdouble-promotion
+)
+
 # The line below is not okay; it overwrites the installed library every time
 # we run "make install", even if it did not change. As a result, ArduCopter
 # rebuilds itself all the time when libskybrush is used as a dependency.

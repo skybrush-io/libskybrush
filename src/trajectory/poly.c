@@ -124,7 +124,7 @@ double sb_poly_eval_double(const sb_poly_t* poly, double t)
     const float* ptr = poly->coeffs + poly->num_coeffs;
 
     while (ptr > poly->coeffs) {
-        result = result * t + (*(--ptr));
+        result = result * t + ((double)*(--ptr));
     }
 
     return result;
