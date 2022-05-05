@@ -40,7 +40,7 @@ static char *sb_i_error_messages[] = {
     "Buffer is empty",                                     /* SB_EEMPTY */
     "Resource temporarily unavailable",                    /* SB_EAGAIN */
     "File does not exist",                                 /* SB_ENOENT */
-    "Corrupted data"                                       /* SB_ECORRUPTED */
+    "Corrupted data",                                      /* SB_ECORRUPTED */
     "Overflow error"                                       /* SB_EOVERFLOW */
 };
 /* clang-format on */
