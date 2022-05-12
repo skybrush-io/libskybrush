@@ -23,13 +23,16 @@ set(CMAKE_CXX_STANDARD 11)
 
 # Turn on all compiler warnings and ensure that frame pointers are not omitted
 # so we can debug properly even when the binary is compiled with optimizations
-set(CMAKE_C_FLAGS "-Wall -Werror -Wno-unknown-pragmas -fno-omit-frame-pointer -funwind-tables")
+set(CMAKE_C_FLAGS "-Wall -Werror -pedantic -Wno-unknown-pragmas -fno-omit-frame-pointer -funwind-tables")
+set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic -Wno-unknown-pragmas -fno-omit-frame-pointer -funwind-tables")
 
 # Force colored output when using Ninja
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdiagnostics-color=always")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 endif()
 
 # Add configuration for profiling
