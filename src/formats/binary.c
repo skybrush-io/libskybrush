@@ -300,7 +300,7 @@ static sb_error_t sb_i_binary_file_get_crc32(sb_binary_file_parser_t* parser, ui
             checksum = sb_ap_crc32_update(checksum, buf, bytes_read);
         }
 
-        if (bytes_read < sizeof(buf)) {
+        if (bytes_read < (ssize_t)sizeof(buf)) {
             /* end of file reached */
             break;
         }

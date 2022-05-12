@@ -91,7 +91,7 @@ static sb_error_t sb_i_trajectory_player_find_latest_time_above_altitude(
 void sb_trajectory_destroy(sb_trajectory_t* trajectory)
 {
     sb_trajectory_clear(trajectory); /* will not fail here */
-    sb_buffer_destroy(trajectory->buffer);
+    sb_buffer_destroy(&trajectory->buffer);
 }
 
 /**

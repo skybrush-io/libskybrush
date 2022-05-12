@@ -52,7 +52,7 @@ typedef struct {
 sb_error_t sb_buffer_init(sb_buffer_t* buf, size_t initial_size);
 sb_error_t sb_buffer_init_from_bytes(sb_buffer_t* buf, void* bytes, size_t num_bytes);
 void sb_buffer_init_view(sb_buffer_t* buf, void* bytes, size_t num_bytes);
-void sb_buffer_destroy();
+void sb_buffer_destroy(sb_buffer_t* buf);
 
 size_t sb_buffer_capacity(const sb_buffer_t* buf);
 sb_bool_t sb_buffer_is_view(const sb_buffer_t* buf);
