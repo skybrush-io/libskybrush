@@ -637,8 +637,8 @@ void CommandExecutor::handleTriggeredJumpCommand()
 
 void CommandExecutor::handleWaitUntilCommand()
 {
-    unsigned long deadline = nextVarint();
+    unsigned long deadlineInHalfFrames = nextVarint();
 
-    delayExecutionUntil(deadline);
+    delayExecutionUntil(deadlineInHalfFrames * 20);
     m_cumulativeDurationSinceStart = absoluteToInternalTime(m_nextWakeupTime);
 }
