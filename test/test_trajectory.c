@@ -23,8 +23,9 @@
 #include "unity.h"
 
 sb_trajectory_t trajectory;
+sb_bool_t trajectory_loaded;
 
-void loadFixture(const char* fname);
+sb_error_t loadFixture(const char* fname);
 void closeFixture();
 
 void setUp()
@@ -34,13 +35,16 @@ void setUp()
 
 void tearDown()
 {
-    closeFixture();
+    if (trajectory_loaded) {
+        closeFixture();
+    }
 }
 
-void loadFixture(const char* fname)
+sb_error_t loadFixture(const char* fname)
 {
     FILE* fp;
     int fd;
+    sb_error_t retval;
 
     fp = fopen(fname, "rb");
     if (fp == 0) {
@@ -52,16 +56,21 @@ void loadFixture(const char* fname)
         abort();
     }
 
-    sb_trajectory_init_from_binary_file(&trajectory, fd);
+    retval = sb_trajectory_init_from_binary_file(&trajectory, fd);
 
     fclose(fp);
+
+    trajectory_loaded = retval == SB_SUCCESS;
+
+    return retval;
 }
 
-void loadFixtureInMemory(const char* fname)
+sb_error_t loadFixtureInMemory(const char* fname)
 {
     FILE* fp;
     uint8_t* buf;
     ssize_t num_bytes;
+    sb_error_t retval;
 
     fp = fopen(fname, "rb");
     if (fp == 0) {
@@ -80,11 +89,14 @@ void loadFixtureInMemory(const char* fname)
 
     fclose(fp);
 
-    sb_trajectory_init_from_binary_file_in_memory(&trajectory, buf, num_bytes);
+    retval = sb_trajectory_init_from_binary_file_in_memory(&trajectory, buf, num_bytes);
+    trajectory_loaded = retval == SB_SUCCESS;
 
     /* sb_trajectory_init_from_binary_file_in_memory() copied the data so we
      * must free it */
     free(buf);
+
+    return retval;
 }
 
 void closeFixture()
@@ -284,6 +296,14 @@ void test_propose_takeoff_time_hover_3m()
         sb_trajectory_propose_takeoff_time_sec(&trajectory, 2500 /* mm */, 1000 /* mm/sec */));
 }
 
+void test_load_truncated_file()
+{
+    closeFixture();
+    TEST_ASSERT_EQUAL(
+        SB_EREAD,
+        loadFixture("fixtures/forward_left_back_truncated.skyb"));
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -299,6 +319,9 @@ int main(int argc, char* argv[])
     RUN_TEST(test_get_axis_aligned_bounding_box_from_trajectory_in_memory);
     RUN_TEST(test_propose_takeoff_time);
     RUN_TEST(test_propose_landing_time);
+
+    /* additional tests with other files */
+    RUN_TEST(test_load_truncated_file);
 
     /* editing tests */
 
