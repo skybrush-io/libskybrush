@@ -29,7 +29,7 @@ void tearDown()
 {
 }
 
-void test_boudning_box_expand()
+void test_bounding_box_expand()
 {
     sb_bounding_box_t box = {
         /* .x = */ { /* .min = */ 3, /* .max = */ 11 },
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_boudning_box_expand);
+    RUN_TEST(test_bounding_box_expand);
 
     return UNITY_END();
 }

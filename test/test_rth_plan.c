@@ -253,6 +253,180 @@ void test_plan_duration_too_large()
     TEST_ASSERT_EQUAL(SB_EPARSE, sb_rth_plan_evaluate_at(&plan, 2.5f, &entry));
 }
 
+void assert_trajectory_is_constant(const sb_trajectory_t* trajectory, float start, float end, sb_vector3_with_yaw_t pos)
+{
+    float t;
+    const float step = 0.5f;
+    sb_trajectory_player_t player;
+    sb_vector3_with_yaw_t observed_vec;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+
+    for (t = start; t < end; t += step) {
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t, &observed_vec));
+
+        TEST_ASSERT_EQUAL(pos.x, observed_vec.x);
+        TEST_ASSERT_EQUAL(pos.y, observed_vec.y);
+        TEST_ASSERT_EQUAL(pos.z, observed_vec.z);
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, t, &observed_vec));
+
+        TEST_ASSERT_EQUAL(0.0f, observed_vec.x);
+        TEST_ASSERT_EQUAL(0.0f, observed_vec.y);
+        TEST_ASSERT_EQUAL(0.0f, observed_vec.z);
+    }
+}
+
+void test_convert_to_trajectory()
+{
+    sb_rth_plan_entry_t entry;
+    sb_trajectory_t trajectory;
+    sb_trajectory_player_t player;
+    sb_vector3_with_yaw_t start = {
+        /* .x = */ 15000,
+        /* .y = */ 25000,
+        /* .z = */ 20000,
+        /* .yaw = */ 59
+    };
+    sb_vector3_with_yaw_t vec;
+    float t;
+
+    /* RTH plan from file has the following entries:
+     *
+     * T = 0: land
+     * T = 15: go to (30m, 40m) in 50s with post-delay=5s
+     * T = 45: go to (-40m, -30m) in 50s with pre-delay=2s
+     * T = 65: go to (30m, 40m) in 30s
+     * T = 80: same as previous entry
+     * T = 105: land
+     *
+     * When evaluating the RTH plan at a given time instant t, the entry that is
+     * in effect is the entry at t, or if there is no entry at t, then the
+     * _next_ entry in the list
+     */
+
+    /* Land automatically for negative time, up to and including T=0 */
+    for (int i = -20; i <= 0; i++) {
+        t = i / 10.0f;
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+
+        TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_msec(&trajectory));
+        assert_trajectory_is_constant(&trajectory, 0.0f, 10.0f, start);
+
+        sb_trajectory_destroy(&trajectory);
+    }
+
+    /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
+     * to T=15 (inclusive) */
+    for (int i = 2; i <= 150; i += 2) {
+        t = i / 10.0f;
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+
+        TEST_ASSERT_EQUAL(t * 1000 + 55000, sb_trajectory_get_total_duration_msec(&trajectory));
+        assert_trajectory_is_constant(&trajectory, 0.0f, t, start);
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, &trajectory));
+
+        /* Test arrival */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 50, &vec));
+        TEST_ASSERT_EQUAL(30000, vec.x);
+        TEST_ASSERT_EQUAL(40000, vec.y);
+        TEST_ASSERT_EQUAL(start.z, vec.z);
+        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
+
+        /* Test halfway through transition */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 25, &vec));
+        TEST_ASSERT_EQUAL(22500, vec.x);
+        TEST_ASSERT_EQUAL(32500, vec.y);
+        TEST_ASSERT_EQUAL(start.z, vec.z);
+        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
+
+        sb_trajectory_player_destroy(&player);
+
+        sb_trajectory_destroy(&trajectory);
+    }
+
+    /* Command is "go to (-40m, -30m) in 50s with pre-delay=2s" from T=15
+     * (exclusive) to T=45 (inclusive) */
+    for (int i = 155; i <= 450; i += 5) {
+        t = i / 10.0f;
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+
+        TEST_ASSERT_EQUAL(t * 1000 + 52000, sb_trajectory_get_total_duration_msec(&trajectory));
+        assert_trajectory_is_constant(&trajectory, 0.0f, t + 2.0, start);
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, &trajectory));
+
+        /* Test arrival */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 52, &vec));
+        TEST_ASSERT_EQUAL(-40000, vec.x);
+        TEST_ASSERT_EQUAL(-30000, vec.y);
+        TEST_ASSERT_EQUAL(start.z, vec.z);
+        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
+
+        /* Test halfway through transition */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 27, &vec));
+        TEST_ASSERT_EQUAL(-12500, vec.x);
+        TEST_ASSERT_EQUAL(-2500, vec.y);
+        TEST_ASSERT_EQUAL(start.z, vec.z);
+        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
+
+        sb_trajectory_player_destroy(&player);
+
+        sb_trajectory_destroy(&trajectory);
+    }
+
+    /* Command is "go to (30m, 40m) in 30s" from T=45 (exclusive) to T=80 (inclusive) */
+    for (int i = 455; i <= 800; i += 5) {
+        t = i / 10.0f;
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+
+        TEST_ASSERT_EQUAL(t * 1000 + 30000, sb_trajectory_get_total_duration_msec(&trajectory));
+        assert_trajectory_is_constant(&trajectory, 0.0f, t, start);
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, &trajectory));
+
+        /* Test arrival */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 30, &vec));
+        TEST_ASSERT_EQUAL(30000, vec.x);
+        TEST_ASSERT_EQUAL(40000, vec.y);
+        TEST_ASSERT_EQUAL(start.z, vec.z);
+        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
+
+        /* Test halfway through transition */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 15, &vec));
+        TEST_ASSERT_EQUAL(22500, vec.x);
+        TEST_ASSERT_EQUAL(32500, vec.y);
+        TEST_ASSERT_EQUAL(start.z, vec.z);
+        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
+
+        sb_trajectory_player_destroy(&player);
+
+        sb_trajectory_destroy(&trajectory);
+    }
+
+    /* Command is "land" afterwards */
+    for (int i = 810; i <= 1200; i += 10) {
+        t = i / 10.0f;
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+
+        TEST_ASSERT_EQUAL(t * 1000, sb_trajectory_get_total_duration_msec(&trajectory));
+        assert_trajectory_is_constant(&trajectory, 0.0f, t, start);
+
+        sb_trajectory_destroy(&trajectory);
+    }
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -263,6 +437,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_get_num_entries);
     RUN_TEST(test_evaluate_at);
     RUN_TEST(test_plan_duration_too_large);
+    RUN_TEST(test_convert_to_trajectory);
 
     return UNITY_END();
 }

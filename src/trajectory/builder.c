@@ -41,7 +41,7 @@ static sb_error_t sb_i_trajectory_builder_write_coordinate(
  * @param scale The scale of the trajectory
  * @param flags Additional flags to be written in the trajectory header; see
  *     \ref sb_trajectory_flags_t for more details
- * @return \c SB_EINVAL if the scale is too large, \c SB_SUCCESS otherwise
+ * @return \c SB_EINVAL if the scale is too large or zero, \c SB_SUCCESS otherwise
  */
 sb_error_t sb_trajectory_builder_init(sb_trajectory_builder_t* builder, uint8_t scale, uint8_t flags)
 {

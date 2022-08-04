@@ -30,6 +30,7 @@
 #include <skybrush/formats/binary.h>
 #include <skybrush/memory.h>
 #include <skybrush/rth_plan.h>
+#include <skybrush/utils.h>
 
 #include "../parsing.h"
 
@@ -253,6 +254,15 @@ sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vec
     return SB_SUCCESS;
 }
 
+/**
+ * @brief Evaluates the RTH plan and returns what to do if the RTH maneuver is triggered at the given time.
+ *
+ * @param plan    the RTH plan
+ * @param time    the timestamp when the RTH plan is triggered
+ * @param result  the item describing what to do when the plan is triggered.
+ *        Guaranteed not to contain a "same as previous entry" action when
+ *        returning from the function successfully.
+ */
 sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth_plan_entry_t* result)
 {
     size_t i, num_entries = sb_rth_plan_get_num_entries(plan);
@@ -361,11 +371,101 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
     } else {
         memset(&entry.target, 0, sizeof(entry.target));
     }
+
     if (result) {
         *result = entry;
     }
 
     return SB_SUCCESS;
+}
+
+/**
+ * @brief Converts an RTH entry evaluated from an RTH plan to a trajectory.
+ *
+ * The converted trajectory will represent the action contained in the RTH
+ * plan entry and it can be followed ("flown") just like any regular trajectory.
+ *
+ * When the RTH plan action is "land", the trajectory will contain a constant
+ * segment only to the specified start position and start time as it is
+ * assumed that the code evaluating the trajectory will automatically land when
+ * the trajectory ends.
+ *
+ * @param trajectory  an uninitialized trajectory where the result will be stored
+ * @param entry  the RTH plan entry to convert into a trajectory
+ * @param start  the current position of the vehicle that will fly the
+ *        trajectory; it is assumed to be the coordinate where the RTH plan
+ *        expects the vehicle to be (since the RTH plan does not store the
+ *        start coordinate).
+ * @param start_time  the timestamp of the current position; the generated
+ *        trajectory will contain a constant segment from time zero up to this
+ *        start time.
+ */
+sb_error_t sb_trajectory_init_from_rth_plan_entry(
+    sb_trajectory_t* trajectory,
+    const sb_rth_plan_entry_t* entry,
+    sb_vector3_with_yaw_t start,
+    float start_time)
+{
+    sb_trajectory_builder_t builder;
+    sb_vector3_with_yaw_t target;
+    uint8_t scale = 1;
+    sb_error_t retval = SB_SUCCESS;
+    uint32_t duration_msec;
+
+    SB_CHECK(sb_scale_update_vector3_with_yaw(&scale, start));
+    if (sb_i_rth_action_has_target(entry->action)) {
+        SB_CHECK(sb_scale_update_vector2(&scale, entry->target));
+    }
+
+    if (start_time < 0) {
+        start_time = 0;
+    }
+
+    SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+        &duration_msec,
+        start_time + (entry->pre_delay_sec > 0 ? entry->pre_delay_sec : 0)));
+
+    SB_CHECK(sb_trajectory_builder_init(&builder, scale, /* flags = */ 0));
+    SB_CHECK(sb_trajectory_builder_set_start_position(&builder, start));
+
+    SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
+
+    /* Pre-delay is now taken into account */
+
+    switch (entry->action) {
+    case SB_RTH_ACTION_LAND:
+        /* this is easy, nothing to do */
+        break;
+
+    case SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE:
+        target.x = entry->target.x;
+        target.y = entry->target.y;
+        target.z = start.z;
+        target.yaw = start.yaw;
+        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+            &duration_msec, entry->duration_sec));
+        SB_CHECK(sb_trajectory_builder_append_line(&builder, target, duration_msec));
+
+        if (entry->post_delay_sec > 0) {
+            SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+                &duration_msec, entry->post_delay_sec));
+            SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
+        }
+
+        break;
+
+    default:
+        /* unknown action */
+        retval = SB_EINVAL;
+        goto cleanup;
+    }
+
+    retval = sb_trajectory_init_from_builder(trajectory, &builder);
+
+cleanup:
+    sb_trajectory_builder_destroy(&builder);
+
+    return retval;
 }
 
 /* ************************************************************************** */

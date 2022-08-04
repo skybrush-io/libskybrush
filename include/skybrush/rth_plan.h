@@ -22,6 +22,7 @@
 
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
+#include <skybrush/trajectory.h>
 
 __BEGIN_DECLS
 
@@ -85,11 +86,17 @@ sb_error_t sb_rth_plan_init_from_binary_file_in_memory(
 sb_error_t sb_rth_plan_init_from_buffer(sb_rth_plan_t* plan,
     uint8_t* buf, size_t nbytes);
 sb_error_t sb_rth_plan_init_empty(sb_rth_plan_t* plan);
-void sb_rth_plan_destroy(sb_rth_plan_t* trajectory);
+void sb_rth_plan_destroy(sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_entries(const sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_points(const sb_rth_plan_t* plan);
 sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vector2_t* point);
 sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth_plan_entry_t* result);
+
+sb_error_t sb_trajectory_init_from_rth_plan_entry(
+    sb_trajectory_t* trajectory,
+    const sb_rth_plan_entry_t* entry,
+    sb_vector3_with_yaw_t start,
+    float start_time);
 
 __END_DECLS
 
