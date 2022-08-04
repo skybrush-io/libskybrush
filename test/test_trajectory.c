@@ -136,6 +136,10 @@ void test_clear()
 {
     sb_trajectory_clear(&trajectory);
     test_trajectory_is_really_empty();
+
+    /* ensure that the buffer behind the trajectory did not become a view in
+     * the process */
+    TEST_ASSERT(!sb_buffer_is_view(&trajectory.buffer));
 }
 
 void test_clear_view()
@@ -151,6 +155,10 @@ void test_clear_view()
 
     sb_trajectory_clear(&trajectory);
     test_trajectory_is_really_empty();
+
+    /* ensure that the buffer behind the trajectory remained a view in
+     * the process */
+    TEST_ASSERT(sb_buffer_is_view(&trajectory.buffer));
 }
 
 void test_init_empty()

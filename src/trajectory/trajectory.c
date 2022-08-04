@@ -101,15 +101,19 @@ void sb_trajectory_destroy(sb_trajectory_t* trajectory)
 sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory)
 {
     if (sb_buffer_is_view(&trajectory->buffer)) {
-        sb_buffer_destroy(&trajectory->buffer);
-        SB_CHECK(sb_buffer_init(&trajectory->buffer, 0));
+        /* clear the entire buffer with zero bytes -- this should be enough
+         * to make the trajectory empty because the duration of the first
+         * segment will be zero. We also set the scale to zero so the
+         * trajectory player knows not to look into the buffer */
+        sb_buffer_fill(&trajectory->buffer, 0);
+        trajectory->scale = 0;
     } else {
         SB_CHECK(sb_buffer_clear(&trajectory->buffer));
+        trajectory->scale = 1;
     }
 
     memset(&trajectory->start, 0, sizeof(trajectory->start));
 
-    trajectory->scale = 1;
     trajectory->use_yaw = 0;
     trajectory->header_length = 0;
 
@@ -459,11 +463,13 @@ float sb_trajectory_propose_landing_time_sec(const sb_trajectory_t* trajectory, 
 }
 
 /**
- * Returns whether the trajectory is empty (i.e. has no start position yet).
+ * Returns whether the trajectory is empty (i.e. has no start position or
+ * scale yet).
  */
 sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
 {
-    return sb_buffer_size(&trajectory->buffer) == 0;
+    return (
+        sb_buffer_size(&trajectory->buffer) == 0 || (SB_BUFFER(trajectory->buffer)[0] & 0x7f) == 0);
 }
 
 /* ************************************************************************** */
@@ -747,8 +753,10 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     data->start_time_msec = start_time_msec;
     data->start_time_sec = start_time_msec / 1000.0f;
 
-    if (offset >= buffer_length) {
-        /* We are beyond the end of the buffer */
+    if (offset >= buffer_length || trajectory->scale == 0) {
+        /* We are beyond the end of the buffer or the scale is zero, indicating
+         * that there are no segments in the buffer yet (first byte of the
+         * buffer was all zeros) */
         sb_poly_4d_make_constant(&data->poly, start);
 
         data->duration_msec = UINT32_MAX - data->start_time_msec;
