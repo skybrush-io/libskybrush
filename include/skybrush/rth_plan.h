@@ -51,6 +51,9 @@ typedef enum {
  * given time instant during the mission.
  */
 typedef struct {
+    /** The timestamp when the action should start */
+    float time_sec;
+
     /** The action type to perform */
     sb_rth_action_t action;
 
@@ -95,8 +98,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 sb_error_t sb_trajectory_init_from_rth_plan_entry(
     sb_trajectory_t* trajectory,
     const sb_rth_plan_entry_t* entry,
-    sb_vector3_with_yaw_t start,
-    float start_time);
+    sb_vector3_with_yaw_t start);
 
 __END_DECLS
 

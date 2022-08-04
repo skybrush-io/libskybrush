@@ -274,6 +274,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 
     memset(&entry, 0, sizeof(entry));
     entry.action = SB_RTH_ACTION_LAND;
+    entry.time_sec = time;
 
     if (time < 0) {
         found = 1;
@@ -296,6 +297,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 
         /* Okay, no overflow, we can increase time_s */
         time_s += time_diff_s;
+        entry.time_sec = time_s;
 
         /* Now, decode the rest of the entry */
 
@@ -403,14 +405,14 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 sb_error_t sb_trajectory_init_from_rth_plan_entry(
     sb_trajectory_t* trajectory,
     const sb_rth_plan_entry_t* entry,
-    sb_vector3_with_yaw_t start,
-    float start_time)
+    sb_vector3_with_yaw_t start)
 {
     sb_trajectory_builder_t builder;
     sb_vector3_with_yaw_t target;
     uint8_t scale = 1;
     sb_error_t retval = SB_SUCCESS;
     uint32_t duration_msec;
+    float start_time = entry->time_sec;
 
     SB_CHECK(sb_scale_update_vector3_with_yaw(&scale, start));
     if (sb_i_rth_action_has_target(entry->action)) {

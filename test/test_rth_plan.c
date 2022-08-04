@@ -310,7 +310,7 @@ void test_convert_to_trajectory()
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start));
 
         TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_msec(&trajectory));
         assert_trajectory_is_constant(&trajectory, 0.0f, 10.0f, start);
@@ -319,13 +319,14 @@ void test_convert_to_trajectory()
     }
 
     /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
-     * to T=15 (inclusive) */
+     * to T=15 (inclusive). RTH plan is designed to start at T=15 */
     for (int i = 2; i <= 150; i += 2) {
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start));
 
+        t = 15;
         TEST_ASSERT_EQUAL(t * 1000 + 55000, sb_trajectory_get_total_duration_msec(&trajectory));
         assert_trajectory_is_constant(&trajectory, 0.0f, t, start);
 
@@ -351,13 +352,14 @@ void test_convert_to_trajectory()
     }
 
     /* Command is "go to (-40m, -30m) in 50s with pre-delay=2s" from T=15
-     * (exclusive) to T=45 (inclusive) */
+     * (exclusive) to T=45 (inclusive). RTH plan is designed to start at T=45 */
     for (int i = 155; i <= 450; i += 5) {
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start));
 
+        t = 45;
         TEST_ASSERT_EQUAL(t * 1000 + 52000, sb_trajectory_get_total_duration_msec(&trajectory));
         assert_trajectory_is_constant(&trajectory, 0.0f, t + 2.0, start);
 
@@ -382,12 +384,15 @@ void test_convert_to_trajectory()
         sb_trajectory_destroy(&trajectory);
     }
 
-    /* Command is "go to (30m, 40m) in 30s" from T=45 (exclusive) to T=80 (inclusive) */
+    /* Command is "go to (30m, 40m) in 30s" from T=45 (exclusive) to T=80 (inclusive).
+     * RTH plan is designed to start at T=80, but we deliberately push it back. */
     for (int i = 455; i <= 800; i += 5) {
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+
+        entry.time_sec = t;
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start));
 
         TEST_ASSERT_EQUAL(t * 1000 + 30000, sb_trajectory_get_total_duration_msec(&trajectory));
         assert_trajectory_is_constant(&trajectory, 0.0f, t, start);
@@ -413,13 +418,14 @@ void test_convert_to_trajectory()
         sb_trajectory_destroy(&trajectory);
     }
 
-    /* Command is "land" afterwards */
+    /* Command is "land" afterwards, to be executed at T=105 */
     for (int i = 810; i <= 1200; i += 10) {
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start, t));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_rth_plan_entry(&trajectory, &entry, start));
 
+        t = 105;
         TEST_ASSERT_EQUAL(t * 1000, sb_trajectory_get_total_duration_msec(&trajectory));
         assert_trajectory_is_constant(&trajectory, 0.0f, t, start);
 
