@@ -68,6 +68,7 @@ void test_rth_plan_is_really_empty()
     int i, n = sizeof(t) / sizeof(t[0]);
     sb_rth_plan_entry_t entry;
 
+    TEST_ASSERT(sb_rth_plan_is_empty(&plan));
     TEST_ASSERT_EQUAL(0, sb_rth_plan_get_num_points(&plan));
 
     for (i = 0; i < n; i++) {
@@ -112,6 +113,11 @@ void test_get_points()
 void test_get_num_entries()
 {
     TEST_ASSERT_EQUAL(6, sb_rth_plan_get_num_entries(&plan));
+}
+
+void test_is_empty()
+{
+    TEST_ASSERT(!sb_rth_plan_is_empty(&plan));
 }
 
 void test_evaluate_at()
@@ -452,6 +458,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_init_empty);
     RUN_TEST(test_get_points);
     RUN_TEST(test_get_num_entries);
+    RUN_TEST(test_is_empty);
     RUN_TEST(test_evaluate_at);
     RUN_TEST(test_plan_duration_too_large);
     RUN_TEST(test_convert_to_trajectory);

@@ -255,6 +255,17 @@ sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vec
 }
 
 /**
+ * @brief Returns whether the RTH plan is empty (i.e. has no entries).
+ *
+ * @param plan   the RTH plan
+ * @return true if the RTH plan has no entries, false otherwise
+ */
+sb_bool_t sb_rth_plan_is_empty(const sb_rth_plan_t* plan)
+{
+    return sb_rth_plan_get_num_entries(plan) == 0;
+}
+
+/**
  * @brief Evaluates the RTH plan and returns what to do if the RTH maneuver is triggered at the given time.
  *
  * @param plan    the RTH plan

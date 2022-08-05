@@ -50,7 +50,7 @@ typedef enum {
  * @brief Structure describing the return-to-home action corresponding to a
  * given time instant during the mission.
  */
-typedef struct {
+typedef struct sb_rth_plan_entry_s {
     /** The timestamp when the action should start */
     float time_sec;
 
@@ -73,7 +73,7 @@ typedef struct {
 /**
  * @brief Structure representing a return-to-home plan in a Skybrush mission.
  */
-typedef struct {
+typedef struct sb_rth_plan_s {
     uint8_t* buffer; /**< Pointer to the buffer holding the RTH plan */
     size_t buffer_length; /**< Number of bytes in the buffer */
     sb_bool_t owner; /**< Whether the object owns the buffer */
@@ -93,6 +93,7 @@ void sb_rth_plan_destroy(sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_entries(const sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_points(const sb_rth_plan_t* plan);
 sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vector2_t* point);
+sb_bool_t sb_rth_plan_is_empty(const sb_rth_plan_t* plan);
 sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth_plan_entry_t* result);
 
 sb_error_t sb_trajectory_init_from_rth_plan_entry(
