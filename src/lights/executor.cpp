@@ -585,7 +585,7 @@ void CommandExecutor::handleSleepCommand()
 void CommandExecutor::handleTriggeredJumpCommand()
 {
     uint8_t triggerParams = nextByte();
-    unsigned long address;
+    unsigned long address = 0;
     uint8_t channelIndex;
     uint8_t willNeedAddress;
     Trigger* pTrigger;
