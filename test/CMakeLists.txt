@@ -17,6 +17,7 @@ add_fixture(forward_left_back_truncated.skyb)
 add_fixture(forward_left_back_v2.skyb)
 add_fixture(forward_left_back_v2_invalid_chksum.skyb)
 add_fixture(light_program_with_wait_until_cmd.skyb)
+add_fixture(zero_scale.skyb)
 
 add_unity_test(ap_crc32)
 add_unity_test(binary_parser)

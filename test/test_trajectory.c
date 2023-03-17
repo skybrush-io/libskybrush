@@ -48,11 +48,13 @@ sb_error_t loadFixture(const char* fname)
 
     fp = fopen(fname, "rb");
     if (fp == 0) {
+        perror(fname);
         abort();
     }
 
     fd = fileno(fp);
     if (fd < 0) {
+        perror(NULL);
         abort();
     }
 
@@ -74,16 +76,19 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
     fp = fopen(fname, "rb");
     if (fp == 0) {
+        perror(fname);
         abort();
     }
 
     buf = (uint8_t*)malloc(65536);
     if (buf == 0) {
+        perror(NULL);
         abort();
     }
 
     num_bytes = fread(buf, sizeof(uint8_t), 65536, fp);
     if (ferror(fp)) {
+        perror(NULL);
         abort();
     }
 
@@ -102,6 +107,7 @@ sb_error_t loadFixtureInMemory(const char* fname)
 void closeFixture()
 {
     sb_trajectory_destroy(&trajectory);
+    trajectory_loaded = 0;
 }
 
 void test_trajectory_is_really_empty()
@@ -312,6 +318,14 @@ void test_load_truncated_file()
         loadFixture("fixtures/forward_left_back_truncated.skyb"));
 }
 
+void test_load_file_with_zero_scale()
+{
+    closeFixture();
+    TEST_ASSERT_EQUAL(
+        SB_SUCCESS,
+        loadFixture("fixtures/zero_scale.skyb"));
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -330,6 +344,7 @@ int main(int argc, char* argv[])
 
     /* additional tests with other files */
     RUN_TEST(test_load_truncated_file);
+    RUN_TEST(test_load_file_with_zero_scale);
 
     /* editing tests */
 
