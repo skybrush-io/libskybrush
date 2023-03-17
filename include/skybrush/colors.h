@@ -40,6 +40,43 @@ typedef struct sb_rgb_color_s {
 } sb_rgb_color_t;
 
 /**
+ * Typedef for an RGBW color.
+ *
+ * The library primarily works in RGB and most of the functions support RGB
+ * only. There are special conversion functions that take an existing RGB
+ * color and returns an equivalent RGBW color.
+ */
+typedef struct sb_rgbw_color_s {
+    uint8_t red; /**< The red component of the color */
+    uint8_t green; /**< The green component of the color */
+    uint8_t blue; /**< The blue component of the color */
+    uint8_t white; /**< The white component of the color */
+} sb_rgbw_color_t;
+
+/**
+ * Supported methods for converting an RGB color to an RGBW color.
+ */
+typedef enum {
+    SB_RGBW_CONVERSION_OFF,
+    SB_RGBW_CONVERSION_FIXED_VALUE,
+    SB_RGBW_CONVERSION_SUBTRACT_MIN,
+    SB_RGBW_CONVERSION_WITH_COLOR_TEMPERATURE,
+    SB_RGBW_CONVERSION_WITH_REFERENCE
+} sb_rgbw_conversion_method_t;
+
+/**
+ * Structure to define the full parameter set of an RGB-to-RGBW conversion.
+ */
+typedef struct {
+    sb_rgbw_conversion_method_t method;
+    union {
+        uint8_t fixed_value;
+        float temperature;
+        sb_rgb_color_t reference;
+    } params;
+} sb_rgbw_conversion_t;
+
+/**
  * Constant for the black color.
  */
 extern const sb_rgb_color_t SB_COLOR_BLACK;
@@ -55,6 +92,10 @@ sb_bool_t sb_rgb_color_equals(sb_rgb_color_t first, sb_rgb_color_t second);
 sb_rgb_color_t sb_rgb_color_linear_interpolation(
     sb_rgb_color_t first, sb_rgb_color_t second, float ratio);
 sb_rgb_color_t sb_rgb_color_make(uint8_t red, uint8_t green, uint8_t blue);
+sb_rgbw_color_t sb_rgb_color_to_rgbw(sb_rgb_color_t color, sb_rgbw_conversion_t conv);
+
+sb_bool_t sb_rgbw_color_equals(sb_rgbw_color_t first, sb_rgbw_color_t second);
+sb_rgbw_color_t sb_rgbw_color_make(uint8_t red, uint8_t green, uint8_t blue, uint8_t white);
 
 __END_DECLS
 

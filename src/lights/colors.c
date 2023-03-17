@@ -56,14 +56,13 @@ uint16_t sb_rgb_color_encode_rgb565(sb_rgb_color_t color)
 }
 
 /**
- * @brief Determines whether two colors are equal
+ * @brief Determines whether two RGB colors are equal
  *
  * @param first   the first color
  * @param second  the second color
  * @return whether the two colors are equal
  */
-sb_bool_t sb_rgb_color_equals(
-    sb_rgb_color_t first, sb_rgb_color_t second)
+sb_bool_t sb_rgb_color_equals(sb_rgb_color_t first, sb_rgb_color_t second)
 {
     return first.red == second.red && first.green == second.green && first.blue == second.blue;
 }
@@ -107,4 +106,78 @@ sb_rgb_color_t sb_rgb_color_make(uint8_t red, uint8_t green, uint8_t blue)
     result.blue = blue;
 
     return result;
+}
+
+/**
+ * @brief Creates an RGBW color struct from its components
+ *
+ * @param red    the red component
+ * @param green  the green component
+ * @param blue   the blue component
+ * @param white  the white component
+ * @return the RGBW color struct that was created
+ */
+sb_rgbw_color_t sb_rgbw_color_make(uint8_t red, uint8_t green, uint8_t blue, uint8_t white)
+{
+    sb_rgbw_color_t result;
+
+    result.red = red;
+    result.green = green;
+    result.blue = blue;
+    result.white = white;
+
+    return result;
+}
+
+/**
+ * @brief Converts an RGB color to an equivalent RGBW color.
+ *
+ * @param color  the color to convert
+ * @param conv   the conversion method and parameters
+ * @return the RGBW color that was created from the RGB color.
+ */
+sb_rgbw_color_t sb_rgb_color_to_rgbw(sb_rgb_color_t color, sb_rgbw_conversion_t conv)
+{
+    sb_rgbw_color_t result;
+    uint8_t value;
+
+    switch (conv.method) {
+    case SB_RGBW_CONVERSION_SUBTRACT_MIN:
+        value = color.red;
+        if (color.green < value) {
+            value = color.green;
+        }
+        if (color.blue < value) {
+            value = color.blue;
+        }
+        result.red = color.red - value;
+        result.green = color.green - value;
+        result.blue = color.blue - value;
+        result.white = value;
+        break;
+
+    case SB_RGBW_CONVERSION_OFF:
+    case SB_RGBW_CONVERSION_FIXED_VALUE:
+    default:
+        result.red = color.red;
+        result.green = color.green;
+        result.blue = color.blue;
+        result.white = conv.method == SB_RGBW_CONVERSION_FIXED_VALUE ? conv.params.fixed_value : 0;
+        break;
+    }
+
+    return result;
+}
+
+/**
+ * @brief Determines whether two RGBW colors are equal
+ *
+ * @param first   the first color
+ * @param second  the second color
+ * @return whether the two colors are equal
+ */
+sb_bool_t sb_rgbw_color_equals(sb_rgbw_color_t first, sb_rgbw_color_t second)
+{
+    return (
+        first.red == second.red && first.green == second.green && first.blue == second.blue && first.white == second.white);
 }
