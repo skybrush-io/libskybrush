@@ -93,26 +93,74 @@ void test_rgbw_equals()
     TEST_ASSERT_FALSE(sb_rgbw_color_equals(white, white_with_rgb_only));
 }
 
+void test_rgb_from_color_temperature()
+{
+    /* Approximation inexact around 1000K but then it gets better.
+     * Expected values are from:
+     * http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html
+     */
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(1000),
+        sb_rgb_color_make(255, 56, 0),
+        12));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(2000),
+        sb_rgb_color_make(255, 137, 18),
+        5));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(3000),
+        sb_rgb_color_make(255, 180, 107),
+        5));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(4000),
+        sb_rgb_color_make(255, 209, 163),
+        5));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(5000),
+        sb_rgb_color_make(255, 228, 206),
+        5));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(6000),
+        sb_rgb_color_make(255, 243, 239),
+        5));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(7000),
+        sb_rgb_color_make(245, 243, 255),
+        5));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(8000),
+        sb_rgb_color_make(227, 233, 255),
+        7));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(9000),
+        sb_rgb_color_make(214, 225, 255),
+        5));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(10000),
+        sb_rgb_color_make(204, 219, 255),
+        5));
+}
+
 void test_rgbw_conversion()
 {
-    // sb_rgb_color_t reference = { 255, 219, 186 };
     sb_rgb_color_t color = { 128, 192, 255 };
+    sb_rgbw_color_t converted;
     sb_rgbw_conversion_t conv;
 
-    conv.method = SB_RGBW_CONVERSION_OFF;
-    conv.params.fixed_value = 123;
+    /* "off" method (i.e. no white channel) */
+    sb_rgbw_conversion_turn_off(&conv);
     TEST_ASSERT_TRUE(sb_rgbw_color_equals(
         sb_rgbw_color_make(128, 192, 255, 0),
         sb_rgb_color_to_rgbw(color, conv)));
 
-    conv.method = SB_RGBW_CONVERSION_FIXED_VALUE;
-    conv.params.fixed_value = 123;
+    /* "fixed value" method (white channel set to a fixed value) */
+    sb_rgbw_conversion_use_fixed_value(&conv, 123);
     TEST_ASSERT_TRUE(sb_rgbw_color_equals(
         sb_rgbw_color_make(128, 192, 255, 123),
         sb_rgb_color_to_rgbw(color, conv)));
 
-    conv.method = SB_RGBW_CONVERSION_SUBTRACT_MIN;
-    conv.params.fixed_value = 123;
+    /* assume that W is perfect white and use min(R, G, B) */
+    sb_rgbw_conversion_use_min_subtraction(&conv);
     TEST_ASSERT_TRUE(sb_rgbw_color_equals(
         sb_rgbw_color_make(0, 64, 127, 128),
         sb_rgb_color_to_rgbw(color, conv)));
@@ -125,7 +173,36 @@ void test_rgbw_conversion()
         sb_rgbw_color_make(96, 32, 0, 32),
         sb_rgb_color_to_rgbw(color, conv)));
     color.green = 192;
-    color.blue = 255;
+    color.blue = 254;
+
+    /* test with a reference color */
+    sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(254, 127, 127));
+    converted = sb_rgb_color_to_rgbw(color, conv);
+    TEST_ASSERT_TRUE(sb_rgbw_color_equals(sb_rgbw_color_make(0, 128, 190, 128), converted));
+
+    sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(127, 254, 127));
+    converted = sb_rgb_color_to_rgbw(color, conv);
+    TEST_ASSERT_TRUE(sb_rgbw_color_equals(sb_rgbw_color_make(32, 0, 158, 192), converted));
+
+    sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(127, 127, 254));
+    converted = sb_rgb_color_to_rgbw(color, conv);
+    TEST_ASSERT_TRUE(sb_rgbw_color_equals(sb_rgbw_color_make(1, 65, 0, 254), converted));
+
+    sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(255, 219, 186));
+    converted = sb_rgb_color_to_rgbw(SB_COLOR_WHITE, conv);
+    TEST_ASSERT_TRUE(sb_rgbw_color_equals(sb_rgbw_color_make(0, 36, 69, 255), converted));
+
+    /* test a white LED with a warm white color temperature of 3000K */
+    sb_rgbw_conversion_use_color_temperature(&conv, 3000);
+    TEST_ASSERT_TRUE(sb_rgbw_color_equals(
+        sb_rgbw_color_make(0, 103, 199, 128),
+        sb_rgb_color_to_rgbw(color, conv)));
+
+    /* test a white LED with a cool white color temperature of 6000K */
+    sb_rgbw_conversion_use_color_temperature(&conv, 6000);
+    TEST_ASSERT_TRUE(sb_rgbw_color_equals(
+        sb_rgbw_color_make(0, 68, 135, 128),
+        sb_rgb_color_to_rgbw(color, conv)));
 }
 
 int main(int argc, char* argv[])
@@ -135,6 +212,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_decode_rgb565);
     RUN_TEST(test_encode_rgb565);
     RUN_TEST(test_rgb_equals);
+    RUN_TEST(test_rgb_from_color_temperature);
     RUN_TEST(test_rgbw_equals);
     RUN_TEST(test_rgbw_conversion);
 

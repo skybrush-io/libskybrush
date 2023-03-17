@@ -57,11 +57,9 @@ typedef struct sb_rgbw_color_s {
  * Supported methods for converting an RGB color to an RGBW color.
  */
 typedef enum {
-    SB_RGBW_CONVERSION_OFF,
     SB_RGBW_CONVERSION_FIXED_VALUE,
     SB_RGBW_CONVERSION_SUBTRACT_MIN,
-    SB_RGBW_CONVERSION_WITH_COLOR_TEMPERATURE,
-    SB_RGBW_CONVERSION_WITH_REFERENCE
+    SB_RGBW_CONVERSION_USE_REFERENCE
 } sb_rgbw_conversion_method_t;
 
 /**
@@ -71,8 +69,10 @@ typedef struct {
     sb_rgbw_conversion_method_t method;
     union {
         uint8_t fixed_value;
-        float temperature;
-        sb_rgb_color_t reference;
+        struct {
+            float mul[3];
+            float div[3];
+        } factors;
     } params;
 } sb_rgbw_conversion_t;
 
@@ -89,13 +89,22 @@ extern const sb_rgb_color_t SB_COLOR_WHITE;
 sb_rgb_color_t sb_rgb_color_decode_rgb565(uint16_t color);
 uint16_t sb_rgb_color_encode_rgb565(sb_rgb_color_t color);
 sb_bool_t sb_rgb_color_equals(sb_rgb_color_t first, sb_rgb_color_t second);
+sb_bool_t sb_rgb_color_almost_equals(sb_rgb_color_t first, sb_rgb_color_t second, uint8_t eps);
 sb_rgb_color_t sb_rgb_color_linear_interpolation(
     sb_rgb_color_t first, sb_rgb_color_t second, float ratio);
 sb_rgb_color_t sb_rgb_color_make(uint8_t red, uint8_t green, uint8_t blue);
 sb_rgbw_color_t sb_rgb_color_to_rgbw(sb_rgb_color_t color, sb_rgbw_conversion_t conv);
+sb_rgb_color_t sb_rgb_color_from_color_temperature(float temperature);
 
 sb_bool_t sb_rgbw_color_equals(sb_rgbw_color_t first, sb_rgbw_color_t second);
+sb_bool_t sb_rgbw_color_almost_equals(sb_rgbw_color_t first, sb_rgbw_color_t second, uint8_t eps);
 sb_rgbw_color_t sb_rgbw_color_make(uint8_t red, uint8_t green, uint8_t blue, uint8_t white);
+
+void sb_rgbw_conversion_turn_off(sb_rgbw_conversion_t* conv);
+void sb_rgbw_conversion_use_fixed_value(sb_rgbw_conversion_t* conv, uint8_t value);
+void sb_rgbw_conversion_use_min_subtraction(sb_rgbw_conversion_t* conv);
+void sb_rgbw_conversion_use_color_temperature(sb_rgbw_conversion_t* conv, float temperature);
+void sb_rgbw_conversion_use_reference_color(sb_rgbw_conversion_t* conv, sb_rgb_color_t reference);
 
 __END_DECLS
 
