@@ -67,12 +67,14 @@ typedef enum {
  */
 typedef struct {
     sb_rgbw_conversion_method_t method;
+    float temperature;
     union {
         uint8_t fixed_value;
         struct {
             float mul[3];
             float div[3];
-        } factors;
+            float temperature;
+        } color_ref;
     } params;
 } sb_rgbw_conversion_t;
 

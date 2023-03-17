@@ -188,9 +188,9 @@ sb_rgbw_color_t sb_rgb_color_to_rgbw(sb_rgb_color_t color, sb_rgbw_conversion_t 
         float correction;
 
         /* Code adapted from: https://www.dmurph.com/posts/2021/1/cabinet-light-3.html */
-        scaled[0] = color.red * conv.params.factors.mul[0];
-        scaled[1] = color.green * conv.params.factors.mul[1];
-        scaled[2] = color.blue * conv.params.factors.mul[2];
+        scaled[0] = color.red * conv.params.color_ref.mul[0];
+        scaled[1] = color.green * conv.params.color_ref.mul[1];
+        scaled[2] = color.blue * conv.params.color_ref.mul[2];
         min_scaled = scaled[0];
         if (min_scaled > scaled[1]) {
             min_scaled = scaled[1];
@@ -200,13 +200,13 @@ sb_rgbw_color_t sb_rgb_color_to_rgbw(sb_rgb_color_t color, sb_rgbw_conversion_t 
         }
         result.white = min_scaled <= 0 ? 0 : (min_scaled <= 255 ? ((uint8_t)min_scaled) : 255);
 
-        correction = result.white * conv.params.factors.div[0];
+        correction = result.white * conv.params.color_ref.div[0];
         result.red = color.red > correction ? color.red - correction : 0;
 
-        correction = result.white * conv.params.factors.div[1];
+        correction = result.white * conv.params.color_ref.div[1];
         result.green = color.green > correction ? color.green - correction : 0;
 
-        correction = result.white * conv.params.factors.div[2];
+        correction = result.white * conv.params.color_ref.div[2];
         result.blue = color.blue > correction ? color.blue - correction : 0;
     }
     }
@@ -290,8 +290,13 @@ void sb_rgbw_conversion_use_min_subtraction(sb_rgbw_conversion_t* conv)
  */
 void sb_rgbw_conversion_use_color_temperature(sb_rgbw_conversion_t* conv, float temperature)
 {
+    if (conv->method == SB_RGBW_CONVERSION_USE_REFERENCE && conv->params.color_ref.temperature == temperature) {
+        return;
+    }
+
     sb_rgbw_conversion_use_reference_color(
         conv, sb_rgb_color_from_color_temperature(temperature));
+    conv->params.color_ref.temperature = temperature;
 }
 
 /**
@@ -324,12 +329,13 @@ void sb_rgbw_conversion_use_reference_color(sb_rgbw_conversion_t* conv, sb_rgb_c
 
     conv->method = SB_RGBW_CONVERSION_USE_REFERENCE;
 
-    conv->params.factors.mul[0] = reference.red >= 1 ? max_value / reference.red : 255.0f;
-    conv->params.factors.mul[1] = reference.green >= 1 ? max_value / reference.green : 255.0f;
-    conv->params.factors.mul[2] = reference.blue >= 1 ? max_value / reference.blue : 255.0f;
+    conv->params.color_ref.mul[0] = reference.red >= 1 ? max_value / reference.red : 255.0f;
+    conv->params.color_ref.mul[1] = reference.green >= 1 ? max_value / reference.green : 255.0f;
+    conv->params.color_ref.mul[2] = reference.blue >= 1 ? max_value / reference.blue : 255.0f;
+    conv->params.color_ref.temperature = 0; /* not based on temperature */
 
     for (i = 0; i < 3; i++) {
-        conv->params.factors.div[i] = 1.0f / conv->params.factors.mul[i];
+        conv->params.color_ref.div[i] = 1.0f / conv->params.color_ref.mul[i];
     }
 }
 
