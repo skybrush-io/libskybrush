@@ -143,30 +143,30 @@ void test_rgb_from_color_temperature()
 
 void test_rgbw_conversion()
 {
-    sb_rgb_color_t color = { 128, 192, 255 };
+    sb_rgb_color_t color = { 128, 192, 254 };
     sb_rgbw_color_t converted;
     sb_rgbw_conversion_t conv;
 
     /* "off" method (i.e. no white channel) */
     sb_rgbw_conversion_turn_off(&conv);
     TEST_ASSERT_TRUE(sb_rgbw_color_equals(
-        sb_rgbw_color_make(128, 192, 255, 0),
+        sb_rgbw_color_make(128, 192, 254, 0),
         sb_rgb_color_to_rgbw(color, conv)));
 
     /* "fixed value" method (white channel set to a fixed value) */
     sb_rgbw_conversion_use_fixed_value(&conv, 123);
     TEST_ASSERT_TRUE(sb_rgbw_color_equals(
-        sb_rgbw_color_make(128, 192, 255, 123),
+        sb_rgbw_color_make(128, 192, 254, 123),
         sb_rgb_color_to_rgbw(color, conv)));
 
     /* assume that W is perfect white and use min(R, G, B) */
     sb_rgbw_conversion_use_min_subtraction(&conv);
     TEST_ASSERT_TRUE(sb_rgbw_color_equals(
-        sb_rgbw_color_make(0, 64, 127, 128),
+        sb_rgbw_color_make(0, 64, 126, 128),
         sb_rgb_color_to_rgbw(color, conv)));
     color.green = 64;
     TEST_ASSERT_TRUE(sb_rgbw_color_equals(
-        sb_rgbw_color_make(64, 0, 191, 64),
+        sb_rgbw_color_make(64, 0, 190, 64),
         sb_rgb_color_to_rgbw(color, conv)));
     color.blue = 32;
     TEST_ASSERT_TRUE(sb_rgbw_color_equals(
@@ -191,6 +191,23 @@ void test_rgbw_conversion()
     sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(255, 219, 186));
     converted = sb_rgb_color_to_rgbw(SB_COLOR_WHITE, conv);
     TEST_ASSERT_TRUE(sb_rgbw_color_equals(sb_rgbw_color_make(0, 36, 69, 255), converted));
+
+    /* test with a reference color of perfect white and check whether the
+     * results are identical to the naive min(R, G, B) method */
+    sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(255, 255, 255));
+    TEST_ASSERT_TRUE(sb_rgbw_color_equals(
+        sb_rgbw_color_make(0, 64, 126, 128),
+        sb_rgb_color_to_rgbw(color, conv)));
+    color.green = 64;
+    TEST_ASSERT_TRUE(sb_rgbw_color_equals(
+        sb_rgbw_color_make(64, 0, 190, 64),
+        sb_rgb_color_to_rgbw(color, conv)));
+    color.blue = 32;
+    TEST_ASSERT_TRUE(sb_rgbw_color_equals(
+        sb_rgbw_color_make(96, 32, 0, 32),
+        sb_rgb_color_to_rgbw(color, conv)));
+    color.green = 192;
+    color.blue = 254;
 
     /* test a white LED with a warm white color temperature of 3000K */
     sb_rgbw_conversion_use_color_temperature(&conv, 3000);
