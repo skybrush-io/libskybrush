@@ -23,15 +23,15 @@
 #include "unity.h"
 #include "utils.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_file_without_light_program()
+void test_file_without_light_program(void)
 {
     sb_light_program_t program;
     sb_error_t retval;

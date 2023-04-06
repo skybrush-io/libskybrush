@@ -26,13 +26,13 @@ sb_trajectory_t trajectory;
 sb_trajectory_player_t player;
 
 void loadFixture(const char* fname);
-void closeFixture();
+void closeFixture(void);
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
@@ -59,12 +59,12 @@ void loadFixtureAndValidate(const char* fname, sb_error_t expected_retval)
     sb_trajectory_player_destroy(&player);
 }
 
-void test_valid_checksum()
+void test_valid_checksum(void)
 {
     loadFixtureAndValidate("fixtures/forward_left_back_v2.skyb", SB_SUCCESS);
 }
 
-void test_invalid_checksum()
+void test_invalid_checksum(void)
 {
     loadFixtureAndValidate("fixtures/forward_left_back_v2_invalid_chksum.skyb", SB_ECORRUPTED);
 }

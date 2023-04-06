@@ -24,15 +24,15 @@
 
 sb_trajectory_builder_t builder;
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_init()
+void test_init(void)
 {
     uint8_t* buf;
 
@@ -53,13 +53,13 @@ void test_init()
     sb_trajectory_builder_destroy(&builder);
 }
 
-void test_init_invalid_scale()
+void test_init_invalid_scale(void)
 {
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_init(&builder, 0, 0));
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_init(&builder, 255, 0));
 }
 
-void test_set_start_position()
+void test_set_start_position(void)
 {
     uint8_t* buf;
     uint8_t expected_before[] = { 2, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -88,7 +88,7 @@ void test_set_start_position()
     sb_trajectory_builder_destroy(&builder);
 }
 
-void test_append_line()
+void test_append_line(void)
 {
     sb_vector3_with_yaw_t vec;
     // clang-format off
@@ -194,7 +194,7 @@ void test_append_line()
     sb_trajectory_builder_destroy(&builder);
 }
 
-void test_set_start_position_later()
+void test_set_start_position_later(void)
 {
     sb_vector3_with_yaw_t vec;
 
@@ -215,7 +215,7 @@ void test_set_start_position_later()
     sb_trajectory_builder_destroy(&builder);
 }
 
-void test_set_start_position_invalid_coordinate()
+void test_set_start_position_invalid_coordinate(void)
 {
     sb_vector3_with_yaw_t vec;
 
@@ -230,7 +230,7 @@ void test_set_start_position_invalid_coordinate()
     sb_trajectory_builder_destroy(&builder);
 }
 
-void test_hold_position_for()
+void test_hold_position_for(void)
 {
     sb_vector3_with_yaw_t vec;
     // clang-format off
@@ -315,7 +315,7 @@ void test_hold_position_for()
     sb_trajectory_builder_destroy(&builder);
 }
 
-void test_conversion_to_trajectory()
+void test_conversion_to_trajectory(void)
 {
     sb_vector3_with_yaw_t vec;
     sb_trajectory_t trajectory;

@@ -23,15 +23,15 @@
 #include "unity.h"
 #include "utils.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_light_program_with_wait_until_command()
+void test_light_program_with_wait_until_command(void)
 {
     float t[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12.04, 13, 14 };
     sb_rgb_color_t actual;

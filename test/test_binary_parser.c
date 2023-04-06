@@ -21,15 +21,15 @@
 
 #include "unity.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_open_file()
+void test_open_file(void)
 {
     sb_binary_file_parser_t parser;
     FILE* fp;
@@ -101,7 +101,7 @@ void test_read_blocks_from_parser(sb_binary_file_parser_t* parser)
     TEST_ASSERT_EQUAL(SB_EREAD, sb_binary_file_seek_to_next_block(parser));
 }
 
-void test_read_blocks_from_file()
+void test_read_blocks_from_file(void)
 {
     sb_binary_file_parser_t parser;
     FILE* fp;
@@ -120,7 +120,7 @@ void test_read_blocks_from_file()
     fclose(fp);
 }
 
-void test_read_blocks_from_memory()
+void test_read_blocks_from_memory(void)
 {
     sb_binary_file_parser_t parser;
     FILE* fp;
@@ -138,7 +138,7 @@ void test_read_blocks_from_memory()
     sb_binary_file_parser_destroy(&parser);
 }
 
-void test_find_first_block_by_type()
+void test_find_first_block_by_type(void)
 {
     sb_binary_file_parser_t parser;
     FILE* fp;

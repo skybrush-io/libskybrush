@@ -21,15 +21,15 @@
 
 #include "unity.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_bounding_box_expand()
+void test_bounding_box_expand(void)
 {
     sb_bounding_box_t box = {
         /* .x = */ { /* .min = */ 3, /* .max = */ 11 },

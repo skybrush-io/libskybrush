@@ -23,15 +23,15 @@
 
 #include "unity.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_ap_crc32()
+void test_ap_crc32(void)
 {
     const char* buf = "hello-world";
     uint32_t value;

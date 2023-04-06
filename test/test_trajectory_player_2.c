@@ -26,7 +26,7 @@ sb_trajectory_t trajectory;
 sb_trajectory_player_t player;
 
 void loadFixture(const char* fname);
-void closeFixture();
+void closeFixture(void);
 
 /* test trajectory is as follows:
 
@@ -55,12 +55,12 @@ evaluation.
 
 */
 
-void setUp()
+void setUp(void)
 {
     loadFixture("fixtures/forward_left_back.skyb");
 }
 
-void tearDown()
+void tearDown(void)
 {
     closeFixture();
 }
@@ -86,13 +86,13 @@ void loadFixture(const char* fname)
     fclose(fp);
 }
 
-void closeFixture()
+void closeFixture(void)
 {
     sb_trajectory_player_destroy(&player);
     sb_trajectory_destroy(&trajectory);
 }
 
-void test_position_at()
+void test_position_at(void)
 {
     sb_vector3_with_yaw_t pos;
     float t[] = {
@@ -170,7 +170,7 @@ void test_position_at()
     }
 }
 
-void test_velocity_at()
+void test_velocity_at(void)
 {
     sb_vector3_with_yaw_t vel;
     float t[] = {
@@ -248,7 +248,7 @@ void test_velocity_at()
     }
 }
 
-void test_acceleration_at()
+void test_acceleration_at(void)
 {
     sb_vector3_with_yaw_t acc;
     /* Don't query at t=10, t=20 and t=30 because in these places the result

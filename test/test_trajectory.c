@@ -26,14 +26,14 @@ sb_trajectory_t trajectory;
 sb_bool_t trajectory_loaded;
 
 sb_error_t loadFixture(const char* fname);
-void closeFixture();
+void closeFixture(void);
 
-void setUp()
+void setUp(void)
 {
     loadFixture("fixtures/test.skyb");
 }
 
-void tearDown()
+void tearDown(void)
 {
     if (trajectory_loaded) {
         closeFixture();
@@ -104,13 +104,13 @@ sb_error_t loadFixtureInMemory(const char* fname)
     return retval;
 }
 
-void closeFixture()
+void closeFixture(void)
 {
     sb_trajectory_destroy(&trajectory);
     trajectory_loaded = 0;
 }
 
-void test_trajectory_is_really_empty()
+void test_trajectory_is_really_empty(void)
 {
     float t[] = { -10, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60 };
     int i, n = sizeof(t) / sizeof(t[0]);
@@ -138,7 +138,7 @@ void test_trajectory_is_really_empty()
     sb_trajectory_player_destroy(&player);
 }
 
-void test_clear()
+void test_clear(void)
 {
     sb_trajectory_clear(&trajectory);
     test_trajectory_is_really_empty();
@@ -148,7 +148,7 @@ void test_clear()
     TEST_ASSERT(!sb_buffer_is_view(&trajectory.buffer));
 }
 
-void test_clear_view()
+void test_clear_view(void)
 {
     uint8_t buf[] = {
         0x01, 0x64, 0x00, 0x64, 0x00, 0x64, 0x00, 0x00, 0x00,
@@ -167,14 +167,14 @@ void test_clear_view()
     TEST_ASSERT(sb_buffer_is_view(&trajectory.buffer));
 }
 
-void test_init_empty()
+void test_init_empty(void)
 {
     closeFixture(); /* was created in setUp() */
     sb_trajectory_init_empty(&trajectory);
     test_trajectory_is_really_empty();
 }
 
-void test_get_start_position()
+void test_get_start_position(void)
 {
     sb_vector3_with_yaw_t pos;
 
@@ -185,7 +185,7 @@ void test_get_start_position()
     TEST_ASSERT_EQUAL(0, pos.yaw);
 }
 
-void test_get_end_position()
+void test_get_end_position(void)
 {
     sb_vector3_with_yaw_t pos;
 
@@ -196,13 +196,13 @@ void test_get_end_position()
     TEST_ASSERT_EQUAL(0, pos.yaw);
 }
 
-void test_get_total_duration()
+void test_get_total_duration(void)
 {
     TEST_ASSERT_EQUAL_UINT32(50000, sb_trajectory_get_total_duration_msec(&trajectory));
     TEST_ASSERT_EQUAL_FLOAT(50, sb_trajectory_get_total_duration_sec(&trajectory));
 }
 
-void test_get_axis_aligned_bounding_box()
+void test_get_axis_aligned_bounding_box(void)
 {
     sb_bounding_box_t box;
 
@@ -218,7 +218,7 @@ void test_get_axis_aligned_bounding_box()
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(&trajectory, NULL));
 }
 
-void test_get_axis_aligned_bounding_box_from_trajectory_in_memory()
+void test_get_axis_aligned_bounding_box_from_trajectory_in_memory(void)
 {
     sb_bounding_box_t box;
 
@@ -234,7 +234,7 @@ void test_get_axis_aligned_bounding_box_from_trajectory_in_memory()
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.z.max);
 }
 
-void test_propose_takeoff_time()
+void test_propose_takeoff_time(void)
 {
     /* Test invalid values first */
     TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, -1, 1));
@@ -270,7 +270,7 @@ void test_propose_takeoff_time()
         sb_trajectory_propose_takeoff_time_sec(&trajectory, 200000 /* mm */, 1000 /* mm/sec */));
 }
 
-void test_propose_landing_time()
+void test_propose_landing_time(void)
 {
     float total_duration = sb_trajectory_get_total_duration_sec(&trajectory);
 
@@ -296,7 +296,7 @@ void test_propose_landing_time()
         sb_trajectory_propose_landing_time_sec(&trajectory, 200000 /* mm */));
 }
 
-void test_propose_takeoff_time_hover_3m()
+void test_propose_takeoff_time_hover_3m(void)
 {
     closeFixture();
     loadFixture("fixtures/hover_3m.skyb");
@@ -310,7 +310,7 @@ void test_propose_takeoff_time_hover_3m()
         sb_trajectory_propose_takeoff_time_sec(&trajectory, 2500 /* mm */, 1000 /* mm/sec */));
 }
 
-void test_load_truncated_file()
+void test_load_truncated_file(void)
 {
     closeFixture();
     TEST_ASSERT_EQUAL(
@@ -318,7 +318,7 @@ void test_load_truncated_file()
         loadFixture("fixtures/forward_left_back_truncated.skyb"));
 }
 
-void test_load_file_with_zero_scale()
+void test_load_file_with_zero_scale(void)
 {
     closeFixture();
     TEST_ASSERT_EQUAL(

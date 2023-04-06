@@ -23,15 +23,15 @@
 
 #include "unity.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_format_int16()
+void test_format_int16(void)
 {
     const uint8_t expected[8] = { 0x01, 0x02, 0x03, 0x04, 0xff, 0xfe, 0x00, 0x00 };
     uint8_t buf[8];
@@ -50,7 +50,7 @@ void test_format_int16()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, sizeof(buf));
 }
 
-void test_format_uint16()
+void test_format_uint16(void)
 {
     const uint8_t expected[8] = { 0x01, 0x02, 0x03, 0x04, 0xff, 0xfe, 0x00, 0x00 };
     uint8_t buf[8];
@@ -69,7 +69,7 @@ void test_format_uint16()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, sizeof(buf));
 }
 
-void test_parse_int16()
+void test_parse_int16(void)
 {
     uint8_t buf[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0xff, 0xfe };
     size_t offset;
@@ -90,7 +90,7 @@ void test_parse_int16()
     TEST_ASSERT_EQUAL(7, offset);
 }
 
-void test_parse_uint16()
+void test_parse_uint16(void)
 {
     uint8_t buf[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0xff, 0xfe };
     size_t offset;
@@ -111,7 +111,7 @@ void test_parse_uint16()
     TEST_ASSERT_EQUAL(7, offset);
 }
 
-void test_format_int32()
+void test_format_int32(void)
 {
     const uint8_t expected[10] = { 0x01, 0x02, 0x03, 0x04, 0x04, 0x05, 0xff, 0xfe, 0x00, 0x00 };
     uint8_t buf[8];
@@ -128,7 +128,7 @@ void test_format_int32()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, sizeof(buf));
 }
 
-void test_format_uint32()
+void test_format_uint32(void)
 {
     const uint8_t expected[10] = { 0x01, 0x02, 0x03, 0x04, 0x04, 0x05, 0xff, 0xfe, 0x00, 0x00 };
     uint8_t buf[8];
@@ -145,7 +145,7 @@ void test_format_uint32()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, sizeof(buf));
 }
 
-void test_parse_int32()
+void test_parse_int32(void)
 {
     uint8_t buf[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0xff, 0xfe };
     size_t offset;
@@ -163,7 +163,7 @@ void test_parse_int32()
     TEST_ASSERT_EQUAL(7, offset);
 }
 
-void test_parse_uint32()
+void test_parse_uint32(void)
 {
     uint8_t buf[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0xff, 0xfe };
     size_t offset;
@@ -181,7 +181,7 @@ void test_parse_uint32()
     TEST_ASSERT_EQUAL(7, offset);
 }
 
-void test_parse_varuint32()
+void test_parse_varuint32(void)
 {
     uint8_t buf[] = { 0x00, 0x01, 0x40, 0x7f, 0x80, 0x02, 0xa7, 0x82, 0x04, 0xff, 0xff, 0xff, 0xff, 0x0d, 0xff, 0xff, 0xff, 0xff, 0x0f };
     uint8_t overflow_buf[] = { 0x80, 0x80, 0x80, 0x80, 0x10, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00 };

@@ -21,15 +21,15 @@
 
 #include "unity.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_interval_expand()
+void test_interval_expand(void)
 {
     sb_interval_t interval = { /* .min = */ 3, /* .max = */ 11 };
 

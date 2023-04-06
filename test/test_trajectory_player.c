@@ -26,14 +26,14 @@ sb_trajectory_t trajectory;
 sb_trajectory_player_t player;
 
 void loadFixture(const char* fname);
-void closeFixture();
+void closeFixture(void);
 
-void setUp()
+void setUp(void)
 {
     loadFixture("fixtures/test.skyb");
 }
 
-void tearDown()
+void tearDown(void)
 {
     closeFixture();
 }
@@ -59,13 +59,13 @@ void loadFixture(const char* fname)
     fclose(fp);
 }
 
-void closeFixture()
+void closeFixture(void)
 {
     sb_trajectory_player_destroy(&player);
     sb_trajectory_destroy(&trajectory);
 }
 
-void test_position_at()
+void test_position_at(void)
 {
     sb_vector3_with_yaw_t pos;
     float t[] = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60 };
@@ -116,7 +116,7 @@ void test_position_at()
     }
 }
 
-void test_velocity_at()
+void test_velocity_at(void)
 {
     sb_vector3_with_yaw_t vel;
     float t[] = { 5, 15, 25, 35, 45, 55 };
@@ -160,7 +160,7 @@ void test_velocity_at()
     }
 }
 
-void test_acceleration_at()
+void test_acceleration_at(void)
 {
     sb_vector3_with_yaw_t acc;
     float t[] = { 5, 15, 25, 35, 45, 55 };

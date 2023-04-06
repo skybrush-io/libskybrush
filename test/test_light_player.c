@@ -26,7 +26,7 @@
 sb_light_program_t program;
 sb_light_player_t player;
 
-void setUp()
+void setUp(void)
 {
     FILE* fp;
     int fd;
@@ -47,13 +47,13 @@ void setUp()
     fclose(fp);
 }
 
-void tearDown()
+void tearDown(void)
 {
     sb_light_player_destroy(&player);
     sb_light_program_destroy(&program);
 }
 
-void test_get_color_at()
+void test_get_color_at(void)
 {
     float t[] = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60 };
     sb_rgb_color_t actual;

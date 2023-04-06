@@ -22,15 +22,15 @@
 
 #include "unity.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_init_destroy()
+void test_init_destroy(void)
 {
     sb_buffer_t buf;
     size_t i;
@@ -45,7 +45,7 @@ void test_init_destroy()
     sb_buffer_destroy(&buf);
 }
 
-void test_init_destroy_zero_size()
+void test_init_destroy_zero_size(void)
 {
     sb_buffer_t buf;
 
@@ -56,7 +56,7 @@ void test_init_destroy_zero_size()
     sb_buffer_destroy(&buf);
 }
 
-void test_clear_and_prune()
+void test_clear_and_prune(void)
 {
     sb_buffer_t buf;
     size_t capacity;
@@ -78,7 +78,7 @@ void test_clear_and_prune()
     sb_buffer_destroy(&buf);
 }
 
-void test_resize_same_or_larger()
+void test_resize_same_or_larger(void)
 {
     sb_buffer_t buf;
     size_t i, capacity;
@@ -127,7 +127,7 @@ void test_resize_same_or_larger()
     sb_buffer_destroy(&buf);
 }
 
-void test_resize_smaller()
+void test_resize_smaller(void)
 {
     sb_buffer_t buf;
     size_t i, capacity;
@@ -160,7 +160,7 @@ void test_resize_smaller()
     sb_buffer_destroy(&buf);
 }
 
-void test_resize_too_large()
+void test_resize_too_large(void)
 {
     sb_buffer_t buf;
     const char* s = "dummy";
@@ -177,7 +177,7 @@ void test_resize_too_large()
     TEST_ASSERT_EQUAL(SB_ENOMEM, sb_buffer_append_bytes(&buf, s, SIZE_MAX));
 }
 
-void test_fill()
+void test_fill(void)
 {
     sb_buffer_t buf;
     size_t i;
@@ -206,7 +206,7 @@ void test_fill()
     sb_buffer_destroy(&buf);
 }
 
-void test_append()
+void test_append(void)
 {
     sb_buffer_t buf, other;
     const char* str = "hello world";
@@ -239,7 +239,7 @@ void test_append()
     sb_buffer_destroy(&buf);
 }
 
-void test_append_zero_length()
+void test_append_zero_length(void)
 {
     sb_buffer_t buf;
     const char* str = "hello world";
@@ -255,7 +255,7 @@ void test_append_zero_length()
     sb_buffer_destroy(&buf);
 }
 
-void test_extend_with_zeros()
+void test_extend_with_zeros(void)
 {
     sb_buffer_t buf;
     const char* str = "hello world";
@@ -277,7 +277,7 @@ void test_extend_with_zeros()
     }
 }
 
-void test_init_view()
+void test_init_view(void)
 {
     sb_buffer_t buf;
     char* str = "hello world";
@@ -289,7 +289,7 @@ void test_init_view()
     TEST_ASSERT_EQUAL(str, SB_BUFFER(buf));
 }
 
-void test_init_view_cannot_grow_or_shrink()
+void test_init_view_cannot_grow_or_shrink(void)
 {
     sb_buffer_t buf;
     char* str = "hello world";
@@ -300,7 +300,7 @@ void test_init_view_cannot_grow_or_shrink()
     TEST_ASSERT_EQUAL(SB_FAILURE, sb_buffer_clear(&buf));
 }
 
-void test_init_from_bytes()
+void test_init_from_bytes(void)
 {
     sb_buffer_t buf;
     const char* str = "hello world";
@@ -319,7 +319,7 @@ void test_init_from_bytes()
     sb_buffer_destroy(&buf);
 }
 
-void test_init_from_bytes_zero_size()
+void test_init_from_bytes_zero_size(void)
 {
     sb_buffer_t buf;
     char* str = "hello world";

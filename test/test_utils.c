@@ -21,15 +21,15 @@
 
 #include "unity.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_scale_update()
+void test_scale_update(void)
 {
     uint8_t scale = 0;
     sb_vector3_with_yaw_t vec = { 0, 0, 0, 0 };

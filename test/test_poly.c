@@ -22,11 +22,11 @@
 
 #include "unity.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
@@ -43,7 +43,7 @@ void check_if_poly_is_all_zero(sb_poly_t* poly)
     TEST_ASSERT_EQUAL(0, sb_poly_eval_double(poly, 1));
 }
 
-void test_zero()
+void test_zero(void)
 {
     sb_poly_t poly;
 
@@ -51,7 +51,7 @@ void test_zero()
     check_if_poly_is_all_zero(&poly);
 }
 
-void test_zero_4d()
+void test_zero_4d(void)
 {
     sb_poly_4d_t poly;
 
@@ -62,7 +62,7 @@ void test_zero_4d()
     check_if_poly_is_all_zero(&poly.yaw);
 }
 
-void test_constant()
+void test_constant(void)
 {
     sb_poly_t poly;
 
@@ -79,7 +79,7 @@ void test_constant()
     TEST_ASSERT_EQUAL(3, sb_poly_eval_double(&poly, 1));
 }
 
-void test_linear()
+void test_linear(void)
 {
     sb_poly_t poly;
 
@@ -106,7 +106,7 @@ void test_linear()
     TEST_ASSERT_EQUAL(22, sb_poly_eval_double(&poly, 6));
 }
 
-void test_linear_small_durations()
+void test_linear_small_durations(void)
 {
     sb_poly_t poly;
 
@@ -133,7 +133,7 @@ void test_linear_small_durations()
     TEST_ASSERT_EQUAL(1, sb_poly_eval(&poly, FLT_EPSILON / 2));
 }
 
-void test_bezier()
+void test_bezier(void)
 {
     sb_poly_t poly;
     float xs;
@@ -169,7 +169,7 @@ void test_bezier()
     TEST_ASSERT_EQUAL(0, sb_poly_eval_double(&poly, 4));
 }
 
-void test_add_constant()
+void test_add_constant(void)
 {
     sb_poly_t poly;
 
@@ -199,7 +199,7 @@ void test_add_constant()
     TEST_ASSERT_EQUAL(23, sb_poly_eval(&poly, 5));
 }
 
-void test_scale()
+void test_scale(void)
 {
     sb_poly_t poly;
 
@@ -212,7 +212,7 @@ void test_scale()
     TEST_ASSERT_EQUAL(60, sb_poly_eval(&poly, 5));
 }
 
-void test_get_degree()
+void test_get_degree(void)
 {
     sb_poly_t poly;
     float xs[4] = { 0, 7, 13, 61 };
@@ -234,7 +234,7 @@ void test_get_degree()
     TEST_ASSERT_EQUAL(0, sb_poly_get_degree(&poly));
 }
 
-void test_get_extrema()
+void test_get_extrema(void)
 {
     sb_poly_t poly;
     sb_interval_t result;
@@ -303,7 +303,7 @@ void test_get_extrema()
     TEST_ASSERT_EQUAL(4, result.max);
 }
 
-void test_stretch()
+void test_stretch(void)
 {
     sb_poly_t poly;
     sb_poly_t poly2;
@@ -319,7 +319,7 @@ void test_stretch()
     }
 }
 
-void test_deriv()
+void test_deriv(void)
 {
     sb_poly_t poly;
     float xs[4] = { 0, 7, 13, 61 };
@@ -349,7 +349,7 @@ void test_deriv()
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(xs4, poly.coeffs, 1);
 }
 
-void test_solve_simple()
+void test_solve_simple(void)
 {
     sb_poly_t poly;
     float xs[8];
@@ -420,7 +420,7 @@ void test_solve_simple()
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 2, roots[0]);
 }
 
-void test_solve_roots_not_needed()
+void test_solve_roots_not_needed(void)
 {
     sb_poly_t poly;
     float xs[8];
@@ -436,7 +436,7 @@ void test_solve_roots_not_needed()
     TEST_ASSERT_EQUAL(1, num_roots);
 }
 
-void test_solve_root_count_not_needed()
+void test_solve_root_count_not_needed(void)
 {
     sb_poly_t poly;
     float xs[8];
@@ -452,7 +452,7 @@ void test_solve_root_count_not_needed()
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 3, roots[0]);
 }
 
-void test_solve_generic()
+void test_solve_generic(void)
 {
     sb_poly_t poly;
     float xs[8];

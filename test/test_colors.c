@@ -21,15 +21,15 @@
 
 #include "unity.h"
 
-void setUp()
+void setUp(void)
 {
 }
 
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_decode_rgb565()
+void test_decode_rgb565(void)
 {
     sb_rgb_color_t color;
 
@@ -46,7 +46,7 @@ void test_decode_rgb565()
     TEST_ASSERT_TRUE(sb_rgb_color_equals(sb_rgb_color_make(248, 128, 64), color));
 }
 
-void test_encode_rgb565()
+void test_encode_rgb565(void)
 {
     sb_rgb_color_t color;
 
@@ -63,7 +63,7 @@ void test_encode_rgb565()
     TEST_ASSERT_EQUAL_UINT16(0xfc08, sb_rgb_color_encode_rgb565(color));
 }
 
-void test_rgb_equals()
+void test_rgb_equals(void)
 {
     sb_rgb_color_t red = { 255, 0, 0 };
     sb_rgb_color_t another_red = { 255, 0, 0 };
@@ -76,7 +76,7 @@ void test_rgb_equals()
     TEST_ASSERT_FALSE(sb_rgb_color_equals(SB_COLOR_WHITE, SB_COLOR_BLACK));
 }
 
-void test_rgbw_equals()
+void test_rgbw_equals(void)
 {
     sb_rgbw_color_t red = { 255, 0, 0 };
     sb_rgbw_color_t another_red = { 255, 0, 0 };
@@ -93,7 +93,7 @@ void test_rgbw_equals()
     TEST_ASSERT_FALSE(sb_rgbw_color_equals(white, white_with_rgb_only));
 }
 
-void test_rgb_from_color_temperature()
+void test_rgb_from_color_temperature(void)
 {
     /* Approximation inexact around 1000K but then it gets better.
      * Expected values are from:
@@ -141,7 +141,7 @@ void test_rgb_from_color_temperature()
         5));
 }
 
-void test_rgbw_conversion()
+void test_rgbw_conversion(void)
 {
     sb_rgb_color_t color = { 128, 192, 254 };
     sb_rgbw_color_t converted;

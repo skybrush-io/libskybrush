@@ -25,7 +25,7 @@
 
 sb_light_program_t program;
 
-void setUp()
+void setUp(void)
 {
     FILE* fp;
     int fd;
@@ -45,12 +45,12 @@ void setUp()
     fclose(fp);
 }
 
-void tearDown()
+void tearDown(void)
 {
     sb_light_program_destroy(&program);
 }
 
-void test_light_program_is_really_empty()
+void test_light_program_is_really_empty(void)
 {
     float t[] = { 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60 };
     int i, n = sizeof(t) / sizeof(t[0]);
@@ -67,13 +67,13 @@ void test_light_program_is_really_empty()
     sb_light_player_destroy(&player);
 }
 
-void test_clear()
+void test_clear(void)
 {
     sb_light_program_clear(&program);
     test_light_program_is_really_empty();
 }
 
-void test_init_empty()
+void test_init_empty(void)
 {
     sb_light_program_destroy(&program); /* was created in setUp() */
     sb_light_program_init_empty(&program);

@@ -25,14 +25,14 @@
 sb_rth_plan_t plan;
 
 void loadFixture(const char* fname);
-void closeFixture();
+void closeFixture(void);
 
-void setUp()
+void setUp(void)
 {
     loadFixture("fixtures/hover_3m_with_rth_plan.skyb");
 }
 
-void tearDown()
+void tearDown(void)
 {
     closeFixture();
 }
@@ -57,12 +57,12 @@ void loadFixture(const char* fname)
     fclose(fp);
 }
 
-void closeFixture()
+void closeFixture(void)
 {
     sb_rth_plan_destroy(&plan);
 }
 
-void test_rth_plan_is_really_empty()
+void test_rth_plan_is_really_empty(void)
 {
     float t[] = { -10, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60 };
     int i, n = sizeof(t) / sizeof(t[0]);
@@ -80,14 +80,14 @@ void test_rth_plan_is_really_empty()
     }
 }
 
-void test_init_empty()
+void test_init_empty(void)
 {
     closeFixture(); /* was created in setUp() */
     sb_rth_plan_init_empty(&plan);
     test_rth_plan_is_really_empty();
 }
 
-void test_get_points()
+void test_get_points(void)
 {
     sb_vector2_t vec;
 
@@ -110,17 +110,17 @@ void test_get_points()
     TEST_ASSERT_EQUAL_FLOAT(-30000, vec.y);
 }
 
-void test_get_num_entries()
+void test_get_num_entries(void)
 {
     TEST_ASSERT_EQUAL(6, sb_rth_plan_get_num_entries(&plan));
 }
 
-void test_is_empty()
+void test_is_empty(void)
 {
     TEST_ASSERT(!sb_rth_plan_is_empty(&plan));
 }
 
-void test_evaluate_at()
+void test_evaluate_at(void)
 {
     sb_rth_plan_entry_t entry;
     float t;
@@ -205,7 +205,7 @@ void test_evaluate_at()
     }
 }
 
-void test_plan_duration_too_large()
+void test_plan_duration_too_large(void)
 {
     sb_rth_plan_entry_t entry;
 
@@ -294,7 +294,7 @@ void assert_trajectory_is_constant(const sb_trajectory_t* trajectory, float star
     }
 }
 
-void test_convert_to_trajectory()
+void test_convert_to_trajectory(void)
 {
     sb_rth_plan_entry_t entry;
     sb_trajectory_t trajectory;
