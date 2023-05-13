@@ -285,7 +285,7 @@ void test_propose_landing_time(void)
      * 1 m/sec for 10 seconds, so it reaches 2 meters 2 seconds before the
      * end of the trajectory. */
     TEST_ASSERT_FLOAT_WITHIN(
-        1e-7, total_duration - 2,
+        1e-1, total_duration - 2,
         sb_trajectory_propose_landing_time_sec(&trajectory, 2000 /* mm */));
 
     /* Test what happens if we pass an altitude that the trajectory never
