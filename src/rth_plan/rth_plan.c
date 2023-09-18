@@ -48,9 +48,19 @@
 #define OFFSET_OF_FIRST_ENTRY (OFFSET_OF_ENTRY_TABLE + sizeof(uint16_t))
 
 /**
+ * @brief Returns whether the given RTH action has an associated pre-neck phase.
+ */
+static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action);
+
+/**
  * @brief Returns whether the given RTH action has an associated target coordinate.
  */
 static sb_bool_t sb_i_rth_action_has_target(sb_rth_action_t action);
+
+/**
+ * @brief Returns whether the given RTH action has an associated target altitude.
+ */
+static sb_bool_t sb_i_rth_action_has_target_altitude(sb_rth_action_t action);
 
 sb_error_t sb_i_rth_plan_init_from_parser(sb_rth_plan_t* plan, sb_binary_file_parser_t* parser);
 
@@ -327,48 +337,74 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
             entry.action = SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE;
             break;
 
+        case 3:
+            entry.action = SB_RTH_ACTION_GO_TO_STRAIGHT;
+
         default:
             return SB_EPARSE;
         }
 
+        /* Parse action parameters */
         if (encoded_action != SB_RTH_ACTION_SAME_AS_PREVIOUS) {
-            /* If the action has a target, parse the target and the duration */
+            /* If the action has a target, parse it */
             if (sb_i_rth_action_has_target(entry.action)) {
                 SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &point_index));
-                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
             } else {
                 point_index = 0;
-                duration = 0;
             }
 
-            /* Range check for the duration */
+            /* If the action has a target altitude, parse it */
+            if (sb_i_rth_action_has_target_altitude(entry.action)) {
+                entry.target_altitude = sb_i_rth_plan_parse_coordinate(plan->buffer, &offset);
+            } else {
+                entry.target_altitude = 0;
+            }
+
+            /* If the action has a pre-neck, parse its size and duration */
+            if (sb_i_rth_action_has_neck(entry.action)) {
+                entry.pre_neck_mm = sb_i_rth_plan_parse_coordinate(plan, &offset);
+                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
+                if (duration > MAX_DURATION) {
+                    return SB_EOVERFLOW;
+                }
+                entry.pre_neck_duration_sec = duration;
+            } else {
+                entry.pre_neck_mm = 0;
+                entry.pre_neck_duration_sec = duration;
+            }
+        }
+
+        /* If the action has a duration, parse it */
+        if (sb_i_rth_action_has_target(entry.action)) {
+            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
             if (duration > MAX_DURATION) {
                 return SB_EOVERFLOW;
             }
-
             entry.duration_sec = duration;
+        } else {
+            entry.duration_sec = 0;
+        }
 
-            /* If the action has a pre-delay, parse it */
-            if (flags & 0x02) {
-                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
-                if (duration > MAX_DURATION) {
-                    return SB_EOVERFLOW;
-                }
-                entry.pre_delay_sec = duration;
-            } else {
-                entry.pre_delay_sec = 0;
+        /* If the action has a pre-delay, parse it */
+        if (flags & 0x02) {
+            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
+            if (duration > MAX_DURATION) {
+                return SB_EOVERFLOW;
             }
+            entry.pre_delay_sec = duration;
+        } else {
+            entry.pre_delay_sec = 0;
+        }
 
-            /* If the action has a post-delay, parse it */
-            if (flags & 0x01) {
-                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
-                if (duration > MAX_DURATION) {
-                    return SB_EOVERFLOW;
-                }
-                entry.post_delay_sec = duration;
-            } else {
-                entry.post_delay_sec = 0;
+        /* If the action has a post-delay, parse it */
+        if (flags & 0x01) {
+            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
+            if (duration > MAX_DURATION) {
+                return SB_EOVERFLOW;
             }
+            entry.post_delay_sec = duration;
+        } else {
+            entry.post_delay_sec = 0;
         }
 
         /* Check if the time of this entry is at least as large as the the
@@ -425,15 +461,21 @@ sb_error_t sb_trajectory_init_from_rth_plan_entry(
     uint32_t duration_msec;
     float start_time = entry->time_sec;
 
+    /* Determine final scale for trajectory generation */
     SB_CHECK(sb_scale_update_vector3_with_yaw(&scale, start));
+    sb_i_scale_update(&scale, 0.0, 0.0, start.z + entry->pre_neck_mm);
     if (sb_i_rth_action_has_target(entry->action)) {
         SB_CHECK(sb_scale_update_vector2(&scale, entry->target));
+    }
+    if (sb_i_rth_action_has_target_altitude(entry->action)) {
+        sb_i_scale_update(&scale, 0.0, 0.0, entry->target_altitude);
     }
 
     if (start_time < 0) {
         start_time = 0;
     }
 
+    /* Start trajectory with holding still during pre-delay */
     SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
         &duration_msec,
         start_time + (entry->pre_delay_sec > 0 ? entry->pre_delay_sec : 0)));
@@ -443,8 +485,18 @@ sb_error_t sb_trajectory_init_from_rth_plan_entry(
 
     SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
 
-    /* Pre-delay is now taken into account */
+    /* Initialize target from start */
+    target = start;
 
+    /* Add pre-neck */
+    if (entry->pre_neck_mm || entry->pre_neck_duration_sec) {
+        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+            &duration_msec, entry->pre_neck_duration_sec));
+        target.z += entry->pre_neck_mm;
+        SB_CHECK(sb_trajectory_builder_append_line(&builder, target, duration_msec));
+    }
+
+    /* Add net action */
     switch (entry->action) {
     case SB_RTH_ACTION_LAND:
         /* this is easy, nothing to do */
@@ -453,17 +505,19 @@ sb_error_t sb_trajectory_init_from_rth_plan_entry(
     case SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE:
         target.x = entry->target.x;
         target.y = entry->target.y;
-        target.z = start.z;
-        target.yaw = start.yaw;
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->duration_sec));
         SB_CHECK(sb_trajectory_builder_append_line(&builder, target, duration_msec));
 
-        if (entry->post_delay_sec > 0) {
-            SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
-                &duration_msec, entry->post_delay_sec));
-            SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
-        }
+        break;
+
+    case SB_RTH_ACTION_GO_TO_STRAIGHT:
+        target.x = entry->target.x;
+        target.y = entry->target.y;
+        target.z = entry->target_altitude;
+        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+            &duration_msec, entry->duration_sec));
+        SB_CHECK(sb_trajectory_builder_append_line(&builder, target, duration_msec));
 
         break;
 
@@ -471,6 +525,13 @@ sb_error_t sb_trajectory_init_from_rth_plan_entry(
         /* unknown action */
         retval = SB_EINVAL;
         goto cleanup;
+    }
+
+    /* Add post delay */
+    if (entry->post_delay_sec > 0) {
+        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+            &duration_msec, entry->post_delay_sec));
+        SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
     }
 
     retval = sb_trajectory_init_from_builder(trajectory, &builder);
@@ -483,9 +544,22 @@ cleanup:
 
 /* ************************************************************************** */
 
+static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action)
+{
+    return action == SB_RTH_ACTION_GO_TO_STRAIGHT;
+}
+
 static sb_bool_t sb_i_rth_action_has_target(sb_rth_action_t action)
 {
-    return action == SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE;
+    return (
+        action == SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE || 
+        action == SB_RTH_ACTION_GO_TO_STRAIGHT
+    );
+}
+
+static sb_bool_t sb_i_rth_action_has_target_altitude(sb_rth_action_t action)
+{
+    return action == SB_RTH_ACTION_GO_TO_STRAIGHT;
 }
 
 static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan)
