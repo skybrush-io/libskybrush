@@ -46,6 +46,24 @@ void sb_interval_expand(sb_interval_t* interval, float offset)
 sb_error_t sb_i_scale_update(uint8_t* scale, float x, float y, float z);
 
 /**
+ * @brief Helper function to pick an appropriate scale for a trajectory (1D variant).
+ *
+ * The input of the function is a pointer to a current scale value and a new
+ * altitude that is to be entered into a trajectory. The function updates the
+ * current scale value in place to a larger value if the new altitude cannot be
+ * stored with the current scale.
+ *
+ * @param  scale  pointer to the current scale value to update
+ * @param  altitude  the altitude to store in a trajectory or RTH plan
+ * @return error code if the scale cannot be increased any further
+ */
+sb_error_t sb_scale_update_altitude(uint8_t* scale, float altitude)
+{
+    return sb_i_scale_update(scale, 0.0f, 0.0f, altitude);
+}
+
+
+/**
  * @brief Helper function to pick an appropriate scale for a trajectory (2D variant).
  *
  * The input of the function is a pointer to a current scale value and a new

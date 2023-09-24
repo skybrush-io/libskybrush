@@ -463,12 +463,12 @@ sb_error_t sb_trajectory_init_from_rth_plan_entry(
 
     /* Determine final scale for trajectory generation */
     SB_CHECK(sb_scale_update_vector3_with_yaw(&scale, start));
-    sb_i_scale_update(&scale, 0.0, 0.0, start.z + entry->pre_neck_mm);
+    SB_CHECK(sb_scale_update_altitude(&scale, start.z + entry->pre_neck_mm));
     if (sb_i_rth_action_has_target(entry->action)) {
         SB_CHECK(sb_scale_update_vector2(&scale, entry->target));
     }
     if (sb_i_rth_action_has_target_altitude(entry->action)) {
-        sb_i_scale_update(&scale, 0.0, 0.0, entry->target_altitude);
+        SB_CHECK(sb_scale_update_altitude(&scale, entry->target_altitude));
     }
 
     if (start_time < 0) {

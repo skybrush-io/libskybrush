@@ -35,6 +35,7 @@ __BEGIN_DECLS
 uint32_t sb_ap_crc32_update(uint32_t crc, const uint8_t* buf, uint32_t size);
 void sb_bounding_box_expand(sb_bounding_box_t* box, float offset);
 void sb_interval_expand(sb_interval_t* interval, float offset);
+sb_error_t sb_scale_update_altitude(uint8_t* scale, float altitude);
 sb_error_t sb_scale_update_vector2(uint8_t* scale, sb_vector2_t point);
 sb_error_t sb_scale_update_vector3_with_yaw(uint8_t* scale, sb_vector3_with_yaw_t point);
 sb_error_t sb_uint32_msec_duration_from_float_seconds(uint32_t* result_msec, float duration_sec);
