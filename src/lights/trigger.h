@@ -41,7 +41,7 @@ enum Enum {
     JUMP_TO_ADDRESS, ///< Jump to a given address
 };
 
-};
+}
 
 namespace TriggerEdge {
 
@@ -55,7 +55,7 @@ enum Enum {
     TRIGGER_RISING = 3
 };
 
-};
+}
 
 /**
  * Struct that fully describes an action that may happen when a trigger is fired.

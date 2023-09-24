@@ -355,7 +355,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 
             /* If the action has a target altitude, parse it */
             if (sb_i_rth_action_has_target_altitude(entry.action)) {
-                entry.target_altitude = sb_i_rth_plan_parse_coordinate(plan->buffer, &offset);
+                entry.target_altitude = sb_i_rth_plan_parse_coordinate(plan, &offset);
             } else {
                 entry.target_altitude = 0;
             }
