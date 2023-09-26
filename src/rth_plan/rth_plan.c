@@ -310,7 +310,6 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 
         /* Parse time difference from previous entry to this one */
         SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &time_diff_s));
-
         /* Overflow check */
         if (time_diff_s + time_s < time_s) {
             return SB_EOVERFLOW;
@@ -339,11 +338,11 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 
         case 3:
             entry.action = SB_RTH_ACTION_GO_TO_STRAIGHT;
+            break;
 
         default:
             return SB_EPARSE;
         }
-
         /* Parse action parameters */
         if (encoded_action != SB_RTH_ACTION_SAME_AS_PREVIOUS) {
             /* If the action has a target, parse it */
@@ -370,7 +369,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
                 entry.pre_neck_duration_sec = duration;
             } else {
                 entry.pre_neck_mm = 0;
-                entry.pre_neck_duration_sec = duration;
+                entry.pre_neck_duration_sec = 0;
             }
         }
 
@@ -414,7 +413,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
             break;
         }
     }
-
+ 
     if (sb_i_rth_action_has_target(entry.action)) {
         SB_CHECK(sb_rth_plan_get_point(plan, point_index, &entry.target));
     } else {
