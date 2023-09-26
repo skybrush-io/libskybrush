@@ -128,11 +128,12 @@ void test_evaluate_at(void)
     /* RTH plan from file has the following entries:
      *
      * T = 0: land
-     * T = 15: go to (30m, 40m) in 50s with post-delay=5s
-     * T = 45: go to (-40m, -30m) in 50s with pre-delay=2s
-     * T = 65: go to (30m, 40m) in 30s
-     * T = 80: same as previous entry
-     * T = 105: land
+     * T = 15: go to keep alt (30m, 40m) in 50s with post-delay=5s
+     * T = 45: go to keep alt (-40m, -30m) in 50s with pre-delay=2s
+     * T = 65: go to keep alt (30m, 40m) in 30s
+     * T = 80: same as previous entry, but in 20s
+     * T = 90: go straight to (30m, 40m, 20m) with +5m pre-neck in 5s, in 30s
+     * T = 115: land
      *
      * When evaluating the RTH plan at a given time instant t, the entry that is
      * in effect is the entry at t, or if there is no entry at t, then the
@@ -149,6 +150,9 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
 
     /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
@@ -162,6 +166,9 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(5, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
 
     /* Command is "go to (-40m, -30m) in 50s with pre-delay=2s" from T=15
@@ -175,9 +182,12 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(2, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
 
-    /* Command is "go to (30m, 40m) in 30s" from T=45 (exclusive) to T=80 (inclusive).
+    /* Command is "go to (30m, 40m) in 30/20s" from T=45 (exclusive) to T=80 (inclusive).
      * Execution starts at T=65 or T=80 */
     for (int i = 455; i <= 800; i += 5) {
         t = i / 10.0f;
@@ -189,19 +199,44 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(t <= 65 ? 65 : 80, entry.time_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
+        TEST_ASSERT_EQUAL(t <= 65 ? 30 : 20, entry.duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+    }
+
+    /* Command is "go straight to (30m, 40m, 20m) in 30s + 5s/5m pre-neck" 
+     * from T=80 (exclusive) to T=90 (inclusive). */
+    for (int i = 455; i <= 800; i += 5) {
+        t = i / 10.0f;
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_STRAIGHT, entry.action);
+        TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
+        TEST_ASSERT_EQUAL(40000, entry.target.y);
+        TEST_ASSERT_EQUAL(20000, entry.target_altitude);
+        TEST_ASSERT_EQUAL(90, entry.time_sec);
+        TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
+        TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
+        TEST_ASSERT_EQUAL(5, entry.pre_neck_duration_sec);
+        TEST_ASSERT_EQUAL(5000, entry.pre_neck_mm);
         TEST_ASSERT_EQUAL(30, entry.duration_sec);
     }
 
+
     /* Command is "land" afterwards. Execution starts at T=105 */
-    for (int i = 810; i <= 1200; i += 10) {
+    for (int i = 1160; i <= 1200; i += 10) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(0, entry.target.x);
         TEST_ASSERT_EQUAL(0, entry.target.y);
-        TEST_ASSERT_EQUAL(105, entry.time_sec);
+        TEST_ASSERT_EQUAL(115, entry.time_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
 }
 
