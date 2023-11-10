@@ -346,32 +346,33 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
         }
 
         /* Parse action parameters */
-
-        /* If the action has a target, parse it */
-        if (sb_i_rth_action_has_target(entry.action)) {
-            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &point_index));
-        } else {
-            point_index = 0;
-        }
-
-        /* If the action has a target altitude, parse it */
-        if (sb_i_rth_action_has_target_altitude(entry.action)) {
-            entry.target_altitude = sb_i_rth_plan_parse_coordinate(plan, &offset);
-        } else {
-            entry.target_altitude = 0;
-        }
-
-        /* If the action has a pre-neck, parse its size and duration */
-        if (sb_i_rth_action_has_neck(entry.action)) {
-            entry.pre_neck_mm = sb_i_rth_plan_parse_coordinate(plan, &offset);
-            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
-            if (duration > MAX_DURATION) {
-                return SB_EOVERFLOW;
+        if (encoded_action != SB_RTH_ACTION_SAME_AS_PREVIOUS) {
+            /* If the action has a target, parse it */
+            if (sb_i_rth_action_has_target(entry.action)) {
+                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &point_index));
+            } else {
+                point_index = 0;
             }
-            entry.pre_neck_duration_sec = duration;
-        } else {
-            entry.pre_neck_mm = 0;
-            entry.pre_neck_duration_sec = 0;
+
+            /* If the action has a target altitude, parse it */
+            if (sb_i_rth_action_has_target_altitude(entry.action)) {
+                entry.target_altitude = sb_i_rth_plan_parse_coordinate(plan, &offset);
+            } else {
+                entry.target_altitude = 0;
+            }
+
+            /* If the action has a pre-neck, parse its size and duration */
+            if (sb_i_rth_action_has_neck(entry.action)) {
+                entry.pre_neck_mm = sb_i_rth_plan_parse_coordinate(plan, &offset);
+                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
+                if (duration > MAX_DURATION) {
+                    return SB_EOVERFLOW;
+                }
+                entry.pre_neck_duration_sec = duration;
+            } else {
+                entry.pre_neck_mm = 0;
+                entry.pre_neck_duration_sec = 0;
+            }
         }
 
         /* If the action has a duration, parse it */
