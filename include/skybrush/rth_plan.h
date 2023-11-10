@@ -45,8 +45,9 @@ typedef enum {
     /** Go to the target of the action, keeping altitude */
     SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE = 2,
 
-    /** Go to the target of the action in a straight line */
-    SB_RTH_ACTION_GO_TO_STRAIGHT = 3
+    /** Go to the target of the action in a straight line, optionally preceded
+     * by a vertical neck */
+    SB_RTH_ACTION_GO_TO_WITH_ALTITUDE = 3
 } sb_rth_action_t;
 
 /**
@@ -76,7 +77,7 @@ typedef struct sb_rth_plan_entry_s {
     float post_delay_sec;
 
     /** Optional vertical neck to add \em before the action, after the pre delay,
-     * in millimeters. Applicable only to SB_RTH_ACTION_GO_TO_STRAIGHT */
+     * in millimeters. Applicable only to SB_RTH_ACTION_GO_TO_WITH_ALTITUDE */
     float pre_neck_mm;
 
     /** The duration of the pre-neck phase, in seconds */

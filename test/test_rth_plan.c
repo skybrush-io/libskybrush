@@ -211,7 +211,7 @@ void test_evaluate_at(void)
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_STRAIGHT, entry.action);
+        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_WITH_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
         TEST_ASSERT_EQUAL(20000, entry.target_altitude);

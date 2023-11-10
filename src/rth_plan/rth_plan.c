@@ -350,7 +350,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
             break;
 
         case 3:
-            entry.action = SB_RTH_ACTION_GO_TO_STRAIGHT;
+            entry.action = SB_RTH_ACTION_GO_TO_WITH_ALTITUDE;
             break;
 
         default:
@@ -512,7 +512,7 @@ sb_error_t sb_trajectory_init_from_rth_plan_entry(
 
         break;
 
-    case SB_RTH_ACTION_GO_TO_STRAIGHT:
+    case SB_RTH_ACTION_GO_TO_WITH_ALTITUDE:
         target.x = entry->target.x;
         target.y = entry->target.y;
         target.z = entry->target_altitude;
@@ -554,18 +554,18 @@ static sb_bool_t sb_i_rth_action_has_duration(sb_rth_action_t action)
 
 static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action)
 {
-    return action == SB_RTH_ACTION_GO_TO_STRAIGHT;
+    return action == SB_RTH_ACTION_GO_TO_WITH_ALTITUDE;
 }
 
 static sb_bool_t sb_i_rth_action_has_target(sb_rth_action_t action)
 {
     return (
-        action == SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE || action == SB_RTH_ACTION_GO_TO_STRAIGHT);
+        action == SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE || action == SB_RTH_ACTION_GO_TO_WITH_ALTITUDE);
 }
 
 static sb_bool_t sb_i_rth_action_has_target_altitude(sb_rth_action_t action)
 {
-    return action == SB_RTH_ACTION_GO_TO_STRAIGHT;
+    return action == SB_RTH_ACTION_GO_TO_WITH_ALTITUDE;
 }
 
 static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan)
