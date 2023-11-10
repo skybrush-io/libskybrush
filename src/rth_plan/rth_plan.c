@@ -73,6 +73,14 @@ sb_error_t sb_i_rth_plan_init_from_parser(sb_rth_plan_t* plan, sb_binary_file_pa
 static float sb_i_rth_plan_parse_coordinate(const sb_rth_plan_t* plan, size_t* offset);
 
 /**
+ * Parses a duration from the memory block that defines the RTH plan, returning
+ * an error code if it is too large.
+ *
+ * The offset is automatically advanced after reading the duration.
+ */
+static sb_error_t sb_i_rth_plan_parse_duration(const sb_rth_plan_t* plan, size_t* offset, float* duration);
+
+/**
  * Parses the header of the memory block that defines the RTH plan.
  */
 static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan);
@@ -304,7 +312,6 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
     for (i = 0; i < num_entries && !found; i++) {
         uint8_t flags, encoded_action;
         uint32_t time_diff_s;
-        uint32_t duration;
 
         flags = plan->buffer[offset++];
 
@@ -364,11 +371,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
             /* If the action has a pre-neck, parse its size and duration */
             if (sb_i_rth_action_has_neck(entry.action)) {
                 entry.pre_neck_mm = sb_i_rth_plan_parse_coordinate(plan, &offset);
-                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
-                if (duration > MAX_DURATION) {
-                    return SB_EOVERFLOW;
-                }
-                entry.pre_neck_duration_sec = duration;
+                SB_CHECK(sb_i_rth_plan_parse_duration(plan, &offset, &entry.pre_neck_duration_sec));
             } else {
                 entry.pre_neck_mm = 0;
                 entry.pre_neck_duration_sec = 0;
@@ -377,33 +380,21 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 
         /* If the action has a duration, parse it */
         if (sb_i_rth_action_has_target(entry.action)) {
-            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
-            if (duration > MAX_DURATION) {
-                return SB_EOVERFLOW;
-            }
-            entry.duration_sec = duration;
+            SB_CHECK(sb_i_rth_plan_parse_duration(plan, &offset, &entry.duration_sec));
         } else {
             entry.duration_sec = 0;
         }
 
         /* If the action has a pre-delay, parse it */
         if (flags & 0x02) {
-            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
-            if (duration > MAX_DURATION) {
-                return SB_EOVERFLOW;
-            }
-            entry.pre_delay_sec = duration;
+            SB_CHECK(sb_i_rth_plan_parse_duration(plan, &offset, &entry.pre_delay_sec));
         } else {
             entry.pre_delay_sec = 0;
         }
 
         /* If the action has a post-delay, parse it */
         if (flags & 0x01) {
-            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
-            if (duration > MAX_DURATION) {
-                return SB_EOVERFLOW;
-            }
-            entry.post_delay_sec = duration;
+            SB_CHECK(sb_i_rth_plan_parse_duration(plan, &offset, &entry.post_delay_sec));
         } else {
             entry.post_delay_sec = 0;
         }
@@ -586,4 +577,17 @@ static void sb_i_rth_plan_take_ownership(sb_rth_plan_t* plan)
 static float sb_i_rth_plan_parse_coordinate(const sb_rth_plan_t* plan, size_t* offset)
 {
     return sb_parse_int16(plan->buffer, offset) * plan->scale;
+}
+
+static sb_error_t sb_i_rth_plan_parse_duration(const sb_rth_plan_t* plan, size_t* offset, float* duration)
+{
+    uint32_t value;
+
+    SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, offset, &value));
+    if (value > MAX_DURATION) {
+        return SB_EOVERFLOW;
+    }
+
+    *duration = value;
+    return SB_SUCCESS;
 }
