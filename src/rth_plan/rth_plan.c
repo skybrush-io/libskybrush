@@ -48,6 +48,11 @@
 #define OFFSET_OF_FIRST_ENTRY (OFFSET_OF_ENTRY_TABLE + sizeof(uint16_t))
 
 /**
+ * @brief Returns whether the given RTH action has an associated duration.
+ */
+static sb_bool_t sb_i_rth_action_has_duration(sb_rth_action_t action);
+
+/**
  * @brief Returns whether the given RTH action has an associated pre-neck phase.
  */
 static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action);
@@ -378,8 +383,10 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
             }
         }
 
-        /* If the action has a duration, parse it */
-        if (sb_i_rth_action_has_target(entry.action)) {
+        /* If the action has a duration, parse it. Note that even if the action
+         * is the same as before (i.e. encoded_action == SB_RTH_ACTION_SAME_AS_PREVIOUS)
+         * we still repeat the duration */
+        if (sb_i_rth_action_has_duration(entry.action)) {
             SB_CHECK(sb_i_rth_plan_parse_duration(plan, &offset, &entry.duration_sec));
         } else {
             entry.duration_sec = 0;
@@ -537,6 +544,13 @@ cleanup:
 }
 
 /* ************************************************************************** */
+
+static sb_bool_t sb_i_rth_action_has_duration(sb_rth_action_t action)
+{
+    /* Right now all actions that have a target also have a duration and vice
+     * versa */
+    return sb_i_rth_action_has_target(action);
+}
 
 static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action)
 {
