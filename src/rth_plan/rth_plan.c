@@ -310,6 +310,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 
         /* Parse time difference from previous entry to this one */
         SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &time_diff_s));
+
         /* Overflow check */
         if (time_diff_s + time_s < time_s) {
             return SB_EOVERFLOW;
@@ -343,34 +344,34 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
         default:
             return SB_EPARSE;
         }
+
         /* Parse action parameters */
-        if (encoded_action != SB_RTH_ACTION_SAME_AS_PREVIOUS) {
-            /* If the action has a target, parse it */
-            if (sb_i_rth_action_has_target(entry.action)) {
-                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &point_index));
-            } else {
-                point_index = 0;
-            }
 
-            /* If the action has a target altitude, parse it */
-            if (sb_i_rth_action_has_target_altitude(entry.action)) {
-                entry.target_altitude = sb_i_rth_plan_parse_coordinate(plan, &offset);
-            } else {
-                entry.target_altitude = 0;
-            }
+        /* If the action has a target, parse it */
+        if (sb_i_rth_action_has_target(entry.action)) {
+            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &point_index));
+        } else {
+            point_index = 0;
+        }
 
-            /* If the action has a pre-neck, parse its size and duration */
-            if (sb_i_rth_action_has_neck(entry.action)) {
-                entry.pre_neck_mm = sb_i_rth_plan_parse_coordinate(plan, &offset);
-                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
-                if (duration > MAX_DURATION) {
-                    return SB_EOVERFLOW;
-                }
-                entry.pre_neck_duration_sec = duration;
-            } else {
-                entry.pre_neck_mm = 0;
-                entry.pre_neck_duration_sec = 0;
+        /* If the action has a target altitude, parse it */
+        if (sb_i_rth_action_has_target_altitude(entry.action)) {
+            entry.target_altitude = sb_i_rth_plan_parse_coordinate(plan, &offset);
+        } else {
+            entry.target_altitude = 0;
+        }
+
+        /* If the action has a pre-neck, parse its size and duration */
+        if (sb_i_rth_action_has_neck(entry.action)) {
+            entry.pre_neck_mm = sb_i_rth_plan_parse_coordinate(plan, &offset);
+            SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &duration));
+            if (duration > MAX_DURATION) {
+                return SB_EOVERFLOW;
             }
+            entry.pre_neck_duration_sec = duration;
+        } else {
+            entry.pre_neck_mm = 0;
+            entry.pre_neck_duration_sec = 0;
         }
 
         /* If the action has a duration, parse it */
@@ -413,7 +414,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
             break;
         }
     }
- 
+
     if (sb_i_rth_action_has_target(entry.action)) {
         SB_CHECK(sb_rth_plan_get_point(plan, point_index, &entry.target));
     } else {
@@ -462,7 +463,9 @@ sb_error_t sb_trajectory_init_from_rth_plan_entry(
 
     /* Determine final scale for trajectory generation */
     SB_CHECK(sb_scale_update_vector3_with_yaw(&scale, start));
-    SB_CHECK(sb_scale_update_altitude(&scale, start.z + entry->pre_neck_mm));
+    if (sb_i_rth_action_has_neck(entry->action)) {
+        SB_CHECK(sb_scale_update_altitude(&scale, start.z + entry->pre_neck_mm));
+    }
     if (sb_i_rth_action_has_target(entry->action)) {
         SB_CHECK(sb_scale_update_vector2(&scale, entry->target));
     }
@@ -495,7 +498,7 @@ sb_error_t sb_trajectory_init_from_rth_plan_entry(
         SB_CHECK(sb_trajectory_builder_append_line(&builder, target, duration_msec));
     }
 
-    /* Add net action */
+    /* Add action */
     switch (entry->action) {
     case SB_RTH_ACTION_LAND:
         /* this is easy, nothing to do */
@@ -551,9 +554,7 @@ static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action)
 static sb_bool_t sb_i_rth_action_has_target(sb_rth_action_t action)
 {
     return (
-        action == SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE || 
-        action == SB_RTH_ACTION_GO_TO_STRAIGHT
-    );
+        action == SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE || action == SB_RTH_ACTION_GO_TO_STRAIGHT);
 }
 
 static sb_bool_t sb_i_rth_action_has_target_altitude(sb_rth_action_t action)

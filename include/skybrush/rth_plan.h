@@ -60,26 +60,27 @@ typedef struct sb_rth_plan_entry_s {
     /** The action type to perform */
     sb_rth_action_t action;
 
-    /** The duration of the net action, in seconds */
+    /** The net duration of the action, in seconds */
     float duration_sec;
 
-    /** The (horizontal) target of the action; coordinates are in milimeters */
+    /** The (horizontal) target of the action; coordinates are in millimeters */
     sb_vector2_t target;
 
-    /** The altitude of the target; coordinates are in milimeters */
+    /** The altitude of the target, if neeeded; coordinates are in millimeters */
     float target_altitude;
 
     /** Optional delay to add \em before the action, in seconds */
     float pre_delay_sec;
 
-    /** The duration of the pre-neck phase, in seconds */
-    float pre_neck_duration_sec;
-
-    /** Optional vertical neck to add \em before the action, after the pre delay, in millimeters */
-    float pre_neck_mm;
-
     /** Optional delay to add \em after the action, in seconds */
     float post_delay_sec;
+
+    /** Optional vertical neck to add \em before the action, after the pre delay,
+     * in millimeters. Applicable only to SB_RTH_ACTION_GO_TO_STRAIGHT */
+    float pre_neck_mm;
+
+    /** The duration of the pre-neck phase, in seconds */
+    float pre_neck_duration_sec;
 } sb_rth_plan_entry_t;
 
 /**

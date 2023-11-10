@@ -150,7 +150,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
@@ -166,7 +166,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(5, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
@@ -182,7 +182,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(2, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
@@ -200,12 +200,12 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(t <= 65 ? 30 : 20, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
 
-    /* Command is "go straight to (30m, 40m, 20m) in 30s + 5s/5m pre-neck" 
+    /* Command is "go straight to (30m, 40m, 20m) in 30s + 5s/5m pre-neck"
      * from T=80 (exclusive) to T=90 (inclusive). */
     for (int i = 805; i <= 900; i += 5) {
         t = i / 10.0f;
@@ -223,7 +223,6 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(30, entry.duration_sec);
     }
 
-
     /* Command is "land" afterwards. Execution starts at T=105 */
     for (int i = 1160; i <= 1200; i += 10) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
@@ -234,7 +233,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);        
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
@@ -264,7 +263,7 @@ void test_plan_duration_too_large(void)
         /* Entry 4 */
         0x20, 0x14, 0x00, 0x1e,
         /* Entry 5 */
-        0x00, 0x0F, 0x1e,
+        0x00, 0x0f, 0x1e,
         /* Entry 6 */
         0x10, 0x19
     };
@@ -463,7 +462,7 @@ void test_convert_to_trajectory(void)
 
         sb_trajectory_destroy(&trajectory);
     }
- 
+
     /* Command is "go straight (30m, 40m, 20m) in 30s+5s" from T=80 (exclusive) to T=90 (inclusive).
      * RTH plan is designed to start at T=90, but we deliberately push it back. */
     for (int i = 805; i <= 900; i += 5) {
@@ -504,7 +503,6 @@ void test_convert_to_trajectory(void)
 
         sb_trajectory_destroy(&trajectory);
     }
-
 
     /* Command is "land" afterwards, to be executed at T=115 */
     for (int i = 910; i <= 1200; i += 10) {

@@ -47,7 +47,7 @@ CommandExecutor::CommandExecutor()
     , m_transitionHandler(this)
 {
     rewind();
-}
+};
 
 signed long CommandExecutor::absoluteToInternalTime(unsigned long ms)
 {
