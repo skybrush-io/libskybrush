@@ -174,6 +174,18 @@ void test_find_first_block_by_type(void)
     TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_TRAJECTORY,
         sb_binary_file_get_current_block(&parser).type);
 
+    TEST_ASSERT_EQUAL(SB_SUCCESS,
+        sb_binary_file_find_first_block_by_type(
+            &parser, SB_BINARY_BLOCK_RTH_PLAN));
+    TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_RTH_PLAN,
+        sb_binary_file_get_current_block(&parser).type);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS,
+        sb_binary_file_find_first_block_by_type(
+            &parser, SB_BINARY_BLOCK_YAW_CONTROL));
+    TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_YAW_CONTROL,
+        sb_binary_file_get_current_block(&parser).type);
+
     sb_binary_file_parser_destroy(&parser);
     fclose(fp);
 }

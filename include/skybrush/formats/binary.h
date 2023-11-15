@@ -51,7 +51,10 @@ typedef enum {
     SB_BINARY_BLOCK_COMMENT = 3,
 
     /** Block that contains a return-to-home plan */
-    SB_BINARY_BLOCK_RTH_PLAN = 4
+    SB_BINARY_BLOCK_RTH_PLAN = 4,
+
+    /** Block that contains yaw control setpoints */
+    SB_BINARY_BLOCK_YAW_CONTROL = 5
 } sb_binary_block_type_t;
 
 /**
