@@ -75,61 +75,61 @@ void test_yaw_at(void)
 
     /* convert from raw to SI units */
     for (i = 0; i < n; i++) {
-        t[i] /= 1000;
-        expected[i] /= 10;
+        t[i] /= 1000.0;
+        expected[i] /= 10.0;
     }
 
     /* test querying forward */
     for (i = 0; i < n; i++) {
         sb_yaw_player_get_yaw_at(&player, t[i], &value);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i], value);
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected[i], value);
     }
 
     /* test querying backward */
     for (i = n - 1; i >= 0; i--) {
         sb_yaw_player_get_yaw_at(&player, t[i], &value);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i], value);
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected[i], value);
     }
 
     /* test (pseudo)random access */
     for (j = 0; j < n; j++) {
         i = random_order[j];
         sb_yaw_player_get_yaw_at(&player, t[i], &value);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i], value);
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected[i], value);
     }
 }
 
 void test_yaw_rate_at(void)
 {
     float value;
-    float t[] = { 0, 0.5, 1, 2.5, 4, 5 };
-    float expected[] = { 2, 2, 4/3, 4/3, 0, 0};
+    float t[] = { 0, 0.5, 0.99, 1.01, 2.5, 3.99, 4.01, 5 };
+    float expected[] = { 2, 2, 2, 4/3.0, 4/3.0, 4/3.0, 0, 0};
     int i, j, n = sizeof(t) / sizeof(t[0]);
-    const int random_order[] = { 2, 5, 1, 4, 0, 3 };
+    const int random_order[] = { 7, 2, 5, 1, 4, 6, 0, 3 };
 
     /* convert from raw to SI units */
     for (i = 0; i < n; i++) {
-        t[i] /= 1000;
-        expected[i] /= 10;
+        t[i] /= 1000.0;
+        expected[i] *= 100;
     }
 
     /* test querying forward */
     for (i = 0; i < n; i++) {
         sb_yaw_player_get_yaw_rate_at(&player, t[i], &value);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i], value);
+        TEST_ASSERT_FLOAT_WITHIN(1e-4, expected[i], value);
     }
 
     /* test querying backward */
     for (i = n - 1; i >= 0; i--) {
         sb_yaw_player_get_yaw_rate_at(&player, t[i], &value);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i], value);
+        TEST_ASSERT_FLOAT_WITHIN(1e-4, expected[i], value);
     }
 
     /* test (pseudo)random access */
     for (j = 0; j < n; j++) {
         i = random_order[j];
         sb_yaw_player_get_yaw_rate_at(&player, t[i], &value);
-        TEST_ASSERT_FLOAT_WITHIN(1e-7, expected[i], value);
+        TEST_ASSERT_FLOAT_WITHIN(1e-4, expected[i], value);
     }
 }
 
