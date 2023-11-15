@@ -464,7 +464,7 @@ static sb_error_t sb_i_yaw_player_build_current_setpoint(
     int32_t start_yaw)
 {
     const sb_yaw_control_t* ctrl = player->ctrl;
-    size_t buffer_length = sb_buffer_size(&ctrl->buffer);
+    size_t buffer_length = ctrl->buffer_length;
     sb_yaw_setpoint_t* data = &player->current_setpoint.data;
 
     /* Initialize the current setpoint */
