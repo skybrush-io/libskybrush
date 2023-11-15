@@ -92,6 +92,19 @@ void test_read_blocks_from_parser(sb_binary_file_parser_t* parser)
     TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_LIGHT_PROGRAM, block.type);
     TEST_ASSERT_EQUAL(27, block.length);
     TEST_ASSERT_EQUAL(69, block.start_of_body);
+    
+    /* seeking to next block */
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_seek_to_next_block(parser));
+
+    /* fourth block: yaw control */
+
+    TEST_ASSERT_TRUE(sb_binary_file_is_current_block_valid(parser));
+
+    block = sb_binary_file_get_current_block(parser);
+    TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_YAW_CONTROL, block.type);
+    TEST_ASSERT_EQUAL(11, block.length);
+    TEST_ASSERT_EQUAL(99, block.start_of_body);
 
     /* trying to read past EOF */
 
@@ -172,12 +185,6 @@ void test_find_first_block_by_type(void)
         sb_binary_file_find_first_block_by_type(
             &parser, SB_BINARY_BLOCK_TRAJECTORY));
     TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_TRAJECTORY,
-        sb_binary_file_get_current_block(&parser).type);
-
-    TEST_ASSERT_EQUAL(SB_SUCCESS,
-        sb_binary_file_find_first_block_by_type(
-            &parser, SB_BINARY_BLOCK_RTH_PLAN));
-    TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_RTH_PLAN,
         sb_binary_file_get_current_block(&parser).type);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS,

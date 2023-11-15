@@ -144,7 +144,7 @@ void test_loaded_setpoints_in_memory(void)
     closeFixture();
     loadFixtureInMemory("fixtures/test.skyb");
 
-    TEST_ASSERT_EQUAL(10, ctrl.buffer_length);
+    TEST_ASSERT_EQUAL(11, ctrl.buffer_length);
     TEST_ASSERT_EQUAL(3, ctrl.header_length);
     TEST_ASSERT_EQUAL(1, ctrl.owner);
     TEST_ASSERT_EQUAL(0, ctrl.auto_yaw);
