@@ -594,7 +594,7 @@ void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* pla
 /* LCOV_EXCL_STOP */
 
 /**
- * Returns a pointer to the current trajectory segment of thr trajectory player.
+ * Returns a pointer to the current trajectory segment of the trajectory player.
  */
 const sb_trajectory_segment_t* sb_trajectory_player_get_current_segment(
     const sb_trajectory_player_t* player)
