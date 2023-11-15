@@ -61,9 +61,24 @@ static uint16_t sb_i_yaw_control_parse_duration(const sb_yaw_control_t* ctrl, si
 static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl);
 
 /**
+ * Resets the internal state of the yaw player and rewinds it to time zero.
+ */
+static sb_error_t sb_i_yaw_player_rewind(sb_yaw_player_t* player);
+
+/**
+ * Finds the setpoint in the yaw setpoint list that contains the given time.
+ * Returns the relative time into the setpoint such that rel_t = 0 is the
+ * start of the segment and rel_t = 1 is the end of the segment. It is
+ * guaranteed that the returned relative time is between 0 and 1, inclusive.
+ */
+static sb_error_t sb_i_yaw_player_seek_to_time(sb_yaw_player_t* player, float t, float* rel_t);
+
+/**
  * Instructs the yaw control object to take ownership of its inner memory buffer.
  */
 static void sb_i_yaw_control_take_ownership(sb_yaw_control_t* ctrl);
+
+
 
 /*****************************************************************************/
 

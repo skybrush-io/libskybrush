@@ -22,6 +22,8 @@ add_library(
     trajectory/builder.c
     trajectory/poly.c
     trajectory/trajectory.c
+
+    yaw_control/yaw_control.c
 )
 
 set_property(TARGET skybrush PROPERTY C_STANDARD 99)
