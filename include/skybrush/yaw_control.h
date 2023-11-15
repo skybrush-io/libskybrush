@@ -20,6 +20,8 @@
 #ifndef SKYBRUSH_YAW_CONTROL_H
 #define SKYBRUSH_YAW_CONTROL_H
 
+#include <skybrush/buffer.h>
+
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
 

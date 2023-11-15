@@ -61,6 +61,15 @@ static uint16_t sb_i_yaw_control_parse_duration(const sb_yaw_control_t* ctrl, si
 static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl);
 
 /**
+ * Builds the current yaw setpoint from the wrapped buffer, starting from
+ * the given offset, assuming that the start time and yaw of the current 
+ * setpoint has to be at the given parameters.
+ */
+static sb_error_t sb_i_yaw_player_build_current_setpoint(
+    sb_yaw_player_t* player, size_t offset, uint32_t start_time_msec,
+    int32_t start_yaw_ddeg);
+
+/**
  * Resets the internal state of the yaw player and rewinds it to time zero.
  */
 static sb_error_t sb_i_yaw_player_rewind(sb_yaw_player_t* player);
@@ -243,7 +252,7 @@ static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl)
     ctrl->auto_yaw = (sb_bool_t)((buf[0] & 0x01));
 
     offset = 1;
-    ctrl->yaw_offset_ddeg = sb_i_yaw_control_parse_yaw(buf, &offset);
+    ctrl->yaw_offset_ddeg = sb_i_yaw_control_parse_yaw(ctrl, &offset);
 
     ctrl->num_setpoints = (size_t)((ctrl->buffer_length - offset) / SIZE_OF_SETPOINT);
 
@@ -280,7 +289,7 @@ sb_error_t sb_yaw_player_init(sb_yaw_player_t* player, const sb_yaw_control_t* c
 
     player->ctrl = ctrl;
 
-    sb_i_ctrl_player_rewind(player);
+    sb_i_yaw_player_rewind(player);
 
     return SB_SUCCESS;
 }
@@ -299,8 +308,6 @@ void sb_yaw_player_destroy(sb_yaw_player_t* player)
  */
 sb_error_t sb_yaw_player_build_next_setpoint(sb_yaw_player_t* player)
 {
-    sb_yaw_setpoint_t* setpoint = &player->current_setpoint.data;
-
     return sb_i_yaw_player_build_current_setpoint(
         player,
         player->current_setpoint.start + player->current_setpoint.length,
@@ -457,7 +464,6 @@ static sb_error_t sb_i_yaw_player_build_current_setpoint(
     int32_t start_yaw)
 {
     const sb_yaw_control_t* ctrl = player->ctrl;
-    uint8_t* buf = SB_BUFFER(ctrl->buffer);
     size_t buffer_length = sb_buffer_size(&ctrl->buffer);
     sb_yaw_setpoint_t* data = &player->current_setpoint.data;
 
