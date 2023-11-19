@@ -139,7 +139,7 @@ void test_init_empty(void)
     test_yaw_control_is_really_empty();
 }
 
-void test_loaded_setpoints_in_memory(void)
+void test_loaded_deltas_in_memory(void)
 {
     closeFixture();
     loadFixtureInMemory("fixtures/test.skyb");
@@ -149,7 +149,7 @@ void test_loaded_setpoints_in_memory(void)
     TEST_ASSERT_EQUAL(1, ctrl.owner);
     TEST_ASSERT_EQUAL(0, ctrl.auto_yaw);
     TEST_ASSERT_EQUAL(40, ctrl.yaw_offset_ddeg);
-    TEST_ASSERT_EQUAL(2, ctrl.num_setpoints);
+    TEST_ASSERT_EQUAL(2, ctrl.num_deltas);
 }
 
 int main(int argc, char* argv[])
@@ -158,7 +158,7 @@ int main(int argc, char* argv[])
 
     /* basic tests with test.skyb */
     RUN_TEST(test_init_empty);
-    RUN_TEST(test_loaded_setpoints_in_memory);
+    RUN_TEST(test_loaded_deltas_in_memory);
 
     return UNITY_END();
 }

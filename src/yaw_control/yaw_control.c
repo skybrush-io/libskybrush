@@ -34,8 +34,8 @@
 
 #include "../parsing.h"
 
-#define SIZE_OF_SETPOINT (sizeof(uint16_t) + sizeof(int16_t))
-#define OFFSET_OF_SETPOINT(index) (ctrl->header_length + (index)*SIZE_OF_SETPOINT)
+#define SIZE_OF_DELTA (sizeof(uint16_t) + sizeof(int16_t))
+#define OFFSET_OF_DELTA(index) (ctrl->header_length + (index)*SIZE_OF_DELTA)
 
 sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
 
@@ -103,7 +103,7 @@ void sb_yaw_control_destroy(sb_yaw_control_t* ctrl)
     ctrl->owner = 0;
 
     ctrl->header_length = 0;
-    ctrl->num_setpoints = 0;
+    ctrl->num_deltas = 0;
     ctrl->auto_yaw = 0;
     ctrl->yaw_offset_ddeg = 0;
 }
@@ -220,7 +220,7 @@ sb_error_t sb_yaw_control_init_empty(sb_yaw_control_t* ctrl)
     ctrl->owner = 0;
 
     ctrl->header_length = 0;
-    ctrl->num_setpoints = 0;
+    ctrl->num_deltas = 0;
     ctrl->auto_yaw = 0;
     ctrl->yaw_offset_ddeg = 0;
 
@@ -228,14 +228,14 @@ sb_error_t sb_yaw_control_init_empty(sb_yaw_control_t* ctrl)
 }
 
 /**
- * @brief Returns whether the yaw control object is empty (i.e. has no setpoints).
+ * @brief Returns whether the yaw control object is empty (i.e. has no deltas).
  *
  * @param ctrl   the yaw control object
  * @return true if the yaw control object has no entries, false otherwise
  */
 sb_bool_t sb_yaw_control_is_empty(const sb_yaw_control_t* ctrl)
 {
-    return ctrl->num_setpoints == 0;
+    return ctrl->num_deltas == 0;
 }
 
 /* ************************************************************************** */
@@ -252,7 +252,7 @@ static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl)
     offset = 1;
     ctrl->yaw_offset_ddeg = sb_i_yaw_control_parse_yaw(ctrl, &offset);
 
-    ctrl->num_setpoints = (size_t)((ctrl->buffer_length - offset) / SIZE_OF_SETPOINT);
+    ctrl->num_deltas = (size_t)((ctrl->buffer_length - offset) / SIZE_OF_DELTA);
 
     return offset; /* size of the header */
 }
@@ -302,7 +302,7 @@ void sb_yaw_player_destroy(sb_yaw_player_t* player)
 
 /**
  * Builds the next setpoint in the yaw player. Used to move on to the next
- * setpoint during an iteration over the setpoints of the yaw control object.
+ * setpoint during an iteration over the deltas of the yaw control object.
  */
 sb_error_t sb_yaw_player_build_next_setpoint(sb_yaw_player_t* player)
 {
@@ -321,7 +321,6 @@ sb_error_t sb_yaw_player_build_next_setpoint(sb_yaw_player_t* player)
 void sb_yaw_player_dump_current_setpoint(const sb_yaw_player_t* player)
 {
 #ifdef LIBSKYBRUSH_DEBUG
-    sb_vector3_with_yaw_t pos, vel, acc;
     const sb_yaw_setpoint_t* current = sb_yaw_player_get_current_setpoint(player);
 
     printf("Start offset = %ld bytes\n", (long int)player->current_setpoint.start);
@@ -460,7 +459,7 @@ static sb_error_t sb_i_yaw_player_seek_to_time(sb_yaw_player_t* player, float t,
 
 static sb_error_t sb_i_yaw_player_build_current_setpoint(
     sb_yaw_player_t* player, size_t offset, uint32_t start_time_msec,
-    int32_t start_yaw)
+    int32_t start_yaw_ddeg)
 {
     const sb_yaw_control_t* ctrl = player->ctrl;
     size_t buffer_length = ctrl->buffer_length;
@@ -475,7 +474,7 @@ static sb_error_t sb_i_yaw_player_build_current_setpoint(
     data->start_time_sec = start_time_msec / 1000.0f;
 
     /* Store the start yaw as instructed */
-    data->start_yaw_ddeg = start_yaw;
+    data->start_yaw_ddeg = start_yaw_ddeg;
     data->start_yaw_deg = data->start_yaw_ddeg / 10.0f;
 
     if (offset >= buffer_length) {
