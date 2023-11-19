@@ -29,13 +29,13 @@
 
 #include <skybrush/formats/binary.h>
 #include <skybrush/memory.h>
-#include <skybrush/yaw_control.h>
 #include <skybrush/utils.h>
+#include <skybrush/yaw_control.h>
 
 #include "../parsing.h"
 
 #define SIZE_OF_SETPOINT (sizeof(uint16_t) + sizeof(int16_t))
-#define OFFSET_OF_SETPOINT(index) (ctrl->header_length + (index) * SIZE_OF_SETPOINT)
+#define OFFSET_OF_SETPOINT(index) (ctrl->header_length + (index)*SIZE_OF_SETPOINT)
 
 sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
 
@@ -48,7 +48,7 @@ sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_f
 static int16_t sb_i_yaw_control_parse_yaw(const sb_yaw_control_t* ctrl, size_t* offset);
 
 /**
- * Parses a duration from the memory block that defines the yaw control curve, 
+ * Parses a duration from the memory block that defines the yaw control curve,
  * keeping its raw (msec) unit.
  *
  * The offset is automatically advanced after reading the duration.
@@ -62,7 +62,7 @@ static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl);
 
 /**
  * Builds the current yaw setpoint from the wrapped buffer, starting from
- * the given offset, assuming that the start time and yaw of the current 
+ * the given offset, assuming that the start time and yaw of the current
  * setpoint has to be at the given parameters.
  */
 static sb_error_t sb_i_yaw_player_build_current_setpoint(
@@ -86,8 +86,6 @@ static sb_error_t sb_i_yaw_player_seek_to_time(sb_yaw_player_t* player, float t,
  * Instructs the yaw control object to take ownership of its inner memory buffer.
  */
 static void sb_i_yaw_control_take_ownership(sb_yaw_control_t* ctrl);
-
-
 
 /*****************************************************************************/
 
@@ -388,7 +386,8 @@ sb_error_t sb_yaw_player_get_yaw_rate_at(sb_yaw_player_t* player, float t, float
 /**
  * Returns the total duration of the yaw control curve associated to the player, in seconds.
  */
-sb_error_t sb_yaw_player_get_total_duration_msec(sb_yaw_player_t* player, uint32_t* duration){
+sb_error_t sb_yaw_player_get_total_duration_msec(sb_yaw_player_t* player, uint32_t* duration)
+{
     uint32_t result = 0;
 
     SB_CHECK(sb_i_yaw_player_rewind(player));
@@ -480,7 +479,7 @@ static sb_error_t sb_i_yaw_player_build_current_setpoint(
     data->start_yaw_deg = data->start_yaw_ddeg / 10.0f;
 
     if (offset >= buffer_length) {
-        /* We are beyond the end of the buffer, indicating that there are 
+        /* We are beyond the end of the buffer, indicating that there are
          * no more setpoints in the buffer; we keep last yaw forever */
         data->duration_msec = UINT32_MAX - data->start_time_msec;
         data->duration_sec = INFINITY;

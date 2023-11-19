@@ -92,7 +92,7 @@ void test_read_blocks_from_parser(sb_binary_file_parser_t* parser)
     TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_LIGHT_PROGRAM, block.type);
     TEST_ASSERT_EQUAL(27, block.length);
     TEST_ASSERT_EQUAL(69, block.start_of_body);
-    
+
     /* seeking to next block */
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_seek_to_next_block(parser));

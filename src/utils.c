@@ -62,7 +62,6 @@ sb_error_t sb_scale_update_altitude(uint8_t* scale, float altitude)
     return sb_i_scale_update(scale, 0.0f, 0.0f, altitude);
 }
 
-
 /**
  * @brief Helper function to pick an appropriate scale for a trajectory (2D variant).
  *

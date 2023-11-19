@@ -69,7 +69,7 @@ void test_yaw_at(void)
 {
     float value;
     float t[] = { 0, 0.5, 1, 2.5, 4, 5 };
-    float expected[] = { 40, 41, 42, 44, 46, 46};
+    float expected[] = { 40, 41, 42, 44, 46, 46 };
     int i, j, n = sizeof(t) / sizeof(t[0]);
     const int random_order[] = { 2, 5, 1, 4, 0, 3 };
 
@@ -103,7 +103,7 @@ void test_yaw_rate_at(void)
 {
     float value;
     float t[] = { 0, 0.5, 0.99, 1.01, 2.5, 3.99, 4.01, 5 };
-    float expected[] = { 2, 2, 2, 4/3.0, 4/3.0, 4/3.0, 0, 0};
+    float expected[] = { 2, 2, 2, 4 / 3.0, 4 / 3.0, 4 / 3.0, 0, 0 };
     int i, j, n = sizeof(t) / sizeof(t[0]);
     const int random_order[] = { 7, 2, 5, 1, 4, 6, 0, 3 };
 

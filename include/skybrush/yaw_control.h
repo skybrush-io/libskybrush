@@ -32,7 +32,6 @@ __BEGIN_DECLS
  * @brief Handling of yaw control in Skybrush missions.
  */
 
-
 /**
  * @brief Structure describing a single relative yaw setpoint.
  */
@@ -68,7 +67,7 @@ typedef struct sb_yaw_setpoint_s {
     float yaw_change_deg;
 
     /** The ending yaw of the setpoint, in 1/10th of degrees */
-    int32_t end_yaw_ddeg;    
+    int32_t end_yaw_ddeg;
 
     /** The ending yaw of the setpoint, in degrees */
     float end_yaw_deg;
