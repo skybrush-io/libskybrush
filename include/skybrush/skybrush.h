@@ -34,6 +34,7 @@
 #include <skybrush/rth_plan.h>
 #include <skybrush/trajectory.h>
 #include <skybrush/version.h>
+#include <skybrush/yaw_control.h>
 
 #include <skybrush/formats/binary.h>
 
