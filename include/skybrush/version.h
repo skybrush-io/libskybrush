@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2023 CollMot Robotics Ltd.
+ * Copyright 2020-2024 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -41,7 +41,7 @@
  * \def SKYBRUSH_VERSION_PATCH
  * Patch level of \c libskybrush
  */
-#define SKYBRUSH_VERSION_PATCH 0
+#define SKYBRUSH_VERSION_PATCH 1
 
 /**
  * \def SKYBRUSH_VERSION
