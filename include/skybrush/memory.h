@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2023 CollMot Robotics Ltd.
+ * Copyright 2020-2024 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -25,7 +25,6 @@
  * @brief Basic macros related to memory management
  */
 
-#include <memory.h>
 #include <stdlib.h>
 
 /**
@@ -48,7 +47,7 @@
 #define sb_free_unless_null(ptr) \
     {                            \
         if (ptr != 0)            \
-            nc_free(ptr);        \
+            sb_free(ptr);        \
     }
 
 /**
