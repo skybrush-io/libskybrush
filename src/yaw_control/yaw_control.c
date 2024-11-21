@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2023 CollMot Robotics Ltd.
+ * Copyright 2020-2024 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -35,7 +35,7 @@
 #include "../parsing.h"
 
 #define SIZE_OF_DELTA (sizeof(uint16_t) + sizeof(int16_t))
-#define OFFSET_OF_DELTA(index) (ctrl->header_length + (index)*SIZE_OF_DELTA)
+#define OFFSET_OF_DELTA(index) (ctrl->header_length + (index) * SIZE_OF_DELTA)
 
 sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
 
