@@ -52,21 +52,20 @@ static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory,
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory);
 
 /**
- * Calculates the time needed for the three phase motion of
- * const acceleration + const velocity + const deceleration
- * to move a given distance.
+ * Calculates the time needed for the three phase motion of const acceleration +
+ * const velocity + const deceleration to move a given distance.
  *
  * Start and end speed is assumed to be zero. Full speed might not be reached if
  * distance is not large enough.
  *
  * \param  distance      the (nonnegative) distance travelled
  * \param  speed         the (positive) maximal travel speed of the motion
- * \param  acceleration  the (positive) acceleration of the motion; value of INFINITY is
+ * \param  acceleration  the (positive) acceleration of the motion; \c INFINITY is
  *                       treated as constant speed during the entire motion
  *
  * \return the time needed for the motion, or infinity in case of invalid inputs
  */
-static float sb_i_trajectory_time_of_three_phase_motion(float distance, float speed, float acceleration);
+static float sb_i_get_travel_time_for_distance(float distance, float speed, float acceleration);
 
 /**
  * Builds the current trajectory segment from the wrapped buffer, starting from
@@ -388,7 +387,8 @@ float sb_trajectory_get_total_duration_sec(const sb_trajectory_t* trajectory)
  * coordinate system, the drone is initially placed at the first point of the
  * trajectory and it can take off by moving along the Z axis with a constant
  * acceleration up to a constant speed and back to zero speed at the end until
- * it reaches a specified altitude relative to the first point_ of the trajectory.
+ * it reaches a specified altitude _relative to the first point_ of the
+ * trajectory.
  *
  * \param  trajectory    the trajectory to process
  * \param  min_ascent    the minimum ascent to perform during the takeoff
@@ -397,8 +397,9 @@ float sb_trajectory_get_total_duration_sec(const sb_trajectory_t* trajectory)
  *                       value of INFINITY is treated as constant speed during the entire takeoff,
  *                       as a fallback to back-compatibility for previous versions of the function
  * \return the proposed time when the takeoff command has to be sent to the
- *         drone, or infinity in case of invalid inputs or if the trajectory never reaches
- *         an altitude that is above the starting point by the given ascent
+ *         drone, or infinity in case of invalid inputs or if the trajectory
+ *         never reaches an altitude that is above the starting point by the
+ *         given ascent
  */
 float sb_trajectory_propose_takeoff_time_sec(
     const sb_trajectory_t* trajectory, float min_ascent, float speed, float acceleration)
@@ -424,16 +425,20 @@ float sb_trajectory_propose_takeoff_time_sec(
         return INFINITY;
     }
 
-    if (sb_i_trajectory_player_find_earliest_time_reaching_altitude(&player, pos.z + min_ascent, &trajectory_time)) {
+    if (sb_i_trajectory_player_find_earliest_time_reaching_altitude(
+            &player, pos.z + min_ascent, &trajectory_time)) {
         sb_trajectory_player_destroy(&player);
         return INFINITY;
     }
 
     sb_trajectory_player_destroy(&player);
 
-    takeoff_time = sb_i_trajectory_time_of_three_phase_motion(min_ascent, speed, acceleration);
+    takeoff_time = sb_i_get_travel_time_for_distance(
+        min_ascent, speed, acceleration);
 
-    return (isfinite(trajectory_time) && isfinite(takeoff_time)) ? trajectory_time - takeoff_time : INFINITY;
+    return (isfinite(trajectory_time) && isfinite(takeoff_time))
+        ? trajectory_time - takeoff_time
+        : INFINITY;
 }
 
 /**
@@ -708,7 +713,21 @@ sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t* p
 
 /* ************************************************************************** */
 
-static float sb_i_trajectory_time_of_three_phase_motion(float distance, float speed, float acceleration)
+/**
+ * @brief Calculates the minimum time it takes to traverse a given distance from
+ * zero starting speed with a preferred travel speed and an acceleration
+ * constraint.
+ *
+ * It is assumed that the movement starts from zero velocity and that the
+ * velocity is increased by the given acceleration factor until it reaches the
+ * given travel speed or the given distance, whichever happens first.
+ *
+ * @param distance      the distance to travel
+ * @param speed         the maximum allowed travel speed
+ * @param acceleration  the maximum allowed acceleration
+ * @return float
+ */
+static float sb_i_get_travel_time_for_distance(float distance, float speed, float acceleration)
 {
     float t1, t2, s1;
 
