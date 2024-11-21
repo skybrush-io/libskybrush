@@ -136,7 +136,7 @@ sb_error_t sb_i_scale_update(uint8_t* scale, float x, float y, float z)
  */
 sb_error_t sb_uint32_msec_duration_from_float_seconds(uint32_t* result_msec, float duration_sec)
 {
-    const float MAX_DURATION_SEC = UINT32_MAX / 1000.0f;
+    const float MAX_DURATION_SEC = ((float)UINT32_MAX) / 1000.0f;
 
     if (duration_sec < 0 || isnan(duration_sec)) {
         return SB_EINVAL;
