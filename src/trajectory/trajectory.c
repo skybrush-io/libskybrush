@@ -52,6 +52,23 @@ static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory,
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory);
 
 /**
+ * Calculates the time needed for the three phase motion of
+ * const acceleration + const velocity + const deceleration
+ * to move a given distance.
+ *
+ * Start and end speed is assumed to be zero. Full speed might not be reached if
+ * distance is not large enough.
+ *
+ * \param  distance      the (nonnegative) distance travelled
+ * \param  speed         the (positive) maximal travel speed of the motion
+ * \param  acceleration  the (positive) acceleration of the motion; value of INFINITY is
+ *                       treated as constant speed during the entire motion
+ *
+ * \return the time needed for the motion, or infinity in case of invalid inputs
+ */
+static float sb_i_trajectory_time_of_three_phase_motion(float distance, float speed, float acceleration);
+
+/**
  * Builds the current trajectory segment from the wrapped buffer, starting from
  * the given offset, assuming that the start point of the current segment has
  * to be at the given start position.
@@ -370,24 +387,27 @@ float sb_trajectory_get_total_duration_sec(const sb_trajectory_t* trajectory)
  * The function assumes that the trajectory is specified in some common
  * coordinate system, the drone is initially placed at the first point of the
  * trajectory and it can take off by moving along the Z axis with a constant
- * speed until it reaches a specified altitude _relative to the first point_
- * of the trajectory.
+ * acceleration up to a constant speed and back to zero speed at the end until
+ * it reaches a specified altitude relative to the first point_ of the trajectory.
  *
- * \param  trajectory  the trajectory to process
- * \param  min_ascent  the minimum ascent to perform during the takeoff
- * \param  speed       the assumed speed of the takeoff, in Z units per second
+ * \param  trajectory    the trajectory to process
+ * \param  min_ascent    the minimum ascent to perform during the takeoff
+ * \param  speed         the assumed speed of the takeoff, in Z units per second
+ * \param  acceleration  the assumed acceleration of the takeoff, in Z units per second squared;
+ *                       value of INFINITY is treated as constant speed during the entire takeoff,
+ *                       as a fallback to back-compatibility for previous versions of the function
  * \return the proposed time when the takeoff command has to be sent to the
- *         drone, or infinity if the trajectory never reaches an altitude that
- *         is above the starting point by the given ascent
+ *         drone, or infinity in case of invalid inputs or if the trajectory never reaches
+ *         an altitude that is above the starting point by the given ascent
  */
 float sb_trajectory_propose_takeoff_time_sec(
-    const sb_trajectory_t* trajectory, float min_ascent, float speed)
+    const sb_trajectory_t* trajectory, float min_ascent, float speed, float acceleration)
 {
     sb_trajectory_player_t player;
     sb_vector3_with_yaw_t pos;
-    float result;
+    float trajectory_time, takeoff_time;
 
-    if (min_ascent < 0 || speed <= 0) {
+    if (min_ascent < 0 || speed <= 0 || acceleration <= 0) {
         return INFINITY;
     }
 
@@ -404,14 +424,16 @@ float sb_trajectory_propose_takeoff_time_sec(
         return INFINITY;
     }
 
-    if (sb_i_trajectory_player_find_earliest_time_reaching_altitude(&player, pos.z + min_ascent, &result)) {
+    if (sb_i_trajectory_player_find_earliest_time_reaching_altitude(&player, pos.z + min_ascent, &trajectory_time)) {
         sb_trajectory_player_destroy(&player);
         return INFINITY;
     }
 
     sb_trajectory_player_destroy(&player);
 
-    return isfinite(result) ? result - (min_ascent / speed) : INFINITY;
+    takeoff_time = sb_i_trajectory_time_of_three_phase_motion(min_ascent, speed, acceleration);
+
+    return (isfinite(trajectory_time) && isfinite(takeoff_time)) ? trajectory_time - takeoff_time : INFINITY;
 }
 
 /**
@@ -685,6 +707,41 @@ sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t* p
 }
 
 /* ************************************************************************** */
+
+static float sb_i_trajectory_time_of_three_phase_motion(float distance, float speed, float acceleration)
+{
+    float t1, t2, s1;
+
+    /* We return infinite time for invalid input values */
+    if (distance < 0 || speed <= 0 || acceleration <= 0) {
+        return INFINITY;
+    }
+
+    if (distance == 0) {
+        return 0;
+    }
+
+    if (acceleration == INFINITY) {
+        return distance / speed;
+    }
+
+    /* Calculate time of acceleration phase from zero to max speed */
+    t1 = speed / acceleration;
+    s1 = acceleration / 2 * t1 * t1;
+
+    if (distance >= 2 * s1) {
+        /* If we have time for full acceleration, we add time of
+           constant speed on the remaining distance */
+        t2 = (distance - 2 * s1) / speed;
+    } else {
+        /* Otherwise we accelerate to lower speed in less time */
+        /* s1 = distance / 2; t1 = sqrt(2 * s1 / acceleration) */
+        t1 = sqrtf(distance / acceleration);
+        t2 = 0;
+    }
+
+    return 2 * t1 + t2;
+}
 
 static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t* player, float t, float* rel_t)
 {

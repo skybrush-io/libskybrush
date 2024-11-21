@@ -234,15 +234,15 @@ void test_get_axis_aligned_bounding_box_from_trajectory_in_memory(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.z.max);
 }
 
-void test_propose_takeoff_time(void)
+void test_propose_takeoff_time_const_speed(void)
 {
     /* Test invalid values first */
-    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, -1, 1));
-    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, 0));
-    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, -1));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, -1, 1, INFINITY));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, 0, INFINITY));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, -1, INFINITY));
 
     /* Test the case when the minimum ascent is zero so we can take off immediately */
-    TEST_ASSERT_EQUAL_FLOAT(0, sb_trajectory_propose_takeoff_time_sec(&trajectory, 0, 1));
+    TEST_ASSERT_EQUAL_FLOAT(0, sb_trajectory_propose_takeoff_time_sec(&trajectory, 0, 1, INFINITY));
 
     /* Test some valid combinations. The trajectory starts with an ascent of
      * 1 m/sec for 10 seconds, so it reaches 2 meters in 2 seconds. If we can
@@ -251,23 +251,62 @@ void test_propose_takeoff_time(void)
      * earlier than the start of the trajectory to get to our place in time */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, 0,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 1000 /* mm/sec */));
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 1000 /* mm/sec */, INFINITY));
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, -2,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 500 /* mm/sec */));
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 500 /* mm/sec */, INFINITY));
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, 1,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 2000 /* mm/sec */));
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 2000 /* mm/sec */, INFINITY));
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, 1.5,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 4000 /* mm/sec */));
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 4000 /* mm/sec */, INFINITY));
 
     /* Test what happens if we pass an altitude that the trajectory never
      * reaches. We should get positive infinity, indicating that we should
      * never take off at all. */
     TEST_ASSERT_EQUAL_FLOAT(
         INFINITY,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 200000 /* mm */, 1000 /* mm/sec */));
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 200000 /* mm */, 1000 /* mm/sec */, INFINITY));
+}
+
+void test_propose_takeoff_time_const_acceleration(void)
+{
+    /* Test invalid values first */
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, 1, 0));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, 1, -1));
+
+    /* Test the case when the minimum ascent is zero so we can take off immediately */
+    TEST_ASSERT_EQUAL_FLOAT(0, sb_trajectory_propose_takeoff_time_sec(&trajectory, 0, 1, 1));
+
+    /* Test some valid combinations. The trajectory starts with an ascent of
+     * 1 m/sec for 10 seconds, so it reaches 2 meters in 2 seconds. */
+
+    /* With 1 m/s/s acceleration it takes 1 sec to reach 1 m/s speed,
+     * and takes 0.5 m distance. So entire motion should take 1 + 1 + 1 seconds. */
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-7, -1,
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 1000 /* mm/sec */, 1000 /* mm/sec/sec */));
+
+    /* With 0.5 m/s/s acceleration it takes 2 sec to reach 1 m/s speed,
+     * and takes 1 m distance. So entire motion should take 2 + 0 + 2 seconds. */
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-7, -2,
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 1000 /* mm/sec */, 500 /* mm/sec/sec */));
+
+    /* With 0.25 m/s/s acceleration it takes 4 sec to reach 1 m/s speed,
+     * and takes 2 m distance. So motion should be only acceleration and deceleration (1 + 1 m),
+     * and should take sqrt(8) + 0 + sqrt(8) seconds. */
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-7, 2 - 2 * sqrt(8),
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 1000 /* mm/sec */, 250 /* mm/sec/sec */));
+
+    /* Test what happens if we pass an altitude that the trajectory never
+     * reaches. We should get positive infinity, indicating that we should
+     * never take off at all. */
+    TEST_ASSERT_EQUAL_FLOAT(
+        INFINITY,
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 200000 /* mm */, 1000 /* mm/sec */, 1000 /* mm/sec/sec */));
 }
 
 void test_propose_landing_time(void)
@@ -307,7 +346,7 @@ void test_propose_takeoff_time_hover_3m(void)
      * time is at 2.5s */
     TEST_ASSERT_EQUAL_FLOAT(
         2.5,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2500 /* mm */, 1000 /* mm/sec */));
+        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2500 /* mm */, 1000 /* mm/sec */, INFINITY));
 }
 
 void test_load_truncated_file(void)
@@ -339,7 +378,8 @@ int main(int argc, char* argv[])
     RUN_TEST(test_get_total_duration);
     RUN_TEST(test_get_axis_aligned_bounding_box);
     RUN_TEST(test_get_axis_aligned_bounding_box_from_trajectory_in_memory);
-    RUN_TEST(test_propose_takeoff_time);
+    RUN_TEST(test_propose_takeoff_time_const_speed);
+    RUN_TEST(test_propose_takeoff_time_const_acceleration);
     RUN_TEST(test_propose_landing_time);
 
     /* additional tests with other files */
