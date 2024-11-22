@@ -52,8 +52,9 @@ static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory,
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory);
 
 /**
- * Calculates the time needed for the three phase motion of const acceleration +
- * const velocity + const deceleration to move a given distance.
+ * Calculates the time needed for the three phase motion of constant
+ * acceleration + constant velocity + constant deceleration to move a given
+ * distance.
  *
  * Start and end speed is assumed to be zero. Full speed might not be reached if
  * distance is not large enough.
@@ -713,20 +714,6 @@ sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t* p
 
 /* ************************************************************************** */
 
-/**
- * @brief Calculates the minimum time it takes to traverse a given distance from
- * zero starting speed with a preferred travel speed and an acceleration
- * constraint.
- *
- * It is assumed that the movement starts from zero velocity and that the
- * velocity is increased by the given acceleration factor until it reaches the
- * given travel speed or the given distance, whichever happens first.
- *
- * @param distance      the distance to travel
- * @param speed         the maximum allowed travel speed
- * @param acceleration  the maximum allowed acceleration
- * @return float
- */
 static float sb_i_get_travel_time_for_distance(float distance, float speed, float acceleration)
 {
     float t1, t2, s1;
