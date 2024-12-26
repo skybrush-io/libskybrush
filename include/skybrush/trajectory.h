@@ -96,10 +96,15 @@ typedef struct
     /** The duration of the trajectory segment, in seconds. */
     float duration_sec;
 
+    /** Flags storing which parts of the segment are up-to-date. */
+    uint8_t flags;
+
     /** @brief The polynomial that describes the current trajectory segment.
      *
      * The interval [0; 1] of the polynomial is mapped to the time interval
      * between the start and end time of the trajectory.
+     *
+     * This polynomial is calculated lazily. Do not access this field directly.
      */
     sb_poly_4d_t poly;
 
@@ -108,6 +113,8 @@ typedef struct
      *
      * The interval [0; 1] of the polynomial is mapped to the time interval
      * between the start and end time of the trajectory.
+     *
+     * This polynomial is calculated lazily. Do not access this field directly.
      */
     sb_poly_4d_t dpoly;
 
@@ -116,6 +123,8 @@ typedef struct
      *
      * The interval [0; 1] of the polynomial is mapped to the time interval
      * between the start and end time of the trajectory.
+     *
+     * This polynomial is calculated lazily. Do not access this field directly.
      */
     sb_poly_4d_t ddpoly;
 } sb_trajectory_segment_t;
@@ -176,6 +185,7 @@ typedef struct sb_trajectory_player_s {
     struct
     {
         size_t start; /**< Start offset of the current segment */
+        size_t start_of_coordinates; /**< Start offset of the coordinates in the segment */
         size_t length; /**< Length of the current segment in the buffer */
         sb_trajectory_segment_t data; /**< The current segment of the trajectory */
     } current_segment;
