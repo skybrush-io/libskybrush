@@ -24,4 +24,4 @@ repos:
           - --use-current-year
           - --comment-style
           - /*| *| */
-        exclude: vendor
+        exclude: vendor|test/benchmarks/bench.h
