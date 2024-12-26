@@ -29,8 +29,8 @@ int main(int argc, char* argv[])
     sb_trajectory_init_from_fixture(&trajectory, "fixtures/real_show.skyb");
 
     BENCH(
-        "get total trajectory duration, 1000x",
-        REPEAT(sb_trajectory_get_total_duration_msec(&trajectory), 1000));
+        "get total trajectory duration, 10000x",
+        REPEAT(sb_trajectory_get_total_duration_msec(&trajectory), 10000));
 
     sb_trajectory_destroy(&trajectory);
 

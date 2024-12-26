@@ -593,8 +593,8 @@ sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* playe
     return sb_i_trajectory_player_build_current_segment(
         player,
         player->current_segment.start + player->current_segment.length,
-        player->current_segment.data.end_time_msec,
-        sb_poly_4d_eval(&segment->poly, 1));
+        segment->end_time_msec,
+        segment->end);
 }
 
 /* LCOV_EXCL_START */
@@ -846,6 +846,8 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
         data->end_time_msec = UINT32_MAX;
         data->end_time_sec = INFINITY;
 
+        data->end = start;
+
         return SB_SUCCESS;
     }
 
@@ -882,6 +884,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
+    data->end.x = coords[num_coords - 1];
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 
     /* Parse Y coordinates */
@@ -908,6 +911,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
+    data->end.y = coords[num_coords - 1];
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 
     /* Parse Z coordinates */
@@ -934,6 +938,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
+    data->end.z = coords[num_coords - 1];
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 
     /* Parse yaw coordinates */
@@ -960,11 +965,13 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_angle(trajectory, &offset);
     }
+    data->end.yaw = coords[num_coords - 1];
     sb_poly_make_bezier(poly, 1, coords, num_coords);
 
     /* Store that neither dpoly nor ddpoly are valid */
     data->flags = 0;
 
+    /* Update the length of the current segment now that we have parsed it */
     player->current_segment.length = offset - player->current_segment.start;
 
     return SB_SUCCESS;

@@ -96,6 +96,9 @@ typedef struct
     /** The duration of the trajectory segment, in seconds. */
     float duration_sec;
 
+    /** The last point of the trajectory segment */
+    sb_vector3_with_yaw_t end;
+
     /** Flags storing which parts of the segment are up-to-date. */
     uint8_t flags;
 
