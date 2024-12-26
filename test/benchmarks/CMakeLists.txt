@@ -1,7 +1,6 @@
 function(add_benchmark NAME)
     add_executable(bench_${NAME} bench_${NAME}.c)
     target_link_libraries(bench_${NAME} PUBLIC skybrush)
-    add_test(${NAME} bench_${NAME})
 endfunction()
 
 function(add_fixture NAME)
