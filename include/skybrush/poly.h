@@ -106,6 +106,9 @@ double sb_poly_eval_double(const sb_poly_t* poly, double t);
  * Finds the real roots of a polynomial.
  *
  * \param  poly  the polynomial to solve
+ * \param  rhs   the right hand side of the equation; this value is subtracted
+ *         from the zeroth degree term of the polynomial before solving for
+ *         roots
  * \param  roots the real roots of the polynomial will be stored here; it must
  *         point to a memory area that is large enough to hold all roots
  * \param  num_roots  the actual number of roots found will be returned here
@@ -113,7 +116,7 @@ double sb_poly_eval_double(const sb_poly_t* poly, double t);
  *         \c SB_EUNIMPLEMENTED if polynomial solving is not implemented for the
  *         given degree
  */
-sb_error_t sb_poly_solve(const sb_poly_t* poly, float* roots, uint8_t* num_roots);
+sb_error_t sb_poly_solve(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots);
 
 /**
  * Returns the degree of a polynomial.

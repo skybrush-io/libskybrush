@@ -25,10 +25,10 @@
 #include <skybrush/memory.h>
 #include <skybrush/poly.h>
 
-static sb_error_t sb_i_poly_solve_1d(const sb_poly_t* poly, float* roots, uint8_t* num_roots);
-static sb_error_t sb_i_poly_solve_2d(const sb_poly_t* poly, float* roots, uint8_t* num_roots);
-static sb_error_t sb_i_poly_solve_3d(const sb_poly_t* poly, float* roots, uint8_t* num_roots);
-static sb_error_t sb_i_poly_solve_generic(const sb_poly_t* poly, float* roots, uint8_t* num_roots);
+static sb_error_t sb_i_poly_solve_1d(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots);
+static sb_error_t sb_i_poly_solve_2d(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots);
+static sb_error_t sb_i_poly_solve_3d(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots);
+static sb_error_t sb_i_poly_solve_generic(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots);
 
 #define IS_ZERO(x) fabsf(x) < FLT_MIN
 
@@ -175,7 +175,7 @@ sb_error_t sb_poly_get_extrema(const sb_poly_t* poly, sb_interval_t* result)
             uint8_t num_roots;
 
             sb_poly_deriv(&deriv);
-            SB_CHECK(sb_poly_solve(&deriv, roots, &num_roots));
+            SB_CHECK(sb_poly_solve(&deriv, 0, roots, &num_roots));
 
             result->min = sb_poly_eval(poly, 0);
             result->max = sb_poly_eval(poly, 1);
@@ -235,7 +235,7 @@ void sb_poly_scale(sb_poly_t* poly, float factor)
     }
 }
 
-sb_error_t sb_poly_solve(const sb_poly_t* poly, float* roots, uint8_t* num_roots)
+sb_error_t sb_poly_solve(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots)
 {
     uint8_t dummy, num_significant_coeffs;
     sb_bool_t roots_allocated = 0;
@@ -267,19 +267,19 @@ sb_error_t sb_poly_solve(const sb_poly_t* poly, float* roots, uint8_t* num_roots
 
     switch (num_significant_coeffs) {
     case 1:
-        retval = sb_i_poly_solve_1d(poly, roots, num_roots);
+        retval = sb_i_poly_solve_1d(poly, rhs, roots, num_roots);
         break;
 
     case 2:
-        retval = sb_i_poly_solve_2d(poly, roots, num_roots);
+        retval = sb_i_poly_solve_2d(poly, rhs, roots, num_roots);
         break;
 
     case 3:
-        retval = sb_i_poly_solve_3d(poly, roots, num_roots);
+        retval = sb_i_poly_solve_3d(poly, rhs, roots, num_roots);
         break;
 
     default:
-        retval = sb_i_poly_solve_generic(poly, roots, num_roots);
+        retval = sb_i_poly_solve_generic(poly, rhs, roots, num_roots);
         break;
     }
 
@@ -305,9 +305,9 @@ void sb_poly_stretch(sb_poly_t* poly, float factor)
 
 /* ************************************************************************* */
 
-static sb_error_t sb_i_poly_solve_1d(const sb_poly_t* poly, float* roots, uint8_t* num_roots)
+static sb_error_t sb_i_poly_solve_1d(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots)
 {
-    if (IS_ZERO(poly->coeffs[0])) {
+    if (IS_ZERO(poly->coeffs[0] - rhs)) {
         roots[0] = 0;
         *num_roots = 1;
     } else {
@@ -316,10 +316,10 @@ static sb_error_t sb_i_poly_solve_1d(const sb_poly_t* poly, float* roots, uint8_
     return SB_SUCCESS;
 }
 
-static sb_error_t sb_i_poly_solve_2d(const sb_poly_t* poly, float* roots, uint8_t* num_roots)
+static sb_error_t sb_i_poly_solve_2d(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots)
 {
     float a = poly->coeffs[1];
-    float b = poly->coeffs[0];
+    float b = poly->coeffs[0] - rhs;
 
     if (IS_ZERO(a)) {
         *num_roots = 0; /* LCOV_EXCL_LINE */
@@ -331,15 +331,15 @@ static sb_error_t sb_i_poly_solve_2d(const sb_poly_t* poly, float* roots, uint8_
     return SB_SUCCESS;
 }
 
-static sb_error_t sb_i_poly_solve_3d(const sb_poly_t* poly, float* roots, uint8_t* num_roots)
+static sb_error_t sb_i_poly_solve_3d(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots)
 {
     float a = poly->coeffs[2];
     float b = poly->coeffs[1];
-    float c = poly->coeffs[0];
+    float c = poly->coeffs[0] - rhs;
     float d;
 
     if (IS_ZERO(a)) {
-        return sb_i_poly_solve_2d(poly, roots, num_roots); /* LCOV_EXCL_LINE */
+        return sb_i_poly_solve_2d(poly, rhs, roots, num_roots); /* LCOV_EXCL_LINE */
     }
 
     d = (b * b - 4 * a * c);
@@ -358,7 +358,7 @@ static sb_error_t sb_i_poly_solve_3d(const sb_poly_t* poly, float* roots, uint8_
 }
 
 /* LCOV_EXCL_START */
-static sb_error_t sb_i_poly_solve_generic(const sb_poly_t* poly, float* roots, uint8_t* num_roots)
+static sb_error_t sb_i_poly_solve_generic(const sb_poly_t* poly, float rhs, float* roots, uint8_t* num_roots)
 {
     return SB_EUNIMPLEMENTED;
 }
