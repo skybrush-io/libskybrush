@@ -209,6 +209,7 @@ sb_error_t sb_trajectory_player_get_acceleration_at(
 sb_error_t sb_trajectory_player_get_total_duration_msec(
     sb_trajectory_player_t* player, uint32_t* duration);
 sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t* player);
+sb_error_t sb_trajectory_player_rewind(sb_trajectory_player_t* player);
 
 /* ************************************************************************* */
 

@@ -100,11 +100,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     sb_vector3_with_yaw_t start);
 
 /**
- * Resets the internal state of the trajectory and rewinds it to time zero.
- */
-static sb_error_t sb_i_trajectory_player_rewind(sb_trajectory_player_t* player);
-
-/**
  * Finds the segment in the trajectory that contains the given time.
  * Returns the relative time into the segment such that rel_t = 0 is the
  * start of the segment and rel_t = 1 is the end of the segment. It is
@@ -574,7 +569,7 @@ sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, const sb_tr
 
     player->trajectory = trajectory;
 
-    sb_i_trajectory_player_rewind(player);
+    sb_trajectory_player_rewind(player);
 
     return SB_SUCCESS;
 }
@@ -585,6 +580,15 @@ sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, const sb_tr
 void sb_trajectory_player_destroy(sb_trajectory_player_t* player)
 {
     memset(player, 0, sizeof(sb_trajectory_player_t));
+}
+
+/**
+ * Resets the internal state of the trajectory and rewinds it to time zero.
+ */
+sb_error_t sb_trajectory_player_rewind(sb_trajectory_player_t* player)
+{
+    return sb_i_trajectory_player_build_current_segment(
+        player, player->trajectory->header_length, 0, player->trajectory->start);
 }
 
 /**
@@ -713,7 +717,7 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
 {
     uint32_t result = 0;
 
-    SB_CHECK(sb_i_trajectory_player_rewind(player));
+    SB_CHECK(sb_trajectory_player_rewind(player));
 
     while (sb_trajectory_player_has_more_segments(player)) {
         result += player->current_segment.data.duration_msec;
@@ -787,7 +791,7 @@ static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t* pl
         if (segment->start_time_sec > t) {
             /* time that the user asked for is before the current segment. We simply
              * rewind and start from scratch */
-            SB_CHECK(sb_i_trajectory_player_rewind(player));
+            SB_CHECK(sb_trajectory_player_rewind(player));
             assert(player->current_segment.data.start_time_msec == 0);
         } else if (segment->end_time_sec < t) {
             offset = player->current_segment.start;
@@ -824,7 +828,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     uint8_t* buf = SB_BUFFER(trajectory->buffer);
     size_t buffer_length = sb_buffer_size(&trajectory->buffer);
     sb_trajectory_segment_t* data = &player->current_segment.data;
-    sb_poly_t* poly;
     float coords[8];
     unsigned int i;
 
@@ -910,12 +913,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     return SB_SUCCESS;
 }
 
-static sb_error_t sb_i_trajectory_player_rewind(sb_trajectory_player_t* player)
-{
-    return sb_i_trajectory_player_build_current_segment(
-        player, player->trajectory->header_length, 0, player->trajectory->start);
-}
-
 static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
     sb_trajectory_player_t* player, float altitude, float* time)
 {
@@ -924,7 +921,7 @@ static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
     float current_altitude;
     sb_bool_t reached = 0;
 
-    SB_CHECK(sb_i_trajectory_player_rewind(player));
+    SB_CHECK(sb_trajectory_player_rewind(player));
 
     t = 0.0f;
     while (sb_trajectory_player_has_more_segments(player)) {
