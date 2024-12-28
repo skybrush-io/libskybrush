@@ -44,10 +44,11 @@ include(sanitizers)
 
 # Check for code coverage support
 option(LIBSKYBRUSH_ENABLE_CODE_COVERAGE "Enable code coverage calculation" OFF)
-if(LIBSKYBRUSH_ENABLE_CODE_COVERAGE)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND LIBSKYBRUSH_ENABLE_CODE_COVERAGE)
   include(CodeCoverage)
   append_coverage_compiler_flags()
-  setup_target_for_coverage_lcov(
+  set(GCOVR_ADDITIONAL_ARGS --gcov-delete --exclude-lines-by-pattern .*assert.*)
+  setup_target_for_coverage_gcovr_html(
     NAME coverage
     EXECUTABLE "${CMAKE_COMMAND}" "--build" "${CMAKE_BINARY_DIR}" "--target" "test"
     EXCLUDE "/Applications/Xcode*" "/Library/Developer*" "test/*" "vendor/unity/*"
@@ -56,7 +57,7 @@ endif()
 
 # Use cppcheck for static checks if available
 option(LIBSKYBRUSH_ENABLE_CODE_ANALYSIS "Enable code analysis" OFF)
-if(LIBSKYBRUSH_ENABLE_CODE_ANALYSIS)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND LIBSKYBRUSH_ENABLE_CODE_ANALYSIS)
   find_program(CPPCHECK cppcheck)
   if(CPPCHECK)
     set(CMAKE_C_CPPCHECK "${CPPCHECK}" "--enable=warning,style" "--inconclusive" "--inline-suppr"
