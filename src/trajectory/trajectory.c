@@ -69,6 +69,11 @@ static sb_poly_4d_t* sb_i_get_dpoly(sb_trajectory_segment_t* segment);
 static sb_poly_4d_t* sb_i_get_ddpoly(sb_trajectory_segment_t* segment);
 
 /**
+ * @brief Returns the number of expected coordinates given the header bits.
+ */
+static uint8_t sb_i_get_num_coords(uint8_t header_bits);
+
+/**
  * Calculates the time needed for the three phase motion of constant
  * acceleration + constant velocity + constant deceleration to move a given
  * distance.
@@ -861,112 +866,40 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     data->end_time_sec = data->end_time_msec / 1000.0f;
 
     /* Parse X coordinates */
-    poly = &data->poly.x;
-    switch (header & 0x03) {
-    case SB_X_CONSTANT:
-        num_coords = 0;
-        break;
-    case SB_X_LINEAR:
-        num_coords = 1;
-        break;
-    case SB_X_BEZIER:
-        num_coords = 3;
-        break;
-    case SB_X_POLY7D:
-        num_coords = 7;
-        break;
-    default:
-        /* should not happen, the list above is exhaustive */
-        return SB_EPARSE;
-    }
+    num_coords = sb_i_get_num_coords(header >> 0);
     coords[0] = start.x;
-    num_coords++;
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
     data->end.x = coords[num_coords - 1];
-    sb_poly_make_bezier(poly, 1, coords, num_coords);
+    sb_poly_make_bezier(&data->poly.x, 1, coords, num_coords);
 
     /* Parse Y coordinates */
-    poly = &data->poly.y;
-    switch (header & 0x0c) {
-    case SB_Y_CONSTANT:
-        num_coords = 0;
-        break;
-    case SB_Y_LINEAR:
-        num_coords = 1;
-        break;
-    case SB_Y_BEZIER:
-        num_coords = 3;
-        break;
-    case SB_Y_POLY7D:
-        num_coords = 7;
-        break;
-    default:
-        /* should not happen, the list above is exhaustive */
-        return SB_EPARSE;
-    }
+    num_coords = sb_i_get_num_coords(header >> 2);
     coords[0] = start.y;
-    num_coords++;
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
     data->end.y = coords[num_coords - 1];
-    sb_poly_make_bezier(poly, 1, coords, num_coords);
+    sb_poly_make_bezier(&data->poly.y, 1, coords, num_coords);
 
     /* Parse Z coordinates */
-    poly = &data->poly.z;
-    switch (header & 0x30) {
-    case SB_Z_CONSTANT:
-        num_coords = 0;
-        break;
-    case SB_Z_LINEAR:
-        num_coords = 1;
-        break;
-    case SB_Z_BEZIER:
-        num_coords = 3;
-        break;
-    case SB_Z_POLY7D:
-        num_coords = 7;
-        break;
-    default:
-        /* should not happen, the list above is exhaustive */
-        return SB_EPARSE;
-    }
+    num_coords = sb_i_get_num_coords(header >> 4);
     coords[0] = start.z;
-    num_coords++;
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
     data->end.z = coords[num_coords - 1];
-    sb_poly_make_bezier(poly, 1, coords, num_coords);
+    sb_poly_make_bezier(&data->poly.z, 1, coords, num_coords);
 
     /* Parse yaw coordinates */
-    poly = &data->poly.yaw;
-    switch (header & 0xc0) {
-    case SB_YAW_CONSTANT:
-        num_coords = 0;
-        break;
-    case SB_YAW_LINEAR:
-        num_coords = 1;
-        break;
-    case SB_YAW_BEZIER:
-        num_coords = 3;
-        break;
-    case SB_YAW_POLY7D:
-        num_coords = 7;
-        break;
-    default:
-        /* should not happen, the list above is exhaustive */
-        return SB_EPARSE;
-    }
+    num_coords = sb_i_get_num_coords(header >> 6);
     coords[0] = start.yaw;
-    num_coords++;
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_angle(trajectory, &offset);
     }
     data->end.yaw = coords[num_coords - 1];
-    sb_poly_make_bezier(poly, 1, coords, num_coords);
+    sb_poly_make_bezier(&data->poly.yaw, 1, coords, num_coords);
 
     /* Store that neither dpoly nor ddpoly are valid */
     data->flags = 0;
@@ -1078,4 +1011,9 @@ static sb_poly_4d_t* sb_i_get_ddpoly(sb_trajectory_segment_t* data)
     data->flags |= SB_TRAJECTORY_SEGMENT_DDPOLY_VALID;
 
     return &data->ddpoly;
+}
+
+static uint8_t sb_i_get_num_coords(uint8_t header_bits)
+{
+    return 1 << (header_bits & 0x03);
 }
