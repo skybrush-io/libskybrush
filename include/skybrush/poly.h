@@ -151,6 +151,22 @@ void sb_poly_deriv(sb_poly_t* poly);
  */
 void sb_poly_stretch(sb_poly_t* poly, float factor);
 
+/**
+ * Returns whether the polynomial "touches" the given value in the [0; 1] interval.
+ *
+ * The touching point is defined as a value x in the [0; 1] interval such that
+ * evaluating the polynomial at x gives the given value. The polynomial touches
+ * the given value if there exists at least one touching point.
+ *
+ * \param  poly    the polynomial to test
+ * \param  value   the value to touch
+ * \param  result  the value where the polynomial should be evaluated to make it
+ *         equal to the given value. It will be in the [0; 1] interval if there
+ *         is a touching point. It is not modified if there is no touching point.
+ *         When there are multiple touching points, an arbitrary one is returned.
+ */
+sb_bool_t sb_poly_touches(const sb_poly_t* poly, float value, float* result);
+
 /* ************************************************************************* */
 
 /**

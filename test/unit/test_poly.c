@@ -494,6 +494,18 @@ void test_solve_root_count_not_needed(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 3, roots[0]);
 }
 
+static int compare_floats(const void* a, const void* b)
+{
+    float diff = *(float*)a - *(float*)b;
+    if (diff < 0) {
+        return -1;
+    } else if (diff > 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 void test_solve_generic(void)
 {
     sb_poly_t poly;
@@ -538,6 +550,7 @@ void test_solve_generic(void)
     sb_poly_make(&poly, xs, 4);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 0, roots, &num_roots));
     TEST_ASSERT_EQUAL(2, num_roots);
+    qsort(roots, num_roots, sizeof(float), compare_floats);
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[1]);
 
@@ -548,6 +561,7 @@ void test_solve_generic(void)
     sb_poly_make(&poly, xs, 4);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 0, roots, &num_roots));
     TEST_ASSERT_EQUAL(3, num_roots);
+    qsort(roots, num_roots, sizeof(float), compare_floats);
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 1, roots[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[1]);
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[2]);
@@ -559,9 +573,256 @@ void test_solve_generic(void)
     sb_poly_make(&poly, xs, 4);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 15, roots, &num_roots));
     TEST_ASSERT_EQUAL(3, num_roots);
+    qsort(roots, num_roots, sizeof(float), compare_floats);
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 1, roots[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 3, roots[1]);
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 5, roots[2]);
+
+    /* Casus irreducibilis example of the Cardano formula from Wikipedia */
+    xs[0] = 3;
+    xs[1] = -6;
+    xs[2] = -9;
+    xs[3] = 2;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 0, roots, &num_roots));
+    TEST_ASSERT_EQUAL(3, num_roots);
+    qsort(roots, num_roots, sizeof(float), compare_floats);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.876360f, roots[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.339843f, roots[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 5.036517f, roots[2]);
+
+    /* Complicated cubic segment going through the following points:
+     * (0, 5), (0.25, 6), (0.75, 3), (1, 7). */
+    xs[0] = 5;
+    xs[1] = 46 / 3.0f;
+    xs[2] = -56;
+    xs[3] = 128 / 3.0f;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 2, roots, &num_roots));
+    TEST_ASSERT_EQUAL(1, num_roots);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, -0.128953f, roots[0]);
+}
+
+void test_touches_simple(void)
+{
+    sb_poly_t poly;
+    float xs[8];
+    float result;
+
+    /* Degenerate case: constant zero */
+    sb_poly_make(&poly, xs, 0);
+
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 0, 0));
+
+    result = 42;
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(42, result); /* should be untouched */
+
+    /* Constant nonzero */
+    xs[0] = 12;
+    sb_poly_make(&poly, xs, 1);
+
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 12, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+
+    /* Linear segment from 1 to 3 */
+    xs[0] = 1;
+    xs[1] = 2;
+    sb_poly_make(&poly, xs, 2);
+
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 2, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0.5f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 3, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result); /* should be untouched */
+
+    /* Convex quadratic segment raising from 1 to 6 */
+    xs[0] = 1;
+    xs[1] = 2;
+    xs[2] = 3;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 2, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 1 / 3.0f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 3, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.548583f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 4, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.720759f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 5, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.868517f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 6, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 7, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result); /* should be untouched */
+
+    /* Concave quadratic segment falling from 2 to -2 */
+    xs[0] = 2;
+    xs[1] = -1;
+    xs[2] = -3;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 4, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 2, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 2 / 3.0f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, -2, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, -4, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result); /* should be untouched */
+
+    /* Concave quadratic segment raising from 1 to 5 and back to 1 */
+    xs[0] = 1;
+    xs[1] = 16;
+    xs[2] = -16;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, -1, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 4, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0.25f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 5, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0.5f, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 7, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0.5f, result); /* should be untouched */
+
+    /* Friendly cubic segment with no roots or critical points in the
+     * [0; 1] interval */
+    xs[0] = 1;
+    xs[1] = 3;
+    xs[2] = 3;
+    xs[3] = 1;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, -1, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0.9999f, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 3.375f, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 8, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 8.00001, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result); /* should be untouched */
+
+    /* Friendly cubic segment with no roots or critical points in the
+     * [0; 1] interval where a < 0 */
+    xs[0] = 1;
+    xs[1] = -3;
+    xs[2] = -3;
+    xs[3] = -1;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 3, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 2, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 1.00001f, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, -1.375f, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, -6, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, -6.00001, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result); /* should be untouched */
+
+    /* Cubic segment where the first derivative is convex and has a critical
+     * point in [0; 1] */
+    xs[0] = 1;
+    xs[1] = 3;
+    xs[2] = -4;
+    xs[3] = 2;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, -1, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0.9999f, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1.75f, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 2, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 2.00001f, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result); /* should be untouched */
+
+    /* Same as above but the first derivative is negated */
+    xs[0] = 1;
+    xs[1] = -3;
+    xs[2] = 4;
+    xs[3] = -2;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, -2, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, -1, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, -0.0001f, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 0.25f, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.5f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 1.00001f, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result); /* should be untouched */
+
+    /* Complicated cubic segment going through the following points:
+     * (0, 5), (0.25, 6), (0.75, 3), (1, 7).
+     * Some points may occur multiple times; for instance, the leftmost
+     * intersection for y=3 is 0.657549858, not 0.75 */
+    xs[0] = 5;
+    xs[1] = 46 / 3.0f;
+    xs[2] = -56;
+    xs[3] = 128 / 3.0f;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 2, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 2.9f, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 2.93f, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.695873f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 3, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.657549f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 4, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0.5f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 5, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 6, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.097111f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 7, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 7.1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, result); /* should be untouched */
+
+    /* Another complicated cubic segment to cover the case of a < 0:
+     * (0, 5), (0.25, 2), (0.75, 8), (1, 4) */
+    xs[0] = 5;
+    xs[1] = -33;
+    xs[2] = 304 / 3.0f;
+    xs[3] = -208 / 3.0f;
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 1.8f, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1.9f, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.198482f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 2, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.165452f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 3, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.078522f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 4, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 5, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 6, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.552061f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 7, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.622497f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 8, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.75f, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 8.1, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.75f, result); /* should be untouched */
 }
 
 int main(int argc, char* argv[])
@@ -582,10 +843,12 @@ int main(int argc, char* argv[])
     RUN_TEST(test_stretch);
     RUN_TEST(test_deriv);
 
+    RUN_TEST(test_touches_simple);
+
     RUN_TEST(test_solve_simple);
     RUN_TEST(test_solve_roots_not_needed);
     RUN_TEST(test_solve_root_count_not_needed);
-    // RUN_TEST(test_solve_generic);
+    RUN_TEST(test_solve_generic);
 
     return UNITY_END();
 }
