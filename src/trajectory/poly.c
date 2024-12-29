@@ -362,7 +362,10 @@ static sb_bool_t sb_i_poly_touches_2d(const sb_poly_t* poly, float value, float*
     float b = poly->coeffs[0];
     if (IS_ZERO(a)) {
         return sb_i_poly_touches_1d(poly, value, result); /* LCOV_EXCL_LINE */
-    } else if ((b <= value && a >= 0) || (b >= value && a <= 0)) {
+    } else if (a > 0 && value >= b && value <= a + b) {
+        *result = (value - b) / a;
+        return 1;
+    } else if (a < 0 && value >= a + b && value <= b) {
         *result = (value - b) / a;
         return 1;
     } else {

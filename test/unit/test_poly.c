@@ -628,6 +628,7 @@ void test_touches_simple(void)
     TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0, &result));
     TEST_ASSERT_TRUE(sb_poly_touches(&poly, 12, &result));
     TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 24, &result));
 
     /* Linear segment from 1 to 3 */
     xs[0] = 1;
@@ -641,8 +642,23 @@ void test_touches_simple(void)
     TEST_ASSERT_EQUAL_FLOAT(0.5f, result);
     TEST_ASSERT_TRUE(sb_poly_touches(&poly, 3, &result));
     TEST_ASSERT_EQUAL_FLOAT(1, result);
-    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 4, &result));
     TEST_ASSERT_EQUAL_FLOAT(1, result); /* should be untouched */
+
+    /* Linear segment from 3 to 1 */
+    xs[0] = 3;
+    xs[1] = -2;
+    sb_poly_make(&poly, xs, 2);
+
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 1, &result));
+    TEST_ASSERT_EQUAL_FLOAT(1, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 2, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0.5f, result);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 3, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result);
+    TEST_ASSERT_FALSE(sb_poly_touches(&poly, 4, &result));
+    TEST_ASSERT_EQUAL_FLOAT(0, result); /* should be untouched */
 
     /* Convex quadratic segment raising from 1 to 6 */
     xs[0] = 1;
