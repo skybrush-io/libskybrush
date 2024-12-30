@@ -22,6 +22,7 @@ add_library(
     trajectory/builder.c
     trajectory/poly.c
     trajectory/trajectory.c
+    trajectory/stats.c
 
     yaw_control/yaw_control.c
 )

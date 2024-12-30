@@ -234,6 +234,45 @@ sb_error_t sb_trajectory_builder_append_line(
 sb_error_t sb_trajectory_builder_hold_position_for(
     sb_trajectory_builder_t* builder, uint32_t duration_msec);
 
+/* ************************************************************************* */
+
+/**
+ * Structure holding basic statistics about a trajectory that can be gathered
+ * while iterating over it once.
+ */
+typedef struct sb_trajectory_stats_s {
+    /** Total duration, in milliseconds */
+    uint32_t duration_msec;
+
+    /** Earliest time above the takeoff altitude, in milliseconds */
+    uint32_t earliest_above_msec;
+
+    /** Latest time above the landing altitude, in milliseconds */
+    uint32_t latest_above_msec;
+
+    /** Distance between first and last point of trajectory, in the XY plane */
+    float start_to_end_distance_xy;
+} sb_trajectory_stats_t;
+
+/**
+ * Structure containing the configuration of the parameters of the
+ * trajectory statistics calculation.
+ */
+typedef struct sb_trajectory_stats_calculator_s {
+    /**
+     * Threshold in the XY plane that is used to decide whether a
+     * trajectory segment is vertical.
+     */
+    float verticality_threshold;
+} sb_trajectory_stats_calculator_t;
+
+sb_error_t sb_trajectory_stats_calculator_init(sb_trajectory_stats_calculator_t* calc, float scale);
+void sb_trajectory_stats_calculator_destroy(sb_trajectory_stats_calculator_t* calc);
+sb_error_t sb_trajectory_stats_calculator_run(
+    const sb_trajectory_stats_calculator_t* calc,
+    const sb_trajectory_t* trajectory,
+    sb_trajectory_stats_t* result);
+
 __END_DECLS
 
 #endif
