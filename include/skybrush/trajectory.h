@@ -253,6 +253,12 @@ typedef struct sb_trajectory_stats_s {
      */
     float takeoff_time_sec;
 
+    /**
+     * Proposed landing time, in seconds. Infinity if it has not been
+     * calculated.
+     */
+    float landing_time_sec;
+
     /** Distance between first and last point of trajectory, in the XY plane */
     float start_to_end_distance_xy;
 } sb_trajectory_stats_t;
@@ -299,9 +305,15 @@ typedef struct sb_trajectory_stats_calculator_s {
     float acceleration;
 
     /**
-     * @Minimum ascent required for a takeoff.
+     * Minimum ascent required for a takeoff.
      */
     float min_ascent;
+
+    /**
+     * Preferred length of the descent in the landing phase when the drone is
+     * in an autonomous landing mode (and not following the trajectory).
+     */
+    float preferred_descent;
 
     /**
      * Threshold in the XY plane that is used to decide whether a

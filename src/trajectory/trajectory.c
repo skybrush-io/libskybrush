@@ -74,20 +74,6 @@ static sb_poly_4d_t* sb_i_get_ddpoly(sb_trajectory_segment_t* segment);
 static uint8_t sb_i_get_num_coords(uint8_t header_bits);
 
 /**
- * \brief Decides whether the given trajectory segment is descending vertically.
- *
- * A trajectory segment is considered to descend vertically if the distance between
- * the start and the end point of the segment along the X and Y axes are both
- * less than the given threshold, and the Z coordinate of the end point is less
- * than the Z coordinate of the start point.
- *
- * \param segment    the trajectory segment to check
- * \param threshold  the distance threshold
- */
-static sb_bool_t sb_i_is_segment_descending_vertically(
-    const sb_trajectory_segment_t* segment, float threshold);
-
-/**
  * Builds the current trajectory segment from the wrapped buffer, starting from
  * the given offset, assuming that the start point of the current segment has
  * to be at the given start position.
@@ -456,17 +442,8 @@ float sb_trajectory_propose_landing_time_sec(
     const sb_trajectory_t* trajectory, float preferred_descent,
     float verticality_threshold)
 {
-    sb_trajectory_player_t player;
-    sb_trajectory_segment_t* segment;
-    struct sb_trajectory_player_state_s state;
-    sb_bool_t state_valid;
-    float last_vertical_section_start_altitude;
-    float last_vertical_section_end_altitude;
-    float to_descend;
-    float altitude;
-    float delta;
-    float rel_t;
-    float result = -INFINITY;
+    sb_trajectory_stats_calculator_t calc;
+    sb_trajectory_stats_t stats;
 
     if (
         /* clang-format off */
@@ -481,100 +458,21 @@ float sb_trajectory_propose_landing_time_sec(
         verticality_threshold = 0;
     }
 
-    if (sb_trajectory_player_init(&player, trajectory)) {
-        return -INFINITY;
+    if (sb_trajectory_stats_calculator_init(&calc, 1.0f)) {
+        return INFINITY;
     }
 
-    if (sb_trajectory_player_rewind(&player)) {
-        goto cleanup;
+    calc.components = SB_TRAJECTORY_STATS_LANDING_TIME;
+    calc.preferred_descent = preferred_descent;
+    calc.verticality_threshold = verticality_threshold;
+
+    if (sb_trajectory_stats_calculator_run(&calc, trajectory, &stats)) {
+        return INFINITY;
     }
 
-    segment = &player.current_segment.data;
-    result = 0;
-    state_valid = 0;
+    sb_trajectory_stats_calculator_destroy(&calc);
 
-    /* Iterate through the trajectory and find the last run of vertical
-     * segments */
-    while (sb_trajectory_player_has_more_segments(&player)) {
-        if (sb_i_is_segment_descending_vertically(segment, verticality_threshold)) {
-            if (!state_valid) {
-                /* This is the first vertical segment in the current run of
-                 * vertical segments so remember the state */
-                state = player.current_segment;
-                state_valid = 1;
-                last_vertical_section_start_altitude = sb_poly_eval(&segment->poly.z, 0);
-            }
-            last_vertical_section_end_altitude = sb_poly_eval(&segment->poly.z, 1);
-        } else {
-            /* This segment is not vertical so we cannot land earlier than
-             * the end of this segment */
-            result = segment->end_time_msec;
-            state_valid = 0;
-        }
-
-        if (sb_trajectory_player_build_next_segment(&player)) {
-            goto cleanup;
-        }
-    }
-
-    /* Did the trajectory end with a sequence of vertically descending segments? */
-    if (state_valid) {
-        /* Jump back to the first such segment */
-        player.current_segment = state;
-
-        /* Given the total altitude difference in the vertically descending
-         * segment, calculate the distance we need to descend before switching
-         * to land mode to ensure that the final, automatic landing does not
-         * traverse more than a distance of preferred_descent */
-        to_descend = (
-            /* clang-format off */
-            last_vertical_section_start_altitude -
-            (last_vertical_section_end_altitude + preferred_descent)
-            /* clang-format on */
-        );
-
-        if (to_descend > 0) {
-            /* The last vertical section is longer than the preferred
-             * descent so find the point in the last vertical section where
-             * we need to trigger the landing */
-            altitude = sb_poly_eval(&segment->poly.z, 0);
-            while (sb_trajectory_player_has_more_segments(&player)) {
-                /* Can we consume the current segment in full? */
-                delta = altitude - segment->end.z;
-                if (delta < 0) {
-                    /* Segment is ascending, this should not happen */
-                    goto cleanup;
-                } else if (delta <= to_descend) {
-                    /* We can consume the entire segment */
-                    to_descend -= delta;
-                    altitude = segment->end.z;
-                } else {
-                    /* We can consume only part of the segment */
-                    if (!sb_poly_touches(&segment->poly.z, altitude - to_descend, &rel_t)) {
-                        /* should not happen, let's just land at the beginning
-                         * of the segment */
-                        rel_t = 0;
-                    }
-                    result = segment->start_time_sec + rel_t * segment->duration_sec;
-                    break;
-                }
-
-                /* Jump to the next segment */
-                if (sb_trajectory_player_build_next_segment(&player)) {
-                    goto cleanup;
-                }
-            }
-        } else {
-            /* The last vertical section is too short so we just trigger
-             * landing at its beginning */
-            result = segment->start_time_sec;
-        }
-    }
-
-cleanup:
-    sb_trajectory_player_destroy(&player);
-
-    return result;
+    return stats.landing_time_sec;
 }
 
 /**
@@ -946,20 +844,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     player->current_segment.length = offset - player->current_segment.start;
 
     return SB_SUCCESS;
-}
-
-static sb_bool_t sb_i_is_segment_descending_vertically(
-    const sb_trajectory_segment_t* segment, float threshold)
-{
-    sb_vector3_with_yaw_t start = sb_poly_4d_eval(&segment->poly, 0);
-
-    return (
-        /* clang-format off */
-        fabsf(start.x - segment->end.x) <= threshold &&
-        fabsf(start.y - segment->end.y) <= threshold &&
-        start.z >= segment->end.z
-        /* clang-format on */
-    );
 }
 
 static sb_poly_4d_t* sb_i_get_dpoly(sb_trajectory_segment_t* data)
