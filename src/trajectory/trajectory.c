@@ -88,23 +88,6 @@ static sb_bool_t sb_i_is_segment_descending_vertically(
     const sb_trajectory_segment_t* segment, float threshold);
 
 /**
- * Calculates the time needed for the three phase motion of constant
- * acceleration + constant velocity + constant deceleration to move a given
- * distance.
- *
- * Start and end speed is assumed to be zero. Full speed might not be reached if
- * distance is not large enough.
- *
- * \param  distance      the (nonnegative) distance travelled
- * \param  speed         the (positive) maximal travel speed of the motion
- * \param  acceleration  the (positive) acceleration of the motion; \c INFINITY is
- *                       treated as constant speed during the entire motion
- *
- * \return the time needed for the motion, or infinity in case of invalid inputs
- */
-static float sb_i_get_travel_time_for_distance(float distance, float speed, float acceleration);
-
-/**
  * Builds the current trajectory segment from the wrapped buffer, starting from
  * the given offset, assuming that the start point of the current segment has
  * to be at the given start position.
@@ -120,12 +103,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
  * guaranteed that the returned relative time is between 0 and 1, inclusive.
  */
 static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t* player, float t, float* rel_t);
-
-/**
- * Finds the earliest time when the trajectory reaches the given altitude.
-x */
-static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
-    sb_trajectory_player_t* player, float altitude, float* time);
 
 /**
  * Destroys a trajectory object and releases all memory that it owns.
@@ -430,41 +407,25 @@ float sb_trajectory_get_total_duration_sec(const sb_trajectory_t* trajectory)
 float sb_trajectory_propose_takeoff_time_sec(
     const sb_trajectory_t* trajectory, float min_ascent, float speed, float acceleration)
 {
-    sb_trajectory_player_t player;
-    sb_vector3_with_yaw_t pos;
-    float trajectory_time, takeoff_time;
+    sb_trajectory_stats_calculator_t calc;
+    sb_trajectory_stats_t stats;
 
-    if (min_ascent < 0 || speed <= 0 || acceleration <= 0) {
+    if (sb_trajectory_stats_calculator_init(&calc, 1.0f)) {
         return INFINITY;
     }
 
-    if (fabsf(min_ascent) < FLT_MIN) {
-        return 0;
-    }
+    calc.components = SB_TRAJECTORY_STATS_TAKEOFF_TIME;
+    calc.acceleration = acceleration;
+    calc.takeoff_speed = speed;
+    calc.min_ascent = min_ascent;
 
-    if (sb_trajectory_player_init(&player, trajectory)) {
+    if (sb_trajectory_stats_calculator_run(&calc, trajectory, &stats)) {
         return INFINITY;
     }
 
-    if (sb_trajectory_player_get_position_at(&player, 0, &pos)) {
-        sb_trajectory_player_destroy(&player);
-        return INFINITY;
-    }
+    sb_trajectory_stats_calculator_destroy(&calc);
 
-    if (sb_i_trajectory_player_find_earliest_time_reaching_altitude(
-            &player, pos.z + min_ascent, &trajectory_time)) {
-        sb_trajectory_player_destroy(&player);
-        return INFINITY;
-    }
-
-    sb_trajectory_player_destroy(&player);
-
-    takeoff_time = sb_i_get_travel_time_for_distance(
-        min_ascent, speed, acceleration);
-
-    return (isfinite(trajectory_time) && isfinite(takeoff_time))
-        ? trajectory_time - takeoff_time
-        : INFINITY;
+    return stats.takeoff_time_sec;
 }
 
 /**
@@ -851,41 +812,6 @@ sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t* p
 
 /* ************************************************************************** */
 
-static float sb_i_get_travel_time_for_distance(float distance, float speed, float acceleration)
-{
-    float t1, t2, s1;
-
-    /* We return infinite time for invalid input values */
-    if (distance < 0 || speed <= 0 || acceleration <= 0) {
-        return INFINITY;
-    }
-
-    if (distance == 0) {
-        return 0;
-    }
-
-    if (acceleration == INFINITY) {
-        return distance / speed;
-    }
-
-    /* Calculate time of acceleration phase from zero to max speed */
-    t1 = speed / acceleration;
-    s1 = acceleration / 2 * t1 * t1;
-
-    if (distance >= 2 * s1) {
-        /* If we have time for full acceleration, we add time of
-           constant speed on the remaining distance */
-        t2 = (distance - 2 * s1) / speed;
-    } else {
-        /* Otherwise we accelerate to lower speed in less time */
-        /* s1 = distance / 2; t1 = sqrt(2 * s1 / acceleration) */
-        t1 = sqrtf(distance / acceleration);
-        t2 = 0;
-    }
-
-    return 2 * t1 + t2;
-}
-
 static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t* player, float t, float* rel_t)
 {
     size_t offset;
@@ -1018,32 +944,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
 
     /* Update the length of the current segment now that we have parsed it */
     player->current_segment.length = offset - player->current_segment.start;
-
-    return SB_SUCCESS;
-}
-
-static sb_error_t sb_i_trajectory_player_find_earliest_time_reaching_altitude(
-    sb_trajectory_player_t* player, float altitude, float* time)
-{
-    float rel_t;
-    sb_trajectory_segment_t* segment;
-
-    SB_CHECK(sb_trajectory_player_rewind(player));
-
-    segment = &player->current_segment.data;
-    while (sb_trajectory_player_has_more_segments(player)) {
-        if (sb_poly_touches(&segment->poly.z, altitude, &rel_t)) {
-            if (time) {
-                *time = segment->start_time_sec + rel_t * segment->duration_sec;
-            }
-            return SB_SUCCESS;
-        }
-        SB_CHECK(sb_trajectory_player_build_next_segment(player));
-    }
-
-    if (time) {
-        *time = INFINITY;
-    }
 
     return SB_SUCCESS;
 }

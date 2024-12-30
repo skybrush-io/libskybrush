@@ -244,21 +244,65 @@ typedef struct sb_trajectory_stats_s {
     /** Total duration, in milliseconds */
     uint32_t duration_msec;
 
-    /** Earliest time above the takeoff altitude, in milliseconds */
-    uint32_t earliest_above_msec;
+    /** Earliest time above the takeoff altitude, in seconds */
+    float earliest_above_sec;
 
-    /** Latest time above the landing altitude, in milliseconds */
-    uint32_t latest_above_msec;
+    /**
+     * Proposed takeoff time, in seconds. Infinity if it has not been
+     * calculated or when the entire trajectory is below the takeoff altitude.
+     */
+    float takeoff_time_sec;
 
     /** Distance between first and last point of trajectory, in the XY plane */
     float start_to_end_distance_xy;
 } sb_trajectory_stats_t;
 
 /**
+ * \brief Flags that specify what to calculate in the trajectory statistics.
+ */
+typedef enum {
+    SB_TRAJECTORY_STATS_NONE = 0,
+    SB_TRAJECTORY_STATS_DURATION = 1,
+    SB_TRAJECTORY_STATS_START_END_DISTANCE = 2,
+    SB_TRAJECTORY_STATS_TAKEOFF_TIME = 4,
+    SB_TRAJECTORY_STATS_LANDING_TIME = 8,
+
+    /* clang-format off */
+    SB_TRAJECTORY_STATS_ALL = (
+        SB_TRAJECTORY_STATS_DURATION |
+        SB_TRAJECTORY_STATS_START_END_DISTANCE |
+        SB_TRAJECTORY_STATS_TAKEOFF_TIME |
+        SB_TRAJECTORY_STATS_LANDING_TIME
+    )
+    /* clang-format on */
+} sb_trajectory_stat_components_t;
+
+/**
  * Structure containing the configuration of the parameters of the
  * trajectory statistics calculation.
  */
 typedef struct sb_trajectory_stats_calculator_s {
+    /**
+     * Specifies which components of the statistics to calculate.
+     */
+    sb_trajectory_stat_components_t components;
+
+    /**
+     * Assumed takeoff speed of the drone, in units per second.
+     */
+    float takeoff_speed;
+
+    /**
+     * Assumed acceleration of the drone, in units per second squared,
+     * used vertically during takeoff.
+     */
+    float acceleration;
+
+    /**
+     * @Minimum ascent required for a takeoff.
+     */
+    float min_ascent;
+
     /**
      * Threshold in the XY plane that is used to decide whether a
      * trajectory segment is vertical.
@@ -268,6 +312,8 @@ typedef struct sb_trajectory_stats_calculator_s {
 
 sb_error_t sb_trajectory_stats_calculator_init(sb_trajectory_stats_calculator_t* calc, float scale);
 void sb_trajectory_stats_calculator_destroy(sb_trajectory_stats_calculator_t* calc);
+void sb_trajectory_stats_calculator_set_components(
+    sb_trajectory_stats_calculator_t* calc, sb_trajectory_stat_components_t components);
 sb_error_t sb_trajectory_stats_calculator_run(
     const sb_trajectory_stats_calculator_t* calc,
     const sb_trajectory_t* trajectory,

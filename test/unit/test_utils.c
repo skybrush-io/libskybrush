@@ -29,6 +29,27 @@ void tearDown(void)
 {
 }
 
+void test_get_travel_time(void)
+{
+    /* Test erroneous input */
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_time_for_distance(-1, 1, 1));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_time_for_distance(1, 0, 1));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_time_for_distance(1, 1, 0));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_time_for_distance(0, 1, 0));
+
+    /* Test zero distance (trivial case) */
+    TEST_ASSERT_EQUAL_FLOAT(0, sb_get_travel_time_for_distance(0, 1, 1));
+
+    /* Test infinite acceleration (trivial case) */
+    TEST_ASSERT_EQUAL_FLOAT(3, sb_get_travel_time_for_distance(6, 2, INFINITY));
+
+    /* Test the case when we have time for full acceleration and deceleration */
+    TEST_ASSERT_EQUAL_FLOAT(5, sb_get_travel_time_for_distance(6, 2, 1));
+
+    /* Test the case when we do not have time for full acceleration and deceleration */
+    TEST_ASSERT_EQUAL_FLOAT(2 * sqrtf(2), sb_get_travel_time_for_distance(2, 2, 1));
+}
+
 void test_scale_update(void)
 {
     uint8_t scale = 0;
@@ -90,6 +111,7 @@ int main(int argc, char* argv[])
     UNITY_BEGIN();
 
     RUN_TEST(test_scale_update);
+    RUN_TEST(test_get_travel_time);
 
     return UNITY_END();
 }

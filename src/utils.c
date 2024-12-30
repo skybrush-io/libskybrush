@@ -31,6 +31,56 @@ void sb_bounding_box_expand(sb_bounding_box_t* box, float offset)
 }
 
 /**
+ * Calculates the time needed for the three phase motion of constant
+ * acceleration + constant velocity + constant deceleration to move a given
+ * distance.
+ *
+ * Start and end speed is assumed to be zero. Full speed might not be reached if
+ * distance is not large enough.
+ *
+ * \param  distance      the (nonnegative) distance travelled
+ * \param  speed         the (positive) maximal travel speed of the motion
+ * \param  acceleration  the (positive) acceleration of the motion; \c INFINITY is
+ *                       treated as constant speed during the entire motion
+ *
+ * \return the time needed for the motion, or infinity in case of invalid inputs
+ */
+float sb_get_travel_time_for_distance(float distance, float speed, float acceleration)
+{
+    float t1, t2, s1;
+
+    /* We return infinite time for invalid input values */
+    if (distance < 0 || speed <= 0 || acceleration <= 0) {
+        return INFINITY;
+    }
+
+    if (distance == 0) {
+        return 0;
+    }
+
+    if (acceleration == INFINITY) {
+        return distance / speed;
+    }
+
+    /* Calculate time of acceleration phase from zero to max speed */
+    t1 = speed / acceleration;
+    s1 = acceleration / 2 * t1 * t1;
+
+    if (distance >= 2 * s1) {
+        /* If we have time for full acceleration, we add time of
+           constant speed on the remaining distance */
+        t2 = (distance - 2 * s1) / speed;
+    } else {
+        /* Otherwise we accelerate to lower speed in less time */
+        /* s1 = distance / 2; t1 = sqrt(2 * s1 / acceleration) */
+        t1 = sqrtf(distance / acceleration);
+        t2 = 0;
+    }
+
+    return 2 * t1 + t2;
+}
+
+/**
  * @brief Expands an interval with the given offset in both directions, in place.
  */
 void sb_interval_expand(sb_interval_t* interval, float offset)

@@ -34,6 +34,7 @@ __BEGIN_DECLS
 
 uint32_t sb_ap_crc32_update(uint32_t crc, const uint8_t* buf, uint32_t size);
 void sb_bounding_box_expand(sb_bounding_box_t* box, float offset);
+float sb_get_travel_time_for_distance(float distance, float speed, float acceleration);
 void sb_interval_expand(sb_interval_t* interval, float offset);
 sb_error_t sb_scale_update_altitude(uint8_t* scale, float altitude);
 sb_error_t sb_scale_update_vector2(uint8_t* scale, sb_vector2_t point);
