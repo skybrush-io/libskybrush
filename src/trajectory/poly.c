@@ -411,6 +411,8 @@ static sb_bool_t sb_i_poly_touches_3d(const sb_poly_t* poly, float value, float*
 
     /* At this point we should probably just solve for value on the RHS */
     if (sb_poly_solve(poly, value, roots, &num_roots) == SB_SUCCESS) {
+        leftmost_root = 2.0f;
+
         for (uint8_t i = 0; i < num_roots; i++) {
             if (roots[i] >= 0 && roots[i] <= 1 && roots[i] < leftmost_root) {
                 leftmost_root = roots[i];
@@ -498,8 +500,9 @@ static sb_bool_t sb_i_poly_touches_4d(const sb_poly_t* poly, float value, float*
     }
 
     /* At this point we should probably just solve for value on the RHS */
-    leftmost_root = 2.0f;
     if (sb_poly_solve(poly, value, roots, &num_roots) == SB_SUCCESS) {
+        leftmost_root = 2.0f;
+
         for (uint8_t i = 0; i < num_roots; i++) {
             if (roots[i] >= 0 && roots[i] <= 1 && roots[i] < leftmost_root) {
                 leftmost_root = roots[i];

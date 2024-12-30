@@ -22,6 +22,18 @@
 
 #include "unity.h"
 
+static int compare_floats(const void* a, const void* b)
+{
+    float diff = *(float*)a - *(float*)b;
+    if (diff < 0) {
+        return -1;
+    } else if (diff > 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 void setUp(void)
 {
 }
@@ -433,6 +445,7 @@ void test_solve_simple(void)
     sb_poly_make(&poly, xs, 3);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 4, roots, &num_roots));
     TEST_ASSERT_EQUAL(2, num_roots);
+    qsort(roots, num_roots, sizeof(float), compare_floats);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 1, roots[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 5, roots[1]);
 
@@ -442,6 +455,7 @@ void test_solve_simple(void)
     sb_poly_make(&poly, xs, 3);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 0, roots, &num_roots));
     TEST_ASSERT_EQUAL(2, num_roots);
+    qsort(roots, num_roots, sizeof(float), compare_floats);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 1, roots[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 5, roots[1]);
 
@@ -460,6 +474,16 @@ void test_solve_simple(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 0, roots, &num_roots));
     TEST_ASSERT_EQUAL(1, num_roots);
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 2, roots[0]);
+
+    xs[0] = 2;
+    xs[1] = -1;
+    xs[2] = -3;
+    sb_poly_make(&poly, xs, 3);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 0, roots, &num_roots));
+    TEST_ASSERT_EQUAL(2, num_roots);
+    qsort(roots, num_roots, sizeof(float), compare_floats);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, -1, roots[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 2 / 3.0f, roots[1]);
 }
 
 void test_solve_roots_not_needed(void)
@@ -492,18 +516,6 @@ void test_solve_root_count_not_needed(void)
     sb_poly_make(&poly, xs, 3);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_poly_solve(&poly, 0, roots, /* num_roots = */ 0));
     TEST_ASSERT_FLOAT_WITHIN(1e-7, 3, roots[0]);
-}
-
-static int compare_floats(const void* a, const void* b)
-{
-    float diff = *(float*)a - *(float*)b;
-    if (diff < 0) {
-        return -1;
-    } else if (diff > 0) {
-        return 1;
-    } else {
-        return 0;
-    }
 }
 
 void test_solve_generic(void)
