@@ -313,26 +313,36 @@ void test_propose_landing_time(void)
 {
     float total_duration = sb_trajectory_get_total_duration_sec(&trajectory);
 
-    /* Test invalid values first */
-    TEST_ASSERT_EQUAL_FLOAT(-INFINITY, sb_trajectory_propose_landing_time_sec(&trajectory, -1));
+    /* Test invalid values first. Negative ascent is treated as zero so we
+     * should get back the duration of the trajectory */
+    TEST_ASSERT_EQUAL_FLOAT(total_duration, sb_trajectory_propose_landing_time_sec(&trajectory, -1, 50 /* mm */));
 
-    /* Test the case when the minimum ascent is zero so we send the landing command
-     * when we actually landed */
-    TEST_ASSERT_FLOAT_WITHIN(1e-7, total_duration, sb_trajectory_propose_landing_time_sec(&trajectory, 0));
+    /* Test the case when the minimum ascent is zero so we send the landing
+     * command at the end of the trajectory */
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, total_duration, sb_trajectory_propose_landing_time_sec(&trajectory, 0, 50 /* mm */));
+
+    /* Test the case when the verticality threshold is negative; should be
+     * interpreted as zero */
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, total_duration, sb_trajectory_propose_landing_time_sec(&trajectory, 0, -50 /* mm */));
 
     /* Test some valid combinations. The trajectory ends with a descent of
      * 1 m/sec for 10 seconds, so it reaches 2 meters 2 seconds before the
      * end of the trajectory. */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-1, total_duration - 2,
-        sb_trajectory_propose_landing_time_sec(&trajectory, 2000 /* mm */));
+        sb_trajectory_propose_landing_time_sec(&trajectory, 2000 /* mm */, 50 /* mm */));
+
+    /* What if we request exactly 10m of descent? */
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-1, total_duration - 10,
+        sb_trajectory_propose_landing_time_sec(&trajectory, 10000 /* mm */, 50 /* mm */));
 
     /* Test what happens if we pass an altitude that the trajectory never
-     * reaches. We should get negative infinity, indicating that we should
-     * never take off at all. */
+     * reaches. We should get the timetamp of the first point where the
+     * trajectory starts going vertically down */
     TEST_ASSERT_EQUAL_FLOAT(
-        -INFINITY,
-        sb_trajectory_propose_landing_time_sec(&trajectory, 200000 /* mm */));
+        40,
+        sb_trajectory_propose_landing_time_sec(&trajectory, 200000 /* mm */, 50 /* mm */));
 }
 
 void test_propose_takeoff_time_hover_3m(void)
@@ -341,12 +351,48 @@ void test_propose_takeoff_time_hover_3m(void)
     loadFixture("fixtures/hover_3m.skyb");
 
     /* drone reaches 2.97m in 5.87s, so it crosses 2.5m at t=4.941s. Takeoff
-     * speed is 1 m/s on average, so we need to take off at 2.441s. Since we
-     * sample the trajectory in increments of 1/16s, the effective takeoff
-     * time is at 2.5s */
-    TEST_ASSERT_EQUAL_FLOAT(
-        2.5,
+     * speed is 1 m/s on average, so we need to take off at 2.441s. */
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-4,
+        2.441f,
         sb_trajectory_propose_takeoff_time_sec(&trajectory, 2500 /* mm */, 1000 /* mm/sec */, INFINITY));
+}
+
+void test_propose_landing_time_multiple_trailing_vertical_segments(void)
+{
+    float total_duration;
+
+    closeFixture();
+    loadFixture("fixtures/multiple_vertical_landing_segments.skyb");
+
+    total_duration = sb_trajectory_get_total_duration_sec(&trajectory);
+
+    /* there are multiple vertical segments at the end of file, descending
+     * every 1s according to the following schedule: 10m, 9m, 8m, 7.5m,
+     * 6m, 5m, 4m, 3m, 2m, 1m, 0m.
+     *
+     * We want to descend 7 meters in automatic landing mode. In the first
+     * 3 seconds we are down to 7.5m and then we descend 1.5m in 1s so we
+     * reach 7m at 3.3333s. The total descent is 10s, so this is 6.6666s
+     * before the total duration of the trajectory */
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-4,
+        total_duration - 20 / 3.0f,
+        sb_trajectory_propose_landing_time_sec(&trajectory, 7000 /* mm */, 50 /* mm */));
+
+    /* Landing time is equal to the total duration if we do not want to descend
+     * at all in landing mode */
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-4,
+        total_duration,
+        sb_trajectory_propose_landing_time_sec(&trajectory, 0 /* mm */, 50 /* mm */));
+
+    /* Landing time is equal to the time when the last vertical segment starts
+     * if we want to descend more than the length of this segment */
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-4,
+        total_duration - 10.0f,
+        sb_trajectory_propose_landing_time_sec(&trajectory, 15000 /* mm */, 50 /* mm */));
 }
 
 void test_load_truncated_file(void)
@@ -381,6 +427,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_propose_takeoff_time_const_speed);
     RUN_TEST(test_propose_takeoff_time_const_acceleration);
     RUN_TEST(test_propose_landing_time);
+    RUN_TEST(test_propose_landing_time_multiple_trailing_vertical_segments);
 
     /* additional tests with other files */
     RUN_TEST(test_load_truncated_file);

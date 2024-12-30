@@ -11,3 +11,4 @@ add_fixture(real_show.skyb)
 
 add_benchmark(get_duration)
 add_benchmark(player)
+add_benchmark(takeoff_landing_time)

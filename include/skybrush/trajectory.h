@@ -171,7 +171,8 @@ float sb_trajectory_get_total_duration_sec(const sb_trajectory_t* trajectory);
 float sb_trajectory_propose_takeoff_time_sec(
     const sb_trajectory_t* trajectory, float min_ascent, float speed, float acceleration);
 float sb_trajectory_propose_landing_time_sec(
-    const sb_trajectory_t* trajectory, float min_descent);
+    const sb_trajectory_t* trajectory, float preferred_descent,
+    float verticality_threshold);
 
 sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
 
