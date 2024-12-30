@@ -186,8 +186,7 @@ typedef struct sb_trajectory_player_s {
     const sb_trajectory_t* trajectory; /**< The trajectory that the player plays */
 
     /** The current segment that is being evaluated by the player */
-    struct
-    {
+    struct sb_trajectory_player_state_s {
         size_t start; /**< Start offset of the current segment */
         size_t start_of_coordinates; /**< Start offset of the coordinates in the segment */
         size_t length; /**< Length of the current segment in the buffer */
