@@ -29,7 +29,7 @@
  * \def SKYBRUSH_VERSION_MAJOR
  * Major version number of \c libskybrush
  */
-#define SKYBRUSH_VERSION_MAJOR 2
+#define SKYBRUSH_VERSION_MAJOR 3
 
 /**
  * \def SKYBRUSH_VERSION_MINOR
