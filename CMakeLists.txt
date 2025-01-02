@@ -1,7 +1,7 @@
 # A C library that implements the Skybrush binary trajectory format (and many
 # other things related to the Skybrush software suite)
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
