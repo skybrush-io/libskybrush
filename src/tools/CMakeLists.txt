@@ -1,0 +1,2 @@
+add_executable(takeoff_land_info takeoff_land_info.c)
+target_link_libraries(takeoff_land_info PRIVATE skybrush)

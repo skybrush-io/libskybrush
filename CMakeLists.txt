@@ -42,6 +42,9 @@ set(CMAKE_CXX_FLAGS_PROFILE "-g -pg")
 # Add switches to include sanitizers
 include(sanitizers)
 
+# Specify whether supplementary tools should be built
+option(LIBSKYBRUSH_BUILD_TOOLS "Build supplementary tools" OFF)
+
 # Check for code coverage support
 option(LIBSKYBRUSH_ENABLE_CODE_COVERAGE "Enable code coverage calculation" OFF)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND LIBSKYBRUSH_ENABLE_CODE_COVERAGE)

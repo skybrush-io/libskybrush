@@ -48,3 +48,7 @@ target_compile_options(
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libskybrush.a DESTINATION lib)
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/skybrush DESTINATION include)
+
+if(LIBSKYBRUSH_BUILD_TOOLS)
+    add_subdirectory(tools)
+endif()
