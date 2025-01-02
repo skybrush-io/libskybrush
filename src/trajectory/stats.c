@@ -177,6 +177,10 @@ sb_error_t sb_trajectory_stats_calculator_run(
      * might have been cleared during the looping phase */
     components = calc->components;
 
+    if (components & SB_TRAJECTORY_STATS_DURATION) {
+        result->duration_sec = result->duration_msec / 1000.0f;
+    }
+
     if (components & SB_TRAJECTORY_STATS_TAKEOFF_TIME) {
         /* Calculate the real takeoff time based on the assumed speed and
          * acceleration during takeoff */

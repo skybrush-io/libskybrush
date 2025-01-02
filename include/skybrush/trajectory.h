@@ -244,6 +244,9 @@ typedef struct sb_trajectory_stats_s {
     /** Total duration, in milliseconds */
     uint32_t duration_msec;
 
+    /** Total duration, in seconds */
+    uint32_t duration_sec;
+
     /** Earliest time above the takeoff altitude, in seconds */
     float earliest_above_sec;
 
