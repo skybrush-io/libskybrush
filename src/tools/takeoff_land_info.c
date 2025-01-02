@@ -17,6 +17,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
 #include <skybrush/skybrush.h>
 #include <stdio.h>
 
@@ -61,8 +62,14 @@ static sb_error_t calculate_stats(const sb_trajectory_t* trajectory, sb_trajecto
 int main(int argc, char* argv[])
 {
     sb_trajectory_t trajectory;
+    sb_trajectory_player_t player;
     sb_trajectory_stats_t stats;
     sb_bool_t first = 1;
+    sb_vector3_with_yaw_t pos;
+    float starts_at_altitude;
+    float ends_at_altitude;
+    float lands_from_altitude;
+    const char* error;
     int i;
 
     if (argc < 2) {
@@ -73,18 +80,54 @@ int main(int argc, char* argv[])
     for (i = 1; i < argc; i++) {
         SB_CHECK_MAIN(load_trajectory(&trajectory, argv[i]));
         SB_CHECK_MAIN(calculate_stats(&trajectory, &stats));
+
+        if (!isfinite(stats.takeoff_time_sec)) {
+            error = "takeoff time is not finite";
+        } else if (!isfinite(stats.landing_time_sec)) {
+            error = "landing time is not finite";
+        } else if (stats.landing_time_sec < stats.takeoff_time_sec) {
+            error = "landing time is before takeoff time";
+        } else if (stats.duration_msec < 0) {
+            error = "duration is negative";
+        } else {
+            SB_CHECK_MAIN(sb_trajectory_player_init(&player, &trajectory));
+
+            SB_CHECK_MAIN(sb_trajectory_player_get_position_at(&player, 0, &pos));
+            starts_at_altitude = pos.z;
+
+            SB_CHECK_MAIN(sb_trajectory_player_get_position_at(&player, stats.duration_sec, &pos));
+            ends_at_altitude = pos.z;
+
+            SB_CHECK_MAIN(sb_trajectory_player_get_position_at(&player, stats.landing_time_sec, &pos));
+            lands_from_altitude = pos.z;
+
+            sb_trajectory_player_destroy(&player);
+
+            if (lands_from_altitude < ends_at_altitude) {
+                error = "lands below end altitude";
+            } else if (lands_from_altitude > ends_at_altitude + 2600) {
+                error = "lands from too high";
+            } else {
+                error = "";
+            }
+        }
+
         sb_trajectory_destroy(&trajectory);
 
         if (first) {
-            printf("filename\tduration\ttakeoff_time\tlanding_time\n");
+            printf("filename\tduration [s]\ttakeoff_time [s]\trel_landing_time [s]\tstart_alt [m]\tend_alt [m]\tland_alt [m]\terror\n");
             first = 0;
         }
 
-        printf("%s\t%.3f\t%.3f\t%.3f\n",
-            argv[1],
+        printf("%s\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%s\n",
+            argv[i],
             stats.duration_msec / 1000.0,
             (double)stats.takeoff_time_sec,
-            (double)stats.landing_time_sec - stats.duration_msec / 1000.0);
+            stats.landing_time_sec - stats.duration_msec / 1000.0,
+            starts_at_altitude / 1000.0,
+            ends_at_altitude / 1000.0,
+            lands_from_altitude / 1000.0,
+            error);
     }
 
     return 0;
