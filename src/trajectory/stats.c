@@ -84,8 +84,8 @@ sb_error_t sb_trajectory_stats_calculator_run(
     float adjustment;
     float altitude;
     float delta;
-    float last_vertical_section_start_altitude;
-    float last_vertical_section_end_altitude;
+    float last_vertical_section_start_altitude = 0.0f;
+    float last_vertical_section_end_altitude = 0.0f;
     float to_descend;
     sb_error_t retval = SB_SUCCESS;
 
