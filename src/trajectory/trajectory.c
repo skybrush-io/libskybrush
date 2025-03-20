@@ -325,6 +325,26 @@ sb_error_t sb_trajectory_get_end_position(
 }
 
 /**
+ * Get the segment of a trajectory and its relative time at a given time.
+ */
+ sb_error_t sb_trajectory_get_segment_at(sb_trajectory_t* trajectory, float time_sec,
+    sb_trajectory_player_state_t* state, float* rel_time)
+{
+    sb_trajectory_player_t player;
+    sb_error_t retval;
+
+    SB_CHECK(sb_trajectory_player_init(&player, trajectory));
+    retval = sb_i_trajectory_player_seek_to_time(&player, time_sec, rel_time);
+    /* Calculate dpoly and ddpoly behind the scenes before we return the segment */
+    sb_i_get_dpoly(&player.current_segment.data);
+    sb_i_get_ddpoly(&player.current_segment.data);
+    *state = player.current_segment;
+    sb_trajectory_player_destroy(&player);
+
+    return retval;
+}
+
+/**
  * Returns the start position of the trajectory.
  */
 sb_error_t sb_trajectory_get_start_position(
@@ -588,6 +608,7 @@ void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* pla
     const sb_poly_4d_t* ddpoly = sb_i_get_dpoly(current);
 
     printf("Start offset = %ld bytes\n", (long int)player->current_segment.start);
+    printf("Start offset of coordinates = %ld bytes\n", (long int)player->current_segment.start_of_coordinates);
     printf("Length = %ld bytes\n", (long int)player->current_segment.length);
     printf("Start time = %.3fs\n", current->start_time_sec);
     printf("Duration = %.3fs\n", current->duration_sec);
@@ -800,6 +821,9 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     data->duration_sec = data->duration_msec / 1000.0f;
     data->end_time_msec = data->start_time_msec + data->duration_msec;
     data->end_time_sec = data->end_time_msec / 1000.0f;
+
+    /* Store start offset of coordinates now that we have parsed the header */
+    player->current_segment.start_of_coordinates = offset;
 
     /* Parse X coordinates */
     num_coords = sb_i_get_num_coords(header >> 0);

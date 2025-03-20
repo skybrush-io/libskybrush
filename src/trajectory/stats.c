@@ -77,7 +77,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
     sb_trajectory_player_t player;
     sb_trajectory_segment_t* segment;
     sb_vector3_with_yaw_t start, end;
-    struct sb_trajectory_player_state_s state;
+    sb_trajectory_player_state_t state;
     sb_bool_t state_valid;
     float takeoff_altitude;
     float rel_t;
