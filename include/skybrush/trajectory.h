@@ -231,6 +231,10 @@ sb_error_t sb_trajectory_builder_set_start_position(
 sb_error_t sb_trajectory_builder_append_line(
     sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t target,
     uint32_t duration_msec);
+sb_error_t sb_trajectory_builder_append_cubic_bezier(
+    sb_trajectory_builder_t* builder, const sb_vector3_with_yaw_t control1,
+    const sb_vector3_with_yaw_t control2, const sb_vector3_with_yaw_t target,
+    uint32_t duration_msec);
 sb_error_t sb_trajectory_builder_hold_position_for(
     sb_trajectory_builder_t* builder, uint32_t duration_msec);
 

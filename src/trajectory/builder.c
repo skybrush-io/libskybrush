@@ -101,16 +101,89 @@ sb_error_t sb_trajectory_builder_set_start_position(
 }
 
 /**
+ * @brief Appends a new cubic Bézier segment to the trajectory being built.
+ *
+ * @param builder the trajectory builder
+ * @param control1 the first control point of the cubic Bézier segment to move along
+ * @param control2 the second control point of the cubic Bézier segment to move along
+ * @param target the target to move to
+ * @param duration_msec the duration of the segment, in milliseconds
+ * @return \c SB_SUCCESS on success, error code otherwise
+ */
+sb_error_t sb_trajectory_builder_append_cubic_bezier(
+    sb_trajectory_builder_t* builder, const sb_vector3_with_yaw_t control1,
+    const sb_vector3_with_yaw_t control2, const sb_vector3_with_yaw_t target,
+    uint32_t duration_msec)
+{
+    if (duration_msec == 0) {
+        return SB_EINVAL;
+    }
+
+    if (duration_msec > MAX_DURATION_MSEC) {
+        // TODO: split into smaller parts instead of throwing error if ever needed
+        return SB_EINVAL;
+    }
+
+    size_t offset = sb_buffer_size(&builder->buffer);
+    uint8_t* flags_ptr;
+
+    SB_CHECK(sb_buffer_extend_with_zeros(&builder->buffer, 27));
+
+    /* We will always need 1 byte for the header */
+    flags_ptr = SB_BUFFER(builder->buffer) + offset;
+    offset++;
+    *flags_ptr = 0;
+
+    sb_write_uint16(SB_BUFFER(builder->buffer), &offset, duration_msec);
+    if (builder->last_position.x != control1.x || control1.x != control2.x || control2.x != target.x) {
+        *flags_ptr |= SB_X_BEZIER;
+        SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, control1.x));
+        SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, control2.x));
+        SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, target.x));
+    }
+    if (builder->last_position.y != control1.y || control1.y != control2.y || control2.y != target.y) {
+        *flags_ptr |= SB_Y_BEZIER;
+        SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, control1.y));
+        SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, control2.y));
+        SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, target.y));
+    }
+    if (builder->last_position.z != control1.z || control1.z != control2.z || control2.z != target.z) {
+        *flags_ptr |= SB_Z_BEZIER;
+        SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, control1.z));
+        SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, control2.z));
+        SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, target.z));
+    }
+    if (builder->last_position.yaw != control1.yaw || control1.yaw != control2.yaw || control2.yaw != target.yaw) {
+        *flags_ptr |= SB_YAW_BEZIER;
+        SB_CHECK(sb_i_trajectory_builder_write_angle(builder, &offset, control1.yaw));
+        SB_CHECK(sb_i_trajectory_builder_write_angle(builder, &offset, control2.yaw));
+        SB_CHECK(sb_i_trajectory_builder_write_angle(builder, &offset, target.yaw));
+    }
+
+    /* Trim the unneeded bytes from the end */
+    SB_CHECK(sb_buffer_resize(&builder->buffer, offset));
+
+    builder->last_position = target;
+
+    return SB_SUCCESS;
+}
+
+/**
  * @brief Appends a new straight-line segment to the trajectory being built.
  *
  * @param builder the trajectory builder
  * @param target the target to move to
  * @param duration_msec the duration of the segment, in milliseconds
+ * @return \c SB_SUCCESS on success, error code otherwise
  */
 sb_error_t sb_trajectory_builder_append_line(
     sb_trajectory_builder_t* builder, const sb_vector3_with_yaw_t target,
     uint32_t duration_msec)
 {
+    if (duration_msec == 0) {
+        return SB_EINVAL;
+    }
+
     if (duration_msec > MAX_DURATION_MSEC) {
         /* If duration_msec > 60000, split the segment into multiple sub-segments */
         sb_vector3_with_yaw_t midpoint;
@@ -139,19 +212,19 @@ sb_error_t sb_trajectory_builder_append_line(
 
     sb_write_uint16(SB_BUFFER(builder->buffer), &offset, duration_msec);
     if (builder->last_position.x != target.x) {
-        *flags_ptr |= 1;
+        *flags_ptr |= SB_X_LINEAR;
         SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, target.x));
     }
     if (builder->last_position.y != target.y) {
-        *flags_ptr |= (1 << 2);
+        *flags_ptr |= SB_Y_LINEAR;
         SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, target.y));
     }
     if (builder->last_position.z != target.z) {
-        *flags_ptr |= (1 << 4);
+        *flags_ptr |= SB_Z_LINEAR;
         SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, target.z));
     }
     if (builder->last_position.yaw != target.yaw) {
-        *flags_ptr |= (1 << 6);
+        *flags_ptr |= SB_YAW_LINEAR;
         SB_CHECK(sb_i_trajectory_builder_write_angle(builder, &offset, target.yaw));
     }
 

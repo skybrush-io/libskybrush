@@ -88,6 +88,103 @@ void test_set_start_position(void)
     sb_trajectory_builder_destroy(&builder);
 }
 
+void test_append_cubic_bezier(void)
+{
+    sb_vector3_with_yaw_t start, ctrl1, ctrl2, target;
+    // clang-format off
+    uint8_t expected1[] = { 2, 0, 0, 0, 0, 0, 0, 0, 0 };
+    uint8_t expected2[] = {
+        2, 0, 0, 0, 0, 0, 0, 0, 0,
+        0xaa, 0x10, 0x27,
+        0, 0, 25, 0, 25, 0,
+        0, 0, 30, 0, 30, 0,
+        0, 0, 35, 0, 35, 0,
+        0, 0, 0x20, 0x03, 0x20, 0x03
+    }; // clang-format on
+    uint8_t expected3[] = {
+        2, 0, 0, 0, 0, 0, 0, 0, 0,
+        0xaa, 0x10, 0x27,
+        0, 0, 25, 0, 25, 0,
+        0, 0, 30, 0, 30, 0,
+        0, 0, 35, 0, 35, 0,
+        0, 0, 0x20, 0x03, 0x20, 0x03,
+        0xaa, 0x88, 0x13,
+        50, 0, 100, 0, 150, 0,
+        100, 0, 150, 0, 200, 0,
+        150, 0, 200, 0, 250, 0,
+        0x90, 0x01, 0x78, 0x05, 0x60, 0x09
+    }; // clang-format on
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 2, 0));
+
+    start.x = 0;
+    start.y = 0;
+    start.z = 0;
+    start.yaw = 0;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, start));
+    TEST_ASSERT_EQUAL(sizeof(expected1), sb_buffer_size(&builder.buffer));
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected1, SB_BUFFER(builder.buffer), sizeof(expected1));
+    TEST_ASSERT_EQUAL(start.x, builder.last_position.x);
+    TEST_ASSERT_EQUAL(start.y, builder.last_position.y);
+    TEST_ASSERT_EQUAL(start.z, builder.last_position.z);
+    TEST_ASSERT_EQUAL(start.yaw, builder.last_position.yaw);
+
+    ctrl1.x = 0;
+    ctrl1.y = 0;
+    ctrl1.z = 0;
+    ctrl1.yaw = 0;
+
+    ctrl2.x = 50;
+    ctrl2.y = 60;
+    ctrl2.z = 70;
+    ctrl2.yaw = 80;
+
+    target.x = 50;
+    target.y = 60;
+    target.z = 70;
+    target.yaw = 80;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_cubic_bezier(&builder, ctrl1, ctrl2, target, 10000));
+    TEST_ASSERT_EQUAL(sizeof(expected2), sb_buffer_size(&builder.buffer));
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected2, SB_BUFFER(builder.buffer), sizeof(expected2));
+    TEST_ASSERT_EQUAL(target.x, builder.last_position.x);
+    TEST_ASSERT_EQUAL(target.y, builder.last_position.y);
+    TEST_ASSERT_EQUAL(target.z, builder.last_position.z);
+    TEST_ASSERT_EQUAL(target.yaw, builder.last_position.yaw);
+
+    ctrl1.x = 100;
+    ctrl1.y = 200;
+    ctrl1.z = 300;
+    ctrl1.yaw = 400;
+
+    ctrl2.x = 200;
+    ctrl2.y = 300;
+    ctrl2.z = 400;
+    ctrl2.yaw = 500;
+
+    target.x = 300;
+    target.y = 400;
+    target.z = 500;
+    target.yaw = 600;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_cubic_bezier(&builder, ctrl1, ctrl2, target, 5000));
+    TEST_ASSERT_EQUAL(sizeof(expected3), sb_buffer_size(&builder.buffer));
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected3, SB_BUFFER(builder.buffer), sizeof(expected3));
+    TEST_ASSERT_EQUAL(target.x, builder.last_position.x);
+    TEST_ASSERT_EQUAL(target.y, builder.last_position.y);
+    TEST_ASSERT_EQUAL(target.z, builder.last_position.z);
+    TEST_ASSERT_EQUAL(target.yaw, builder.last_position.yaw);
+
+    /* test zero duration */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_cubic_bezier(&builder, ctrl1, ctrl2, target, 0));
+
+    /* test long segments */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_cubic_bezier(&builder, ctrl1, ctrl2, target, 90000));
+
+    sb_trajectory_builder_destroy(&builder);
+}
+
 void test_append_line(void)
 {
     sb_vector3_with_yaw_t vec;
@@ -178,6 +275,9 @@ void test_append_line(void)
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
     TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+
+    /* test zero duration */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_line(&builder, vec, 0));
 
     /* test splitting of long segments */
     vec.x = 7030;
@@ -375,6 +475,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_set_start_position);
     RUN_TEST(test_set_start_position_invalid_coordinate);
     RUN_TEST(test_set_start_position_later);
+    RUN_TEST(test_append_cubic_bezier);
     RUN_TEST(test_append_line);
     RUN_TEST(test_hold_position_for);
     RUN_TEST(test_conversion_to_trajectory);
