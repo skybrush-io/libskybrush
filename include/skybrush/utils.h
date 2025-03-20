@@ -34,6 +34,11 @@ __BEGIN_DECLS
 
 uint32_t sb_ap_crc32_update(uint32_t crc, const uint8_t* buf, uint32_t size);
 void sb_bounding_box_expand(sb_bounding_box_t* box, float offset);
+sb_error_t sb_get_cubic_bezier_from_velocity_constraints(
+    sb_vector3_with_yaw_t start, sb_vector3_with_yaw_t start_vel,
+    sb_vector3_with_yaw_t end, sb_vector3_with_yaw_t end_vel, float duration_sec,
+    sb_vector3_with_yaw_t* control1, sb_vector3_with_yaw_t* control2
+);
 float sb_get_travel_time_for_distance(float distance, float speed, float acceleration);
 void sb_interval_expand(sb_interval_t* interval, float offset);
 sb_error_t sb_scale_update_altitude(uint8_t* scale, float altitude);

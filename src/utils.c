@@ -31,6 +31,46 @@ void sb_bounding_box_expand(sb_bounding_box_t* box, float offset)
 }
 
 /**
+ * Calculates control points for a cubic Bézier curve whose start and end
+ * points are given along with the velocity constraints at these points and
+ * the overall duration of the Bézier segment.
+ *
+ * The accelerations at start and end points are assumed to be zero.
+ *
+ * \param  start         the starting point of the Bézier segment
+ * \param  start_vel     the starting velocity of the Bézier segment
+ * \param  end           the ending point of the Bézier segment
+ * \param  start_vel     the ending velocity of the Bézier segment
+ * \param  duration_sec  the duration of the segment in seconds
+ * \param  control1      the calculated first control point of the resulting Bézier curve
+ * \param  control2      the calculated second control point of the resulting Bézier curve
+ * \return \c SB_EINVAL if input values are invalid, \c SB_SUCCESS otherwise
+ */
+sb_error_t sb_get_cubic_bezier_from_velocity_constraints(
+    sb_vector3_with_yaw_t start, sb_vector3_with_yaw_t start_vel,
+    sb_vector3_with_yaw_t end, sb_vector3_with_yaw_t end_vel, float duration_sec,
+    sb_vector3_with_yaw_t* control1, sb_vector3_with_yaw_t* control2
+) {
+    if (!control1 || !control2 || duration_sec <= 0.0f) {
+        return SB_EINVAL;
+    }
+
+    float scale = duration_sec / 3.0f;
+
+    control1->x = start.x + scale * start_vel.x;
+    control1->y = start.y + scale * start_vel.y;
+    control1->z = start.z + scale * start_vel.z;
+    control1->yaw = start.yaw + scale * start_vel.yaw;
+
+    control2->x = end.x - scale * end_vel.x;
+    control2->y = end.y - scale * end_vel.y;
+    control2->z = end.z - scale * end_vel.z;
+    control2->yaw = end.yaw - scale * end_vel.yaw;
+
+    return SB_SUCCESS;
+}
+
+/**
  * Calculates the time needed for the three phase motion of constant
  * acceleration + constant velocity + constant deceleration to move a given
  * distance.
