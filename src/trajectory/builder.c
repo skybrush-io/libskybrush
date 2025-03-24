@@ -24,6 +24,7 @@
 #include <skybrush/utils.h>
 
 #include "../parsing.h"
+#include "./builder.h"
 
 #define HEADER_LENGTH 9
 #define MAX_DURATION_MSEC 60000

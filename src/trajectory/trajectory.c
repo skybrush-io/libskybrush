@@ -28,6 +28,7 @@
 #include <skybrush/utils.h>
 
 #include "../parsing.h"
+#include "./builder.h"
 
 static sb_error_t sb_i_trajectory_init_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser);
@@ -270,7 +271,7 @@ sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory)
  * @param trajectory the trajectory to cut
  * @param time_sec the timestamp at which to cut the trajectory, in seconds
  */
- sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
+sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
 {
     sb_trajectory_builder_t builder;
     sb_trajectory_player_state_t segment;
@@ -420,7 +421,7 @@ sb_error_t sb_trajectory_get_end_position(
 /**
  * Get the segment of a trajectory and its relative time at a given time.
  */
- sb_error_t sb_trajectory_get_segment_at(sb_trajectory_t* trajectory, float time_sec,
+sb_error_t sb_trajectory_get_segment_at(sb_trajectory_t* trajectory, float time_sec,
     sb_trajectory_player_state_t* state, float* rel_time)
 {
     sb_trajectory_player_t player;
