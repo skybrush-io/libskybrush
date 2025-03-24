@@ -49,8 +49,8 @@ void sb_bounding_box_expand(sb_bounding_box_t* box, float offset)
 sb_error_t sb_get_cubic_bezier_from_velocity_constraints(
     sb_vector3_with_yaw_t start, sb_vector3_with_yaw_t start_vel,
     sb_vector3_with_yaw_t end, sb_vector3_with_yaw_t end_vel, float duration_sec,
-    sb_vector3_with_yaw_t* control1, sb_vector3_with_yaw_t* control2
-) {
+    sb_vector3_with_yaw_t* control1, sb_vector3_with_yaw_t* control2)
+{
     if (!control1 || !control2 || duration_sec <= 0.0f) {
         return SB_EINVAL;
     }
@@ -244,6 +244,9 @@ sb_error_t sb_uint32_msec_duration_from_float_seconds(uint32_t* result_msec, flo
 /**
  * @brief Cuts a Bézier curve at the given ratio using De Casteljau's algorithm.
  *
+ * Returns the left segment of the Bézier curve (i.e. from zero up to the given
+ * ratio). The right segment of the curve is discarded.
+ *
  * Supports Bézier curves up to 7th order.
  *
  * @param dst The control points of the destination Bézier curve; same size as \c src
@@ -252,7 +255,8 @@ sb_error_t sb_uint32_msec_duration_from_float_seconds(uint32_t* result_msec, flo
  * @param ratio The ratio between [0, 1] up to which we cut the segment
  * @return \c SB_EINVAL if input values are invalid, \c SB_SUCCESS on success
  */
- sb_error_t sb_bezier_cut_at(float* dst, float* src, uint8_t num_points, float ratio) {
+sb_error_t sb_bezier_cut_at(float* dst, const float* src, uint8_t num_points, float ratio)
+{
     uint8_t i, j;
 
     if (ratio < 0 || ratio > 1 || num_points < 0 || num_points > 8) {
@@ -271,23 +275,20 @@ sb_error_t sb_uint32_msec_duration_from_float_seconds(uint32_t* result_msec, flo
         }
     } else {
         // General case: cut at arbitrary point
-        float temp[8][8] = {0};
+        float temp[8] = { 0 };
 
         // Copy original control points
         for (j = 0; j < num_points; j++) {
-            temp[0][j] = src[j];
+            temp[j] = src[j];
         }
 
         // Perform De Casteljau's algorithm
+        dst[0] = temp[0];
         for (i = 1; i < num_points; i++) {
             for (j = 0; j < num_points - i; j++) {
-                temp[i][j] = (1 - ratio) * temp[i - 1][j] + ratio * temp[i - 1][j + 1];
+                temp[j] = (1 - ratio) * temp[j] + ratio * temp[j + 1];
             }
-        }
-
-        // Extract left segment control points
-        for (i = 0; i < num_points; i++) {
-            dst[i] = temp[i][0];
+            dst[i] = temp[0];
         }
     }
 
