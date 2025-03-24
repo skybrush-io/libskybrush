@@ -25,6 +25,7 @@
 #include <skybrush/formats/binary.h>
 #include <skybrush/memory.h>
 #include <skybrush/trajectory.h>
+#include <skybrush/utils.h>
 
 #include "../parsing.h"
 
@@ -258,6 +259,98 @@ sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory)
     trajectory->scale = 1;
     trajectory->use_yaw = 0;
     trajectory->header_length = 0;
+
+    return SB_SUCCESS;
+}
+
+/**
+ * @brief Cuts the trajectory at the given time instant, keeping the last
+ * position and velocity at the given time intact and deleting all further segments.
+ *
+ * @param trajectory the trajectory to cut
+ * @param time_sec the timestamp at which to cut the trajectory, in seconds
+ */
+ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
+{
+    sb_trajectory_builder_t builder;
+    sb_trajectory_player_state_t segment;
+    sb_vector3_with_yaw_t start;
+    float rel_time;
+    float src[8];
+    float dst[8];
+    size_t offset;
+    uint8_t i, header, num_coords;
+    uint32_t duration_msec;
+
+    SB_CHECK(sb_trajectory_get_segment_at(trajectory, time_sec, &segment, &rel_time));
+    start = sb_poly_4d_eval(&segment.data.poly, 0);
+
+    if (rel_time < 1.0e-6f) {
+        SB_CHECK(sb_buffer_resize(&trajectory->buffer, segment.start));
+        // TODO: what if we cut the whole trajectory with time_sec <= 0 ?
+    } else if (rel_time > 1 - 1.0e-6f) {
+        SB_CHECK(sb_buffer_resize(&trajectory->buffer, segment.start + segment.length));
+    } else {
+        /* We re-read the given trajectory segment and modify in-place */
+        SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, &start));
+        offset = segment.start;
+        header = SB_BUFFER(trajectory->buffer)[offset++];
+
+        /* Modify duration of segment to be cut */
+        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(&duration_msec, segment.data.duration_sec * rel_time));
+        sb_write_uint16(SB_BUFFER(trajectory->buffer), &offset, duration_msec);
+
+        /* cut along X coordinate */
+        num_coords = sb_i_get_num_coords(header >> 0);
+        src[0] = start.x;
+        for (i = 1; i < num_coords; i++) {
+            src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+        }
+        sb_bezier_cut_at(dst, src, num_coords, rel_time);
+        offset -= 2 * (num_coords - 1);
+        for (i = 1; i < num_coords; i++) {
+            SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
+        }
+
+        /* cut along Y coordinate */
+        num_coords = sb_i_get_num_coords(header >> 2);
+        src[0] = start.y;
+        for (i = 1; i < num_coords; i++) {
+            src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+        }
+        sb_bezier_cut_at(dst, src, num_coords, rel_time);
+        offset -= 2 * (num_coords - 1);
+        for (i = 1; i < num_coords; i++) {
+            SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
+        }
+
+        /* cut along Z coordinate */
+        num_coords = sb_i_get_num_coords(header >> 4);
+        src[0] = start.z;
+        for (i = 1; i < num_coords; i++) {
+            src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+        }
+        sb_bezier_cut_at(dst, src, num_coords, rel_time);
+        offset -= 2 * (num_coords - 1);
+        for (i = 1; i < num_coords; i++) {
+            SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
+        }
+
+        /* cut along yaw coordinate */
+        num_coords = sb_i_get_num_coords(header >> 6);
+        src[0] = start.yaw;
+        for (i = 1; i < num_coords; i++) {
+            src[i] = sb_i_trajectory_parse_angle(trajectory, &offset);
+        }
+        sb_bezier_cut_at(dst, src, num_coords, rel_time);
+        offset -= 2 * (num_coords - 1);
+        for (i = 1; i < num_coords; i++) {
+            SB_CHECK(sb_i_trajectory_builder_write_angle(&builder, &offset, dst[i]));
+        }
+
+        /* finally, cut buffer at end of the re-written segment */
+        SB_CHECK(sb_buffer_resize(&trajectory->buffer, offset));
+    }
 
     return SB_SUCCESS;
 }

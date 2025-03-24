@@ -169,6 +169,7 @@ sb_error_t sb_trajectory_init_from_builder(
 sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory);
 void sb_trajectory_destroy(sb_trajectory_t* trajectory);
 
+sb_error_t sb_trajectory_cut_at(sb_trajectory_t* builder, float duration_sec);
 sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory);
 sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
     const sb_trajectory_t* trajectory, sb_bounding_box_t* result);
@@ -229,6 +230,8 @@ typedef struct sb_trajectory_builder_s {
 
 sb_error_t sb_trajectory_builder_init(
     sb_trajectory_builder_t* builder, uint8_t scale, uint8_t flags);
+sb_error_t sb_trajectory_builder_init_from_trajectory(sb_trajectory_builder_t* builder,
+    sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* last_position);
 void sb_trajectory_builder_destroy(sb_trajectory_builder_t* builder);
 
 sb_error_t sb_trajectory_builder_set_start_position(
@@ -240,10 +243,13 @@ sb_error_t sb_trajectory_builder_append_cubic_bezier(
     sb_trajectory_builder_t* builder, const sb_vector3_with_yaw_t control1,
     const sb_vector3_with_yaw_t control2, const sb_vector3_with_yaw_t target,
     uint32_t duration_msec);
-sb_error_t sb_trajectory_builder_cut_at(sb_trajectory_builder_t* builder,
-    float duration_sec, sb_vector3_with_yaw_t* last_velocity);
 sb_error_t sb_trajectory_builder_hold_position_for(
     sb_trajectory_builder_t* builder, uint32_t duration_msec);
+
+sb_error_t sb_i_trajectory_builder_write_angle(
+    sb_trajectory_builder_t* builder, size_t* offset, float angle);
+sb_error_t sb_i_trajectory_builder_write_coordinate(
+    sb_trajectory_builder_t* builder, size_t* offset, float coordinate);
 
 /* ************************************************************************* */
 

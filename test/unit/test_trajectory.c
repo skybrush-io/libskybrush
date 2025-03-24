@@ -395,6 +395,77 @@ void test_propose_landing_time_multiple_trailing_vertical_segments(void)
         sb_trajectory_propose_landing_time_sec(&trajectory, 15000 /* mm */, 50 /* mm */));
 }
 
+void test_cut_at(void)
+{
+    sb_vector3_with_yaw_t pos;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 60));
+    TEST_ASSERT_EQUAL(50, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(0, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 50));
+    TEST_ASSERT_EQUAL(50, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(0, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 40));
+    TEST_ASSERT_EQUAL(40, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(10000, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 30));
+    TEST_ASSERT_EQUAL(30, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(10000, pos.x);
+    TEST_ASSERT_EQUAL(10000, pos.y);
+    TEST_ASSERT_EQUAL(10000, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 20));
+    TEST_ASSERT_EQUAL(20, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(10000, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(10000, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 10));
+    TEST_ASSERT_EQUAL(10, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(10000, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 5));
+    TEST_ASSERT_EQUAL(5, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(5000, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 0));
+    TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(0, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    // TODO: add more tests with known higher-order input
+}
+
 void test_load_truncated_file(void)
 {
     closeFixture();
@@ -428,6 +499,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_propose_takeoff_time_const_acceleration);
     RUN_TEST(test_propose_landing_time);
     RUN_TEST(test_propose_landing_time_multiple_trailing_vertical_segments);
+    RUN_TEST(test_cut_at);
 
     /* additional tests with other files */
     RUN_TEST(test_load_truncated_file);

@@ -30,10 +30,6 @@
 
 static sb_error_t sb_i_trajectory_builder_scale_coordinate(
     sb_trajectory_builder_t* builder, float coordinate, int16_t* scaled_coordinate);
-static sb_error_t sb_i_trajectory_builder_write_angle(
-    sb_trajectory_builder_t* builder, size_t* offset, float angle);
-static sb_error_t sb_i_trajectory_builder_write_coordinate(
-    sb_trajectory_builder_t* builder, size_t* offset, float coordinate);
 
 /**
  * @brief Creates a new trajectory builder.
@@ -61,6 +57,28 @@ sb_error_t sb_trajectory_builder_init(sb_trajectory_builder_t* builder, uint8_t 
     if (flags & SB_TRAJECTORY_USE_YAW) {
         header[0] |= 128;
     }
+
+    return SB_SUCCESS;
+}
+
+/**
+ * @brief Creates a new trajectory builder from an existing trajectory.
+ *
+ * @param builder The builder to initialize
+ * @param trajectory The existing trajectory to initialize the builder from
+ * @param last_position The last position of the trajectory, if known, \c NULL otherwise
+ */
+sb_error_t sb_trajectory_builder_init_from_trajectory(sb_trajectory_builder_t* builder,
+    sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* last_position)
+{
+    SB_CHECK(sb_buffer_init_from_bytes(&builder->buffer, SB_BUFFER(trajectory->buffer),
+        sb_buffer_size(&trajectory->buffer)));
+    if (last_position) {
+        builder->last_position = *last_position;
+    } else {
+        SB_CHECK(sb_trajectory_get_end_position(trajectory, &builder->last_position));
+    }
+    builder->scale = trajectory->scale;
 
     return SB_SUCCESS;
 }
@@ -238,73 +256,6 @@ sb_error_t sb_trajectory_builder_append_line(
 }
 
 /**
- * @brief Cuts the trajectory at the given time instant, keeping the last
- * position and velocity at the given time intact and deleting all further segments.
- *
- * @param builder the trajectory builder
- * @param time_sec the timestamp at which to cut the trajectory, in seconds
- * @param last_velocity the returned velocity of the trajectory at the cutting point;
- *                      set to \c NULL if you do not want the velocity to be returned
- */
-sb_error_t sb_trajectory_builder_cut_at(sb_trajectory_builder_t* builder, float time_sec,
-    sb_vector3_with_yaw_t* last_velocity)
-{
-    sb_trajectory_t trajectory;
-    sb_trajectory_player_state_t segment;
-    sb_vector3_with_yaw_t start, start_vel, end, end_vel, control1, control2;
-    float rel_time, duration;
-
-    SB_CHECK(sb_trajectory_init_from_buffer(&trajectory, SB_BUFFER(builder->buffer),
-        sb_buffer_capacity(&builder->buffer)));
-    SB_CHECK(sb_trajectory_get_segment_at(&trajectory, time_sec, &segment, &rel_time));
-
-    start = sb_poly_4d_eval(&segment.data.poly, 0);
-    start_vel = sb_poly_4d_eval(&segment.data.dpoly, 0);
-    end = sb_poly_4d_eval(&segment.data.poly, rel_time);
-    end_vel = sb_poly_4d_eval(&segment.data.dpoly, rel_time);
-
-    // TODO: this is a temporary debug section until function settles
-    // printf("segment start pos %f %f %f %f\n", (double)start.x, (double)start.y, (double)start.z, (double)start.yaw);
-    // printf("segment start vel %f %f %f %f\n", (double)start_vel.x, (double)start_vel.y, (double)start_vel.z, (double)start_vel.yaw);
-    // printf("segment end pos %f %f %f %f\n", (double)end.x, (double)end.y, (double)end.z, (double)end.yaw);
-    // printf("segment end vel %f %f %f %f\n", (double)end_vel.x, (double)end_vel.y, (double)end_vel.z, (double)end_vel.yaw);
-    // printf("rel time %f\n", (double)rel_time);
-    // printf("segment offset %ld + %ld\n", segment.start, segment.length);
-
-    if (rel_time < 1.0e-6f) {
-        SB_CHECK(sb_buffer_resize(&trajectory.buffer, segment.start));
-        builder->last_position = start;
-        if (last_velocity) {
-            *last_velocity = start_vel;
-        }
-        // TODO: what if we cut the whole trajectory with time_sec <= 0 ?
-    } else if (rel_time > 1 - 1.0e-6f) {
-        SB_CHECK(sb_buffer_resize(&trajectory.buffer, segment.start + segment.length));
-        builder->last_position = end;
-        if (last_velocity) {
-            *last_velocity = end_vel;
-        }
-    } else {
-        SB_CHECK(sb_buffer_resize(&trajectory.buffer, segment.start));
-        builder->last_position = start;
-        duration = rel_time * segment.data.duration_sec;
-        // TODO: replace current_segment with the cut segment properly, based on
-        // original type (const, linear, cubic and 7-order Bézier)
-        SB_CHECK(sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel,
-            duration, &control1, &control2));
-        SB_CHECK(sb_trajectory_builder_append_cubic_bezier(builder, control1, control2, end, duration));
-        if (last_velocity) {
-            *last_velocity = end_vel;
-        }
-    }
-
-    // TODO: do we need to call sb_trajectory_destroy() here? Needs to be cleared out as
-    // that function truly destroys the trajectory even in view mode (that is used here)
-
-    return SB_SUCCESS;
-}
-
-/**
  * @brief Appends a new constant segment to the trajectory being built.
  *
  * When the duration is larger than the maximum allowed length of a single
@@ -368,7 +319,7 @@ static sb_error_t sb_i_trajectory_builder_scale_coordinate(
     }
 }
 
-static sb_error_t sb_i_trajectory_builder_write_angle(
+sb_error_t sb_i_trajectory_builder_write_angle(
     sb_trajectory_builder_t* builder, size_t* offset, float angle)
 {
     int16_t scaled = fmodf(angle, 360) * 10.0f;
@@ -380,7 +331,7 @@ static sb_error_t sb_i_trajectory_builder_write_angle(
     return SB_SUCCESS;
 }
 
-static sb_error_t sb_i_trajectory_builder_write_coordinate(
+sb_error_t sb_i_trajectory_builder_write_coordinate(
     sb_trajectory_builder_t* builder, size_t* offset, float coordinate)
 {
     int16_t scaled;
