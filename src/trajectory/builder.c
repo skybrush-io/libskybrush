@@ -65,6 +65,11 @@ sb_error_t sb_trajectory_builder_init(sb_trajectory_builder_t* builder, uint8_t 
 /**
  * @brief Creates a new trajectory builder from an existing trajectory.
  *
+ * The trajectory builder and the trajectory will share the same underlying
+ * memory buffer. It is the responsibility of the caller to ensure that there
+ * is enough space in the memory buffer to contain the entire trajectory even
+ * when new segments are appended.
+ *
  * @param builder The builder to initialize
  * @param trajectory The existing trajectory to initialize the builder from
  * @param last_position The last position of the trajectory, if known, \c NULL otherwise
@@ -72,8 +77,8 @@ sb_error_t sb_trajectory_builder_init(sb_trajectory_builder_t* builder, uint8_t 
 sb_error_t sb_trajectory_builder_init_from_trajectory(sb_trajectory_builder_t* builder,
     sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* last_position)
 {
-    SB_CHECK(sb_buffer_init_from_bytes(&builder->buffer, SB_BUFFER(trajectory->buffer),
-        sb_buffer_size(&trajectory->buffer)));
+    sb_buffer_init_view(&builder->buffer, SB_BUFFER(trajectory->buffer),
+        sb_buffer_size(&trajectory->buffer));
     if (last_position) {
         builder->last_position = *last_position;
     } else {
