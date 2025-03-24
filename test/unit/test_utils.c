@@ -175,6 +175,94 @@ void test_scale_update(void)
     TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_scale_update_vector3_with_yaw(&scale, vec));
 }
 
+void test_bezier_cut_at(void)
+{
+    float dst[8];
+    float src[8];
+
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_bezier_cut_at(dst, src, -1, 0.5));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_bezier_cut_at(dst, src, 9, 0.5));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_bezier_cut_at(dst, src, 3, -0.1));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_bezier_cut_at(dst, src, 3, 1.1));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 0, 0.2));
+
+    src[0] = 1;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 1, 0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, src[0], dst[0]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 1, 0.2));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, src[0], dst[0]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 1, 0.5));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, src[0], dst[0]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 1, 0.8));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, src[0], dst[0]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 1, 1));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, src[0], dst[0]);
+
+    src[1] = 2;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 2, 0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[1]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 2, 0.2));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.2, dst[1]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 2, 0.5));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.5, dst[1]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 2, 0.8));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.8, dst[1]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 2, 1));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 2, dst[1]);
+
+    src[2] = 3;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 3, 0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[2]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 3, 0.5));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.5, dst[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 2, dst[2]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 3, 1));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 2, dst[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 3, dst[2]);
+    src[2] = 1;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 3, 0.5));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.5, dst[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.5, dst[2]);
+
+    src[0] = 0; src[1] = 50; src[2] = -50; src[3] = 0;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 4, 0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[3]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 4, 0.25));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 12.5, dst[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 15.625, dst[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 14.0625, dst[3]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 4, 0.5));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 25, dst[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 12.5, dst[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[3]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 4, 0.75));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 37.5, dst[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, -9.375, dst[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, -14.0625, dst[3]);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 4, 1));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 50, dst[1]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, -50, dst[2]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[3]);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -182,6 +270,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_scale_update);
     RUN_TEST(test_get_cubic_bezier_from_velocity_constraints);
     RUN_TEST(test_get_travel_time);
+    RUN_TEST(test_bezier_cut_at);
 
     return UNITY_END();
 }

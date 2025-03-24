@@ -33,6 +33,7 @@ __BEGIN_DECLS
  */
 
 uint32_t sb_ap_crc32_update(uint32_t crc, const uint8_t* buf, uint32_t size);
+sb_error_t sb_bezier_cut_at(float* dst, float* src, uint8_t num_points, float ratio);
 void sb_bounding_box_expand(sb_bounding_box_t* box, float offset);
 sb_error_t sb_get_cubic_bezier_from_velocity_constraints(
     sb_vector3_with_yaw_t start, sb_vector3_with_yaw_t start_vel,

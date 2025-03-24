@@ -240,3 +240,56 @@ sb_error_t sb_uint32_msec_duration_from_float_seconds(uint32_t* result_msec, flo
 
     return SB_SUCCESS;
 }
+
+/**
+ * @brief Cuts a Bézier curve at the given ratio using De Casteljau's algorithm.
+ *
+ * Supports Bézier curves up to 7th order.
+ *
+ * @param dst The control points of the destination Bézier curve; same size as \c src
+ * @param src The control points of the source Bézier curve
+ * @param num_points The number of control points in \c src and \c dst (degree + 1)
+ * @param ratio The ratio between [0, 1] up to which we cut the segment
+ * @return \c SB_EINVAL if input values are invalid, \c SB_SUCCESS on success
+ */
+ sb_error_t sb_bezier_cut_at(float* dst, float* src, uint8_t num_points, float ratio) {
+    uint8_t i, j;
+
+    if (ratio < 0 || ratio > 1 || num_points < 0 || num_points > 8) {
+        return SB_EINVAL;
+    }
+
+    if (ratio == 0) {
+        // Special case: cut at start
+        for (i = 0; i < num_points; i++) {
+            dst[i] = src[0];
+        }
+    } else if (ratio == 1) {
+        // Special case: cut at end
+        for (i = 0; i < num_points; i++) {
+            dst[i] = src[i];
+        }
+    } else {
+        // General case: cut at arbitrary point
+        float temp[8][8] = {0};
+
+        // Copy original control points
+        for (j = 0; j < num_points; j++) {
+            temp[0][j] = src[j];
+        }
+
+        // Perform De Casteljau's algorithm
+        for (i = 1; i < num_points; i++) {
+            for (j = 0; j < num_points - i; j++) {
+                temp[i][j] = (1 - ratio) * temp[i - 1][j] + ratio * temp[i - 1][j + 1];
+            }
+        }
+
+        // Extract left segment control points
+        for (i = 0; i < num_points; i++) {
+            dst[i] = temp[i][0];
+        }
+    }
+
+    return SB_SUCCESS;
+}
