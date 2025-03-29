@@ -95,7 +95,6 @@ static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t* pl
  */
 void sb_trajectory_destroy(sb_trajectory_t* trajectory)
 {
-    sb_trajectory_clear(trajectory); /* will not fail here */
     sb_buffer_destroy(&trajectory->buffer);
 }
 
@@ -152,6 +151,10 @@ sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int 
  * Initializes a trajectory object from the contents of a Skybrush file in
  * binary format, already loaded into memory.
  *
+ * The trajectory object will be backed by a \em view into the already existing
+ * in-memory buffer. The caller is responsible for ensuring that the buffer
+ * remains valid for the lifetime of the trajectory object.
+ *
  * \param trajectory  the trajectory to initialize
  * \param buf   the buffer holding the loaded Skybrush file in binary format
  * \param nbytes  the length of the buffer
@@ -186,31 +189,22 @@ sb_error_t sb_i_trajectory_init_from_bytes(sb_trajectory_t* trajectory, uint8_t*
 static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
-    sb_binary_block_t block;
     uint8_t* buf;
+    size_t size;
+    sb_bool_t owned;
 
     SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_TRAJECTORY));
+    SB_CHECK(sb_binary_file_read_current_block_ex(parser, &buf, &size, &owned));
 
-    block = sb_binary_file_get_current_block(parser);
-
-    buf = sb_calloc(uint8_t, block.length);
-    if (buf == 0) {
-        return SB_ENOMEM; /* LCOV_EXCL_LINE */
-    }
-
-    retval = sb_binary_file_read_current_block(parser, buf);
+    retval = sb_i_trajectory_init_from_bytes(trajectory, buf, size, owned);
     if (retval != SB_SUCCESS) {
-        sb_free(buf);
+        if (owned) {
+            sb_free(buf);
+        }
         return retval;
     }
 
-    retval = sb_i_trajectory_init_from_bytes(trajectory, buf, block.length, /* owned = */ 1);
-    if (retval != SB_SUCCESS) {
-        sb_free(buf);
-        return retval;
-    }
-
-    /* ownership of 'buf' taken by the trajectory */
+    /* ownership of 'buf' taken by the trajectory if needed */
 
     return SB_SUCCESS;
 }

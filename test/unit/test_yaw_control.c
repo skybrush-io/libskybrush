@@ -144,9 +144,9 @@ void test_loaded_deltas_in_memory(void)
     closeFixture();
     loadFixtureInMemory("fixtures/test.skyb");
 
-    TEST_ASSERT_EQUAL(11, ctrl.buffer_length);
+    TEST_ASSERT_EQUAL(11, sb_buffer_size(&ctrl.buffer));
     TEST_ASSERT_EQUAL(3, ctrl.header_length);
-    TEST_ASSERT_EQUAL(1, ctrl.owner);
+    TEST_ASSERT_EQUAL(1, sb_buffer_is_view(&ctrl.buffer));
     TEST_ASSERT_EQUAL(0, ctrl.auto_yaw);
     TEST_ASSERT_EQUAL(40, ctrl.yaw_offset_ddeg);
     TEST_ASSERT_EQUAL(2, ctrl.num_deltas);

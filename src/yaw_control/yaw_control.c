@@ -82,11 +82,6 @@ static sb_error_t sb_i_yaw_player_rewind(sb_yaw_player_t* player);
  */
 static sb_error_t sb_i_yaw_player_seek_to_time(sb_yaw_player_t* player, float t, float* rel_t);
 
-/**
- * Instructs the yaw control object to take ownership of its inner memory buffer.
- */
-static void sb_i_yaw_control_take_ownership(sb_yaw_control_t* ctrl);
-
 /*****************************************************************************/
 
 /**
@@ -94,13 +89,7 @@ static void sb_i_yaw_control_take_ownership(sb_yaw_control_t* ctrl);
  */
 void sb_yaw_control_destroy(sb_yaw_control_t* ctrl)
 {
-    if (ctrl->owner) {
-        sb_free(ctrl->buffer);
-    }
-
-    ctrl->buffer = 0;
-    ctrl->buffer_length = 0;
-    ctrl->owner = 0;
+    sb_buffer_destroy(&ctrl->buffer);
 
     ctrl->header_length = 0;
     ctrl->num_deltas = 0;
@@ -135,6 +124,10 @@ sb_error_t sb_yaw_control_init_from_binary_file(sb_yaw_control_t* ctrl, int fd)
  * Initializes a yaw control object from the contents of a Skybrush file in
  * binary format, already loaded into memory.
  *
+ * The yaw control object will be backed by a \em view into the already existing
+ * in-memory buffer. The caller is responsible for ensuring that the buffer
+ * remains valid for the lifetime of the yaw control object.
+ *
  * \param ctrl  the yaw control object to initialize
  * \param buf   the buffer holding the loaded Skybrush file in binary format
  * \param nbytes  the length of the buffer
@@ -155,34 +148,36 @@ sb_error_t sb_yaw_control_init_from_binary_file_in_memory(
     return retval;
 }
 
+sb_error_t sb_i_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned)
+{
+    if (owned) {
+        SB_CHECK(sb_buffer_init_from_bytes(&ctrl->buffer, buf, nbytes));
+    } else {
+        sb_buffer_init_view(&ctrl->buffer, buf, nbytes);
+    }
+    ctrl->header_length = sb_i_yaw_control_parse_header(ctrl);
+    return SB_SUCCESS;
+}
+
 sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
-    sb_binary_block_t block;
     uint8_t* buf;
+    size_t size;
+    sb_bool_t owned;
 
     SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_YAW_CONTROL));
+    SB_CHECK(sb_binary_file_read_current_block_ex(parser, &buf, &size, &owned));
 
-    block = sb_binary_file_get_current_block(parser);
-
-    buf = sb_calloc(uint8_t, block.length);
-    if (buf == 0) {
-        return SB_ENOMEM; /* LCOV_EXCL_LINE */
-    }
-
-    retval = sb_binary_file_read_current_block(parser, buf);
+    retval = sb_i_yaw_control_init_from_bytes(ctrl, buf, size, owned);
     if (retval != SB_SUCCESS) {
-        sb_free(buf);
+        if (owned) {
+            sb_free(buf);
+        }
         return retval;
     }
 
-    retval = sb_yaw_control_init_from_buffer(ctrl, buf, block.length);
-    if (retval != SB_SUCCESS) {
-        sb_free(buf);
-        return retval;
-    }
-
-    sb_i_yaw_control_take_ownership(ctrl);
+    /* ownership of 'buf' taken by the yaw control object if needed */
 
     return SB_SUCCESS;
 }
@@ -199,13 +194,23 @@ sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_f
  */
 sb_error_t sb_yaw_control_init_from_buffer(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes)
 {
-    ctrl->buffer = buf;
-    ctrl->buffer_length = nbytes;
-    ctrl->owner = 0;
+    return sb_i_yaw_control_init_from_bytes(ctrl, buf, nbytes, /* owned = */ 0);
+}
 
-    ctrl->header_length = sb_i_yaw_control_parse_header(ctrl);
-
-    return SB_SUCCESS;
+/**
+ * Initializes a yaw control object from the contents of a memory buffer, taking
+ * ownership.
+ *
+ * \param ctrl  the yaw control object to initialize
+ * \param buf   the buffer holding the encoded trajectory object
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain a yaw control object
+ */
+sb_error_t sb_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes)
+{
+    return sb_i_yaw_control_init_from_bytes(ctrl, buf, nbytes, /* owned = */ 1);
 }
 
 /**
@@ -215,9 +220,7 @@ sb_error_t sb_yaw_control_init_from_buffer(sb_yaw_control_t* ctrl, uint8_t* buf,
  */
 sb_error_t sb_yaw_control_init_empty(sb_yaw_control_t* ctrl)
 {
-    ctrl->buffer = 0;
-    ctrl->buffer_length = 0;
-    ctrl->owner = 0;
+    SB_CHECK(sb_buffer_init(&ctrl->buffer, 0));
 
     ctrl->header_length = 0;
     ctrl->num_deltas = 0;
@@ -242,7 +245,7 @@ sb_bool_t sb_yaw_control_is_empty(const sb_yaw_control_t* ctrl)
 
 static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl)
 {
-    uint8_t* buf = ctrl->buffer;
+    uint8_t* buf = SB_BUFFER(ctrl->buffer);
     size_t offset;
 
     assert(buf != 0);
@@ -252,24 +255,19 @@ static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl)
     offset = 1;
     ctrl->yaw_offset_ddeg = sb_i_yaw_control_parse_yaw(ctrl, &offset);
 
-    ctrl->num_deltas = (size_t)((ctrl->buffer_length - offset) / SIZE_OF_DELTA);
+    ctrl->num_deltas = (size_t)((sb_buffer_size(&ctrl->buffer) - offset) / SIZE_OF_DELTA);
 
     return offset; /* size of the header */
 }
 
-static void sb_i_yaw_control_take_ownership(sb_yaw_control_t* ctrl)
-{
-    ctrl->owner = 1;
-}
-
 static int16_t sb_i_yaw_control_parse_yaw(const sb_yaw_control_t* ctrl, size_t* offset)
 {
-    return sb_parse_int16(ctrl->buffer, offset);
+    return sb_parse_int16(SB_BUFFER(ctrl->buffer), offset);
 }
 
 static uint16_t sb_i_yaw_control_parse_duration(const sb_yaw_control_t* ctrl, size_t* offset)
 {
-    return sb_parse_uint16(ctrl->buffer, offset);
+    return sb_parse_uint16(SB_BUFFER(ctrl->buffer), offset);
 }
 
 /* ************************************************************************** */
@@ -462,7 +460,7 @@ static sb_error_t sb_i_yaw_player_build_current_setpoint(
     int32_t start_yaw_ddeg)
 {
     const sb_yaw_control_t* ctrl = player->ctrl;
-    size_t buffer_length = ctrl->buffer_length;
+    size_t buffer_length = sb_buffer_size(&ctrl->buffer);
     sb_yaw_setpoint_t* data = &player->current_setpoint.data;
 
     /* Initialize the current setpoint */

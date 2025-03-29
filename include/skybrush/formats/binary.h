@@ -154,6 +154,27 @@ sb_bool_t sb_binary_file_is_current_block_valid(const sb_binary_file_parser_t* p
 sb_error_t sb_binary_file_read_current_block(sb_binary_file_parser_t* parser, uint8_t* buf);
 
 /**
+ * Reads the next block from the Skybrush binary file into a newly allocated
+ * buffer \em or returns a view into the existing buffer.
+ *
+ * When the binary file is already backed by an in-memory representation, a
+ * view into the existing buffer is returned; otherwise a new buffer is
+ * allocated. You can distinguish between the two cases with the \em owned
+ * output argument.
+ *
+ * \param  parser  the parser to read from
+ * \param  buf     a pointer to the contents of the block will be returned here
+ * \param  size    the size of the buffer is returned here
+ * \param  owned   output argument that is set to 1 if the buffer was allocated
+ *         by the function or 0 if the buffer is merely a view into an existing
+ *         memory block. When this argument is set to 1, it is the responsibility
+ *         of the caller to free the returned buffer if it is not needed any
+ *         more.
+ */
+sb_error_t sb_binary_file_read_current_block_ex(
+    sb_binary_file_parser_t* parser, uint8_t** buf, size_t* size, sb_bool_t* owned);
+
+/**
  * Rewinds to the first block of the Skybrush binary file.
  */
 sb_error_t sb_binary_file_rewind(sb_binary_file_parser_t* parser);

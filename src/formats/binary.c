@@ -19,6 +19,7 @@
 
 #include <skybrush/error.h>
 #include <skybrush/formats/binary.h>
+#include <skybrush/memory.h>
 #include <skybrush/utils.h>
 #include <string.h>
 #include <unistd.h>
@@ -111,6 +112,41 @@ sb_error_t sb_binary_file_read_current_block(sb_binary_file_parser_t* parser, ui
     }
 
     return SB_SUCCESS;
+}
+
+sb_error_t sb_binary_file_read_current_block_ex(
+    sb_binary_file_parser_t* parser, uint8_t** buf, size_t* size, sb_bool_t* owned)
+{
+    sb_binary_block_t block;
+    sb_error_t retval;
+    uint8_t* buf_alloc;
+
+    block = sb_binary_file_get_current_block(parser);
+
+    if (parser->buf == 0) {
+        /* no in-memory buffer, allocate a new buffer and read the block into it */
+        buf_alloc = sb_calloc(uint8_t, block.length);
+        if (buf_alloc == 0) {
+            return SB_ENOMEM; /* LCOV_EXCL_LINE */
+        }
+
+        retval = sb_binary_file_read_current_block(parser, buf_alloc);
+        if (retval == SB_SUCCESS) {
+            *buf = buf_alloc;
+            *size = block.length;
+            *owned = 1;
+        } else {
+            sb_free(buf_alloc);
+        }
+    } else {
+        /* we already have the entire block in memory so we return a view into it */
+        retval = SB_SUCCESS;
+        *buf = ((uint8_t*)parser->buf) + block.start_of_body;
+        *size = block.length;
+        *owned = 0;
+    }
+
+    return retval;
 }
 
 sb_error_t sb_binary_file_rewind(sb_binary_file_parser_t* parser)

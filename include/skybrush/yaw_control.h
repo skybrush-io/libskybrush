@@ -77,9 +77,7 @@ typedef struct sb_yaw_setpoint_s {
  * @brief Structure representing the yaw control deltas in a Skybrush mission.
  */
 typedef struct sb_yaw_control_s {
-    uint8_t* buffer; /**< Pointer to the buffer holding the yaw control deltas */
-    size_t buffer_length; /**< Number of bytes in the buffer */
-    sb_bool_t owner; /**< Whether the object owns the buffer */
+    sb_buffer_t buffer; /**< The buffer holding the yaw control data */
 
     size_t header_length; /**< Number of bytes in the header of the buffer */
     size_t num_deltas; /**< Number of yaw deltas in the yaw control object */

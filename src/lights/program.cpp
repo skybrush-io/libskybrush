@@ -31,25 +31,14 @@
 
 sb_error_t sb_i_light_program_init_from_parser(sb_light_program_t* program, sb_binary_file_parser_t* parser);
 
-/**
- * Instructs the light program object to take ownership of its inner memory buffer.
- */
-static void sb_i_light_program_take_ownership(sb_light_program_t* program);
-
 void sb_light_program_destroy(sb_light_program_t* program)
 {
-    sb_light_program_clear(program);
+    sb_buffer_destroy(&program->buffer);
 }
 
 void sb_light_program_clear(sb_light_program_t* program)
 {
-    if (program->owner) {
-        sb_free(program->buffer);
-    }
-
-    program->buffer = 0;
-    program->buffer_length = 0;
-    program->owner = 0;
+    sb_buffer_clear(&program->buffer);
 }
 
 sb_error_t sb_light_program_init_from_binary_file(sb_light_program_t* program, int fd)
@@ -77,58 +66,73 @@ sb_error_t sb_light_program_init_from_binary_file_in_memory(
     return retval;
 }
 
+sb_error_t sb_i_light_program_init_from_bytes(sb_light_program_t* program, uint8_t* buf, size_t nbytes, sb_bool_t owned)
+{
+    if (owned) {
+        SB_CHECK(sb_buffer_init_from_bytes(&program->buffer, buf, nbytes));
+    } else {
+        sb_buffer_init_view(&program->buffer, buf, nbytes);
+    }
+    return SB_SUCCESS;
+}
+
 sb_error_t sb_i_light_program_init_from_parser(
     sb_light_program_t* program, sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
-    sb_binary_block_t block;
     uint8_t* buf;
+    size_t size;
+    sb_bool_t owned;
 
     SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_LIGHT_PROGRAM));
+    SB_CHECK(sb_binary_file_read_current_block_ex(parser, &buf, &size, &owned));
 
-    block = sb_binary_file_get_current_block(parser);
-
-    buf = sb_calloc(uint8_t, block.length);
-    if (buf == 0) {
-        return SB_ENOMEM; /* LCOV_EXCL_LINE */
-    }
-
-    retval = sb_binary_file_read_current_block(parser, buf);
+    retval = sb_i_light_program_init_from_bytes(program, buf, size, owned);
     if (retval != SB_SUCCESS) {
-        sb_free(buf);
+        if (owned) {
+            sb_free(buf);
+        }
         return retval;
     }
-
-    retval = sb_light_program_init_from_buffer(program, buf, block.length);
-    if (retval != SB_SUCCESS) {
-        sb_free(buf);
-        return retval;
-    }
-
-    sb_i_light_program_take_ownership(program);
 
     return SB_SUCCESS;
 }
 
+/**
+ * Initializes a light program object from the contents of a memory buffer.
+ *
+ * \param program  the light program to initialize
+ * \param buf   the buffer holding the encoded light program
+ * \param size  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain a light program
+ */
 sb_error_t sb_light_program_init_from_buffer(sb_light_program_t* program, uint8_t* buf, size_t size)
 {
-    program->buffer = buf;
-    program->buffer_length = size;
-    program->owner = 0;
+    return sb_i_light_program_init_from_bytes(program, buf, size, /* owned = */ 0);
+}
 
-    return SB_SUCCESS;
+/**
+ * Initializes a light program object from the contents of a memory buffer,
+ * taking ownership.
+ *
+ * \param program  the light program to initialize
+ * \param buf   the buffer holding the encoded light program
+ * \param size  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain a light program
+ */
+sb_error_t sb_light_program_init_from_bytes(sb_light_program_t* program, uint8_t* buf, size_t size)
+{
+    return sb_i_light_program_init_from_bytes(program, buf, size, /* owned = */ 1);
 }
 
 sb_error_t sb_light_program_init_empty(sb_light_program_t* program)
 {
-    return sb_light_program_init_from_buffer(program, 0, 0);
-}
-
-/* ************************************************************************** */
-
-static void sb_i_light_program_take_ownership(sb_light_program_t* program)
-{
-    program->owner = 1;
+    SB_CHECK(sb_buffer_init(&program->buffer, 0));
+    return SB_SUCCESS;
 }
 
 /* ************************************************************************** */
@@ -154,7 +158,7 @@ sb_error_t sb_light_player_init(sb_light_player_t* player, const sb_light_progra
         return SB_ENOMEM; /* LCOV_EXCL_LINE */
     }
 
-    new_store = new ArrayBytecodeStore(program->buffer, program->buffer_length);
+    new_store = new ArrayBytecodeStore(SB_BUFFER(program->buffer), sb_buffer_size(&program->buffer));
     if (new_store == 0) {
         delete new_player;
         return SB_ENOMEM; /* LCOV_EXCL_LINE */
