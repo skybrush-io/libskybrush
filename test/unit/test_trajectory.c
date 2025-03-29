@@ -22,6 +22,7 @@
 
 #include "unity.h"
 
+uint8_t* buf;
 sb_trajectory_t trajectory;
 sb_bool_t trajectory_loaded;
 
@@ -63,6 +64,7 @@ sb_error_t loadFixture(const char* fname)
     fclose(fp);
 
     trajectory_loaded = retval == SB_SUCCESS;
+    buf = 0;
 
     return retval;
 }
@@ -97,9 +99,7 @@ sb_error_t loadFixtureInMemory(const char* fname)
     retval = sb_trajectory_init_from_binary_file_in_memory(&trajectory, buf, num_bytes);
     trajectory_loaded = retval == SB_SUCCESS;
 
-    /* sb_trajectory_init_from_binary_file_in_memory() copied the data so we
-     * must free it */
-    free(buf);
+    /* sb_trajectory_init_from_binary_file_in_memory() created a view */
 
     return retval;
 }
@@ -108,6 +108,11 @@ void closeFixture(void)
 {
     sb_trajectory_destroy(&trajectory);
     trajectory_loaded = 0;
+
+    if (buf) {
+        free(buf);
+        buf = 0;
+    }
 }
 
 void test_trajectory_is_really_empty(void)

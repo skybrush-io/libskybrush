@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include <skybrush/basic_types.h>
+#include <skybrush/buffer.h>
 #include <skybrush/colors.h>
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
@@ -38,9 +39,7 @@ __BEGIN_DECLS
  * Structure that represents a \c libskybrush light program.
  */
 typedef struct sb_light_program_s {
-    uint8_t* buffer; /**< Pointer to the buffer holding the light program */
-    size_t buffer_length; /**< Number of bytes in the buffer */
-    sb_bool_t owner; /**< Whether the object owns the buffer */
+    sb_buffer_t buffer; /**< Buffer holding the light program */
 } sb_light_program_t;
 
 /**
