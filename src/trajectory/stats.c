@@ -155,7 +155,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
                 if (!state_valid) {
                     /* This is the first vertical segment in the current run of
                      * vertical segments so remember the state */
-                    state = player.current_segment;
+                    state = player.state;
                     state_valid = 1;
                     last_vertical_section_start_altitude = sb_poly_eval(&segment->poly.z, 0);
                 }
@@ -206,7 +206,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
         /* Did the trajectory end with a sequence of vertically descending segments? */
         if (state_valid) {
             /* Jump back to the first such segment */
-            player.current_segment = state;
+            player.state = state;
 
             /* Given the total altitude difference in the vertically descending
              * segment, calculate the distance we need to descend before switching

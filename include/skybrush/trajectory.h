@@ -133,15 +133,6 @@ typedef struct
 } sb_trajectory_segment_t;
 
 /**
- * Structure representing the status of the current segment in a trajectory player.
- */
-typedef struct {
-    size_t start; /**< Start offset of the current segment */
-    size_t length; /**< Length of the current segment in the buffer */
-    sb_trajectory_segment_t data; /**< The current segment of the trajectory */
-} sb_trajectory_player_state_t;
-
-/**
  * Structure representing the trajectory of a single drone in a Skybrush
  * mission.
  */
@@ -155,6 +146,7 @@ typedef struct sb_trajectory_s {
 } sb_trajectory_t;
 
 struct sb_trajectory_builder_s;
+struct sb_trajectory_player_state_s;
 
 sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int fd);
 sb_error_t sb_trajectory_init_from_binary_file_in_memory(
@@ -175,7 +167,7 @@ sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
 sb_error_t sb_trajectory_get_end_position(
     const sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* result);
 sb_error_t sb_trajectory_get_segment_at(sb_trajectory_t* trajectory, float time_sec,
-    sb_trajectory_player_state_t* state, float* rel_time);
+    struct sb_trajectory_player_state_s* state, float* rel_time);
 sb_error_t sb_trajectory_get_start_position(
     const sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* result);
 uint32_t sb_trajectory_get_total_duration_msec(const sb_trajectory_t* trajectory);
@@ -191,12 +183,27 @@ sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
 /* ************************************************************************* */
 
 /**
+ * Structure representing the status of the current segment in a trajectory player.
+ */
+typedef struct sb_trajectory_player_state_s {
+    size_t start; /**< Start offset of the current segment */
+    size_t length; /**< Length of the current segment in the buffer */
+    sb_trajectory_segment_t segment; /**< The current segment of the trajectory */
+} sb_trajectory_player_state_t;
+
+/**
  * Structure representing a trajectory player that allows us to query the
  * position and velocity along a trajectory.
  */
 typedef struct sb_trajectory_player_s {
-    const sb_trajectory_t* trajectory; /**< The trajectory that the player plays */
-    sb_trajectory_player_state_t current_segment; /** The current segment that is being evaluated by the player */
+    /** The trajectory that the player plays */
+    const sb_trajectory_t* trajectory;
+
+    /**
+     * The state of the player, including the current segment that is being
+     * evaluated by the player.
+     */
+    sb_trajectory_player_state_t state;
 } sb_trajectory_player_t;
 
 sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, const sb_trajectory_t* trajectory);

@@ -268,7 +268,7 @@ sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory)
 sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
 {
     sb_trajectory_builder_t builder;
-    sb_trajectory_player_state_t segment;
+    sb_trajectory_player_state_t state;
     sb_vector3_with_yaw_t start;
     float rel_time;
     float src[8];
@@ -277,21 +277,21 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
     uint8_t i, header, num_coords;
     uint32_t duration_msec;
 
-    SB_CHECK(sb_trajectory_get_segment_at(trajectory, time_sec, &segment, &rel_time));
+    SB_CHECK(sb_trajectory_get_segment_at(trajectory, time_sec, &state, &rel_time));
 
     if (rel_time < 1.0e-6f) {
-        SB_CHECK(sb_buffer_resize(&trajectory->buffer, segment.start));
+        SB_CHECK(sb_buffer_resize(&trajectory->buffer, state.start));
     } else if (rel_time > 1 - 1.0e-6f) {
-        SB_CHECK(sb_buffer_resize(&trajectory->buffer, segment.start + segment.length));
+        SB_CHECK(sb_buffer_resize(&trajectory->buffer, state.start + state.length));
     } else {
         /* We re-read the given trajectory segment and modify in-place */
-        start = sb_poly_4d_eval(&segment.data.poly, 0);
+        start = sb_poly_4d_eval(&state.segment.poly, 0);
         SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, &start));
-        offset = segment.start;
+        offset = state.start;
         header = SB_BUFFER(trajectory->buffer)[offset++];
 
         /* Modify duration of segment to be cut */
-        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(&duration_msec, segment.data.duration_sec * rel_time));
+        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(&duration_msec, state.segment.duration_sec * rel_time));
         sb_write_uint16(SB_BUFFER(trajectory->buffer), &offset, duration_msec);
 
         /* cut along X coordinate */
@@ -423,9 +423,9 @@ sb_error_t sb_trajectory_get_segment_at(sb_trajectory_t* trajectory, float time_
     SB_CHECK(sb_trajectory_player_init(&player, trajectory));
     retval = sb_i_trajectory_player_seek_to_time(&player, time_sec, rel_time);
     /* Calculate dpoly and ddpoly behind the scenes before we return the segment */
-    sb_i_get_dpoly(&player.current_segment.data);
-    sb_i_get_ddpoly(&player.current_segment.data);
-    *state = player.current_segment;
+    sb_i_get_dpoly(&player.state.segment);
+    sb_i_get_ddpoly(&player.state.segment);
+    *state = player.state;
     sb_trajectory_player_destroy(&player);
 
     return retval;
@@ -672,11 +672,11 @@ sb_error_t sb_trajectory_player_rewind(sb_trajectory_player_t* player)
  */
 sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* player)
 {
-    sb_trajectory_segment_t* segment = &player->current_segment.data;
+    sb_trajectory_segment_t* segment = &player->state.segment;
 
     return sb_i_trajectory_player_build_current_segment(
         player,
-        player->current_segment.start + player->current_segment.length,
+        player->state.start + player->state.length,
         segment->end_time_msec,
         segment->end);
 }
@@ -694,8 +694,8 @@ void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* pla
     const sb_poly_4d_t* dpoly = sb_i_get_dpoly(current);
     const sb_poly_4d_t* ddpoly = sb_i_get_dpoly(current);
 
-    printf("Start offset = %ld bytes\n", (long int)player->current_segment.start);
-    printf("Length = %ld bytes\n", (long int)player->current_segment.length);
+    printf("Start offset = %ld bytes\n", (long int)player->state.start);
+    printf("Length = %ld bytes\n", (long int)player->state.length);
     printf("Start time = %.3fs\n", current->start_time_sec);
     printf("Duration = %.3fs\n", current->duration_sec);
 
@@ -730,7 +730,7 @@ void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* pla
 const sb_trajectory_segment_t* sb_trajectory_player_get_current_segment(
     const sb_trajectory_player_t* player)
 {
-    return &player->current_segment.data;
+    return &player->state.segment;
 }
 
 /**
@@ -744,7 +744,7 @@ sb_error_t sb_trajectory_player_get_position_at(sb_trajectory_player_t* player, 
     SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
 
     if (result) {
-        *result = sb_poly_4d_eval(&player->current_segment.data.poly, rel_t);
+        *result = sb_poly_4d_eval(&player->state.segment.poly, rel_t);
     }
 
     return SB_SUCCESS;
@@ -761,7 +761,7 @@ sb_error_t sb_trajectory_player_get_velocity_at(sb_trajectory_player_t* player, 
     SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
 
     if (result) {
-        *result = sb_poly_4d_eval(sb_i_get_dpoly(&player->current_segment.data), rel_t);
+        *result = sb_poly_4d_eval(sb_i_get_dpoly(&player->state.segment), rel_t);
     }
 
     return SB_SUCCESS;
@@ -778,7 +778,7 @@ sb_error_t sb_trajectory_player_get_acceleration_at(sb_trajectory_player_t* play
     SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
 
     if (result) {
-        *result = sb_poly_4d_eval(sb_i_get_ddpoly(&player->current_segment.data), rel_t);
+        *result = sb_poly_4d_eval(sb_i_get_ddpoly(&player->state.segment), rel_t);
     }
 
     return SB_SUCCESS;
@@ -795,7 +795,7 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
     SB_CHECK(sb_trajectory_player_rewind(player));
 
     while (sb_trajectory_player_has_more_segments(player)) {
-        result += player->current_segment.data.duration_msec;
+        result += player->state.segment.duration_msec;
         SB_CHECK(sb_trajectory_player_build_next_segment(player));
     }
 
@@ -812,7 +812,7 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
  */
 sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t* player)
 {
-    return player->current_segment.length > 0;
+    return player->state.length > 0;
 }
 
 /* ************************************************************************** */
@@ -826,21 +826,21 @@ static sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t* pl
     }
 
     while (1) {
-        sb_trajectory_segment_t* segment = &player->current_segment.data;
+        sb_trajectory_segment_t* segment = &player->state.segment;
 
         if (segment->start_time_sec > t) {
             /* time that the user asked for is before the current segment. We simply
              * rewind and start from scratch */
             SB_CHECK(sb_trajectory_player_rewind(player));
-            assert(player->current_segment.data.start_time_msec == 0);
+            assert(player->state.segment.start_time_msec == 0);
         } else if (segment->end_time_sec < t) {
-            offset = player->current_segment.start;
+            offset = player->state.start;
             SB_CHECK(sb_trajectory_player_build_next_segment(player));
             if (!sb_trajectory_player_has_more_segments(player)) {
                 /* reached end of trajectory */
             } else {
                 /* assert that we really moved forward in the buffer */
-                assert(player->current_segment.start > offset);
+                assert(player->state.start > offset);
                 /* make production builds happy by referencing offset even if
                  * asserts are disabled */
                 ((void)offset);
@@ -867,7 +867,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     const sb_trajectory_t* trajectory = player->trajectory;
     uint8_t* buf = SB_BUFFER(trajectory->buffer);
     size_t buffer_length = sb_buffer_size(&trajectory->buffer);
-    sb_trajectory_segment_t* data = &player->current_segment.data;
+    sb_trajectory_segment_t* data = &player->state.segment;
     float coords[8];
     unsigned int i;
 
@@ -875,9 +875,9 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     size_t num_coords;
 
     /* Initialize the current segment */
-    memset(&player->current_segment, 0, sizeof(player->current_segment));
-    player->current_segment.start = offset;
-    player->current_segment.length = 0;
+    memset(&player->state, 0, sizeof(player->state));
+    player->state.start = offset;
+    player->state.length = 0;
 
     /* Store the start time as instructed */
     data->start_time_msec = start_time_msec;
@@ -948,7 +948,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     data->flags = 0;
 
     /* Update the length of the current segment now that we have parsed it */
-    player->current_segment.length = offset - player->current_segment.start;
+    player->state.length = offset - player->state.start;
 
     return SB_SUCCESS;
 }
