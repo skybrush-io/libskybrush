@@ -37,7 +37,10 @@
 #define SIZE_OF_DELTA (sizeof(uint16_t) + sizeof(int16_t))
 #define OFFSET_OF_DELTA(index) (ctrl->header_length + (index) * SIZE_OF_DELTA)
 
-sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
+void sb_yaw_player_dump_current_setpoint(const sb_yaw_player_t* player);
+
+static sb_error_t sb_i_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned);
+static sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
 
 /**
  * Parses a yaw or yaw change value from the memory block that defines the yaw control object,
@@ -148,7 +151,7 @@ sb_error_t sb_yaw_control_init_from_binary_file_in_memory(
     return retval;
 }
 
-sb_error_t sb_i_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned)
+static sb_error_t sb_i_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned)
 {
     if (owned) {
         SB_CHECK(sb_buffer_init_from_bytes(&ctrl->buffer, buf, nbytes));
@@ -159,7 +162,7 @@ sb_error_t sb_i_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf
     return SB_SUCCESS;
 }
 
-sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser)
+static sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
     uint8_t* buf;
