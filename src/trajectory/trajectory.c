@@ -301,7 +301,7 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
         for (i = 1; i < num_coords; i++) {
             src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
         }
-        sb_bezier_cut_at(dst, src, num_coords, rel_time);
+        SB_CHECK(sb_bezier_cut_at(dst, src, num_coords, rel_time));
         offset -= 2 * (num_coords - 1);
         for (i = 1; i < num_coords; i++) {
             SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
@@ -313,7 +313,7 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
         for (i = 1; i < num_coords; i++) {
             src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
         }
-        sb_bezier_cut_at(dst, src, num_coords, rel_time);
+        SB_CHECK(sb_bezier_cut_at(dst, src, num_coords, rel_time));
         offset -= 2 * (num_coords - 1);
         for (i = 1; i < num_coords; i++) {
             SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
@@ -325,7 +325,7 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
         for (i = 1; i < num_coords; i++) {
             src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
         }
-        sb_bezier_cut_at(dst, src, num_coords, rel_time);
+        SB_CHECK(sb_bezier_cut_at(dst, src, num_coords, rel_time));
         offset -= 2 * (num_coords - 1);
         for (i = 1; i < num_coords; i++) {
             SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
@@ -337,7 +337,7 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
         for (i = 1; i < num_coords; i++) {
             src[i] = sb_i_trajectory_parse_angle(trajectory, &offset);
         }
-        sb_bezier_cut_at(dst, src, num_coords, rel_time);
+        SB_CHECK(sb_bezier_cut_at(dst, src, num_coords, rel_time));
         offset -= 2 * (num_coords - 1);
         for (i = 1; i < num_coords; i++) {
             SB_CHECK(sb_i_trajectory_builder_write_angle(&builder, &offset, dst[i]));
