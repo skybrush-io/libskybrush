@@ -404,6 +404,7 @@ void test_cut_at(void)
 {
     sb_vector3_with_yaw_t pos;
 
+    /* Cutting at a point that is longer than the entire trajectory */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 60));
     TEST_ASSERT_EQUAL(50, sb_trajectory_get_total_duration_sec(&trajectory));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
@@ -412,6 +413,7 @@ void test_cut_at(void)
     TEST_ASSERT_EQUAL(0, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
+    /* Cutting right at the end */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 50));
     TEST_ASSERT_EQUAL(50, sb_trajectory_get_total_duration_sec(&trajectory));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
@@ -420,6 +422,16 @@ void test_cut_at(void)
     TEST_ASSERT_EQUAL(0, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
+    /* Cutting 15 seconds before the end, middle of the last vertical segment */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 45));
+    TEST_ASSERT_EQUAL(45, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(5000, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    /* Cutting 20 seconds before the end, last vertical segment stripped entirely */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 40));
     TEST_ASSERT_EQUAL(40, sb_trajectory_get_total_duration_sec(&trajectory));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
@@ -428,14 +440,16 @@ void test_cut_at(void)
     TEST_ASSERT_EQUAL(10000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 30));
-    TEST_ASSERT_EQUAL(30, sb_trajectory_get_total_duration_sec(&trajectory));
+    /* Cutting 22.5 seconds before the end, 75% into the diagonal segment */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 37.5));
+    TEST_ASSERT_EQUAL(37.5, sb_trajectory_get_total_duration_sec(&trajectory));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
-    TEST_ASSERT_EQUAL(10000, pos.x);
-    TEST_ASSERT_EQUAL(10000, pos.y);
+    TEST_ASSERT_EQUAL(2500, pos.x);
+    TEST_ASSERT_EQUAL(2500, pos.y);
     TEST_ASSERT_EQUAL(10000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
+    /* Cutting at 20 seconds, right at the end of the "forward" segment */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 20));
     TEST_ASSERT_EQUAL(20, sb_trajectory_get_total_duration_sec(&trajectory));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
@@ -444,6 +458,7 @@ void test_cut_at(void)
     TEST_ASSERT_EQUAL(10000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
+    /* Cutting at 10 seconds, right at the end of the takeoff segment */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 10));
     TEST_ASSERT_EQUAL(10, sb_trajectory_get_total_duration_sec(&trajectory));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
@@ -452,6 +467,7 @@ void test_cut_at(void)
     TEST_ASSERT_EQUAL(10000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
+    /* Cutting at 5 seconds, middle of the takeoff segment */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 5));
     TEST_ASSERT_EQUAL(5, sb_trajectory_get_total_duration_sec(&trajectory));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
@@ -460,7 +476,17 @@ void test_cut_at(void)
     TEST_ASSERT_EQUAL(5000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
+    /* Cutting at the beginning */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 0));
+    TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(0, pos.z);
+    TEST_ASSERT_EQUAL(0, pos.yaw);
+
+    /* Cutting before the beginning */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, -5));
     TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_sec(&trajectory));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
@@ -504,13 +530,13 @@ int main(int argc, char* argv[])
     RUN_TEST(test_propose_takeoff_time_const_acceleration);
     RUN_TEST(test_propose_landing_time);
     RUN_TEST(test_propose_landing_time_multiple_trailing_vertical_segments);
-    RUN_TEST(test_cut_at);
 
     /* additional tests with other files */
     RUN_TEST(test_load_truncated_file);
     RUN_TEST(test_load_file_with_zero_scale);
 
     /* editing tests */
+    RUN_TEST(test_cut_at);
 
     /* regression tests */
     RUN_TEST(test_propose_takeoff_time_hover_3m);
