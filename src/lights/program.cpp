@@ -29,7 +29,8 @@
 #include "bytecode_array.hpp"
 #include "bytecode_player.h"
 
-sb_error_t sb_i_light_program_init_from_parser(sb_light_program_t* program, sb_binary_file_parser_t* parser);
+static sb_error_t sb_i_light_program_init_from_bytes(sb_light_program_t* program, uint8_t* buf, size_t nbytes, sb_bool_t owned);
+static sb_error_t sb_i_light_program_init_from_parser(sb_light_program_t* program, sb_binary_file_parser_t* parser);
 
 void sb_light_program_destroy(sb_light_program_t* program)
 {
@@ -66,7 +67,7 @@ sb_error_t sb_light_program_init_from_binary_file_in_memory(
     return retval;
 }
 
-sb_error_t sb_i_light_program_init_from_bytes(sb_light_program_t* program, uint8_t* buf, size_t nbytes, sb_bool_t owned)
+static sb_error_t sb_i_light_program_init_from_bytes(sb_light_program_t* program, uint8_t* buf, size_t nbytes, sb_bool_t owned)
 {
     if (owned) {
         SB_CHECK(sb_buffer_init_from_bytes(&program->buffer, buf, nbytes));
@@ -76,7 +77,7 @@ sb_error_t sb_i_light_program_init_from_bytes(sb_light_program_t* program, uint8
     return SB_SUCCESS;
 }
 
-sb_error_t sb_i_light_program_init_from_parser(
+static sb_error_t sb_i_light_program_init_from_parser(
     sb_light_program_t* program, sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
