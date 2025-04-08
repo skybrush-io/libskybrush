@@ -137,7 +137,6 @@ typedef struct
  */
 typedef struct {
     size_t start; /**< Start offset of the current segment */
-    size_t start_of_coordinates; /**< Start offset of the coordinates in the segment */
     size_t length; /**< Length of the current segment in the buffer */
     sb_trajectory_segment_t data; /**< The current segment of the trajectory */
 } sb_trajectory_player_state_t;

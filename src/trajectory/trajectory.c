@@ -278,15 +278,14 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
     uint32_t duration_msec;
 
     SB_CHECK(sb_trajectory_get_segment_at(trajectory, time_sec, &segment, &rel_time));
-    start = sb_poly_4d_eval(&segment.data.poly, 0);
 
     if (rel_time < 1.0e-6f) {
         SB_CHECK(sb_buffer_resize(&trajectory->buffer, segment.start));
-        // TODO: what if we cut the whole trajectory with time_sec <= 0 ?
     } else if (rel_time > 1 - 1.0e-6f) {
         SB_CHECK(sb_buffer_resize(&trajectory->buffer, segment.start + segment.length));
     } else {
         /* We re-read the given trajectory segment and modify in-place */
+        start = sb_poly_4d_eval(&segment.data.poly, 0);
         SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, &start));
         offset = segment.start;
         header = SB_BUFFER(trajectory->buffer)[offset++];
@@ -696,7 +695,6 @@ void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* pla
     const sb_poly_4d_t* ddpoly = sb_i_get_dpoly(current);
 
     printf("Start offset = %ld bytes\n", (long int)player->current_segment.start);
-    printf("Start offset of coordinates = %ld bytes\n", (long int)player->current_segment.start_of_coordinates);
     printf("Length = %ld bytes\n", (long int)player->current_segment.length);
     printf("Start time = %.3fs\n", current->start_time_sec);
     printf("Duration = %.3fs\n", current->duration_sec);
@@ -909,9 +907,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     data->duration_sec = data->duration_msec / 1000.0f;
     data->end_time_msec = data->start_time_msec + data->duration_msec;
     data->end_time_sec = data->end_time_msec / 1000.0f;
-
-    /* Store start offset of coordinates now that we have parsed the header */
-    player->current_segment.start_of_coordinates = offset;
 
     /* Parse X coordinates */
     num_coords = sb_i_get_num_coords(header >> 0);
