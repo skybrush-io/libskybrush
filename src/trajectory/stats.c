@@ -133,7 +133,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
     while (sb_trajectory_player_has_more_segments(&player)) {
         if (components & SB_TRAJECTORY_STATS_DURATION) {
             /* Add the duration of the current segment to the total duration */
-            result->duration_msec += player.current_segment.data.duration_msec;
+            result->duration_msec += segment->duration_msec;
         }
 
         if (components & SB_TRAJECTORY_STATS_TAKEOFF_TIME) {
