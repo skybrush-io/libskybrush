@@ -425,7 +425,7 @@ sb_error_t sb_trajectory_get_segment_at(sb_trajectory_t* trajectory, float time_
     /* Calculate dpoly and ddpoly behind the scenes before we return the segment */
     sb_i_get_dpoly(&player.state.segment);
     sb_i_get_ddpoly(&player.state.segment);
-    *state = player.state;
+    sb_trajectory_player_save_state(&player, state);
     sb_trajectory_player_destroy(&player);
 
     return retval;
@@ -686,7 +686,7 @@ sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* playe
 /**
  * Dumps the details of the current trajectory segment for debugging purposes.
  */
-void sb_trajectory_player_dump_current_segment(const sb_trajectory_player_t* player)
+void sb_trajectory_player_dump_state(const sb_trajectory_player_t* player)
 {
 #ifdef LIBSKYBRUSH_DEBUG
     sb_vector3_with_yaw_t pos, vel, acc;
@@ -813,6 +813,30 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
 sb_bool_t sb_trajectory_player_has_more_segments(const sb_trajectory_player_t* player)
 {
     return player->state.length > 0;
+}
+
+/**
+ * @brief Saves the current state of the trajectory player.
+ *
+ * @param player  the trajectory player
+ * @param state   the state object to save the current state to
+ */
+void sb_trajectory_player_save_state(
+    const sb_trajectory_player_t* player, sb_trajectory_player_state_t* state)
+{
+    *state = player->state;
+}
+
+/**
+ * @brief Restores the state of the trajectory player.
+ *
+ * @param player  the trajectory player
+ * @param state   the state object to restore the state from
+ */
+void sb_trajectory_player_restore_state(
+    sb_trajectory_player_t* player, const sb_trajectory_player_state_t* state)
+{
+    player->state = *state;
 }
 
 /* ************************************************************************** */
