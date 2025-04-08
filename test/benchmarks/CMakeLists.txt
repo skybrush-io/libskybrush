@@ -10,6 +10,7 @@ endfunction()
 add_fixture(real_show.skyb)
 
 add_benchmark(get_duration)
+add_benchmark(get_end_position)
 add_benchmark(player)
 add_benchmark(stats)
 add_benchmark(takeoff_landing_time)
