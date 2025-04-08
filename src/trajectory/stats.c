@@ -75,7 +75,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
 {
     sb_trajectory_stat_components_t components = calc->components;
     sb_trajectory_player_t player;
-    sb_trajectory_segment_t* segment;
+    const sb_trajectory_segment_t* segment;
     sb_vector3_with_yaw_t start, end;
     sb_trajectory_player_state_t state;
     sb_bool_t state_valid;
@@ -116,7 +116,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
     }
 
     SB_CHECK(sb_trajectory_player_init(&player, trajectory));
-    segment = &player.current_segment.data;
+    segment = sb_trajectory_player_get_current_segment(&player);
 
     /* Start is needed both for the takeoff and the start-end distance */
     if ((retval = sb_trajectory_player_get_position_at(&player, 0, &start))) {
