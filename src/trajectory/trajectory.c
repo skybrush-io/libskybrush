@@ -285,7 +285,7 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
         SB_CHECK(sb_buffer_resize(&trajectory->buffer, state.start + state.length));
     } else {
         /* We re-read the given trajectory segment and modify in-place */
-        start = sb_poly_4d_eval(&state.segment.poly, 0);
+        start = state.segment.start;
         SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, &start));
         offset = state.start;
         header = SB_BUFFER(trajectory->buffer)[offset++];
@@ -342,8 +342,11 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
             SB_CHECK(sb_i_trajectory_builder_write_angle(&builder, &offset, dst[i]));
         }
 
-        /* finally, cut buffer at end of the re-written segment */
+        /* cut buffer at end of the re-written segment */
         SB_CHECK(sb_buffer_resize(&trajectory->buffer, offset));
+
+        /* trajectory builder not needed any more */
+        sb_trajectory_builder_destroy(&builder);
     }
 
     return SB_SUCCESS;
@@ -891,7 +894,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     const sb_trajectory_t* trajectory = player->trajectory;
     uint8_t* buf = SB_BUFFER(trajectory->buffer);
     size_t buffer_length = sb_buffer_size(&trajectory->buffer);
-    sb_trajectory_segment_t* data = &player->state.segment;
+    sb_trajectory_segment_t* segment = &player->state.segment;
     float coords[8];
     unsigned int i;
 
@@ -903,22 +906,23 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     player->state.start = offset;
     player->state.length = 0;
 
-    /* Store the start time as instructed */
-    data->start_time_msec = start_time_msec;
-    data->start_time_sec = start_time_msec / 1000.0f;
+    /* Store the start point and the start time as instructed */
+    segment->start = start;
+    segment->start_time_msec = start_time_msec;
+    segment->start_time_sec = start_time_msec / 1000.0f;
 
     if (offset >= buffer_length || trajectory->scale == 0) {
         /* We are beyond the end of the buffer or the scale is zero, indicating
          * that there are no segments in the buffer yet (first byte of the
          * buffer was all zeros) */
-        sb_poly_4d_make_constant(&data->poly, start);
+        sb_poly_4d_make_constant(&segment->poly, start);
 
-        data->duration_msec = UINT32_MAX - data->start_time_msec;
-        data->duration_sec = INFINITY;
-        data->end_time_msec = UINT32_MAX;
-        data->end_time_sec = INFINITY;
+        segment->duration_msec = UINT32_MAX - segment->start_time_msec;
+        segment->duration_sec = INFINITY;
+        segment->end_time_msec = UINT32_MAX;
+        segment->end_time_sec = INFINITY;
 
-        data->end = start;
+        segment->end = start;
 
         return SB_SUCCESS;
     }
@@ -927,10 +931,10 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     header = buf[offset++];
 
     /* Parse duration and calculate end time */
-    data->duration_msec = sb_parse_uint16(SB_BUFFER(trajectory->buffer), &offset);
-    data->duration_sec = data->duration_msec / 1000.0f;
-    data->end_time_msec = data->start_time_msec + data->duration_msec;
-    data->end_time_sec = data->end_time_msec / 1000.0f;
+    segment->duration_msec = sb_parse_uint16(SB_BUFFER(trajectory->buffer), &offset);
+    segment->duration_sec = segment->duration_msec / 1000.0f;
+    segment->end_time_msec = segment->start_time_msec + segment->duration_msec;
+    segment->end_time_sec = segment->end_time_msec / 1000.0f;
 
     /* Parse X coordinates */
     num_coords = sb_i_get_num_coords(header >> 0);
@@ -938,8 +942,8 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
-    data->end.x = coords[num_coords - 1];
-    sb_poly_make_bezier(&data->poly.x, 1, coords, num_coords);
+    segment->end.x = coords[num_coords - 1];
+    sb_poly_make_bezier(&segment->poly.x, 1, coords, num_coords);
 
     /* Parse Y coordinates */
     num_coords = sb_i_get_num_coords(header >> 2);
@@ -947,8 +951,8 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
-    data->end.y = coords[num_coords - 1];
-    sb_poly_make_bezier(&data->poly.y, 1, coords, num_coords);
+    segment->end.y = coords[num_coords - 1];
+    sb_poly_make_bezier(&segment->poly.y, 1, coords, num_coords);
 
     /* Parse Z coordinates */
     num_coords = sb_i_get_num_coords(header >> 4);
@@ -956,8 +960,8 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     }
-    data->end.z = coords[num_coords - 1];
-    sb_poly_make_bezier(&data->poly.z, 1, coords, num_coords);
+    segment->end.z = coords[num_coords - 1];
+    sb_poly_make_bezier(&segment->poly.z, 1, coords, num_coords);
 
     /* Parse yaw coordinates */
     num_coords = sb_i_get_num_coords(header >> 6);
@@ -965,11 +969,11 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     for (i = 1; i < num_coords; i++) {
         coords[i] = sb_i_trajectory_parse_angle(trajectory, &offset);
     }
-    data->end.yaw = coords[num_coords - 1];
-    sb_poly_make_bezier(&data->poly.yaw, 1, coords, num_coords);
+    segment->end.yaw = coords[num_coords - 1];
+    sb_poly_make_bezier(&segment->poly.yaw, 1, coords, num_coords);
 
     /* Store that neither dpoly nor ddpoly are valid */
-    data->flags = 0;
+    segment->flags = 0;
 
     /* Update the length of the current segment now that we have parsed it */
     player->state.length = offset - player->state.start;

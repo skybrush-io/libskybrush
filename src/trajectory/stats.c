@@ -157,9 +157,9 @@ sb_error_t sb_trajectory_stats_calculator_run(
                      * vertical segments so remember the state */
                     sb_trajectory_player_save_state(&player, &state);
                     state_valid = 1;
-                    last_vertical_section_start_altitude = sb_poly_eval(&segment->poly.z, 0);
+                    last_vertical_section_start_altitude = segment->start.z;
                 }
-                last_vertical_section_end_altitude = sb_poly_eval(&segment->poly.z, 1);
+                last_vertical_section_end_altitude = segment->end.z;
             } else {
                 /* This segment is not vertical so we cannot land earlier than
                  * the end of this segment */
@@ -223,7 +223,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
                 /* The last vertical section is longer than the preferred
                  * descent so find the point in the last vertical section where
                  * we need to trigger the landing */
-                altitude = sb_poly_eval(&segment->poly.z, 0);
+                altitude = segment->start.z;
                 while (sb_trajectory_player_has_more_segments(&player)) {
                     /* Can we consume the current segment in full? */
                     delta = altitude - segment->end.z;
@@ -278,13 +278,11 @@ cleanup:
 static sb_bool_t sb_i_is_segment_descending_vertically(
     const sb_trajectory_segment_t* segment, float threshold)
 {
-    sb_vector3_with_yaw_t start = sb_poly_4d_eval(&segment->poly, 0);
-
     return (
         /* clang-format off */
-        fabsf(start.x - segment->end.x) <= threshold &&
-        fabsf(start.y - segment->end.y) <= threshold &&
-        start.z >= segment->end.z
+        fabsf(segment->start.x - segment->end.x) <= threshold &&
+        fabsf(segment->start.y - segment->end.y) <= threshold &&
+        segment->start.z >= segment->end.z
         /* clang-format on */
     );
 }
