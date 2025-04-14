@@ -39,6 +39,21 @@ typedef enum {
 } sb_trajectory_segment_flags_t;
 
 /**
+ * Parses an angle from a memory block.
+ *
+ * The offset is automatically advanced after reading the angle.
+ */
+static float sb_i_parse_angle(const uint8_t* buf, size_t* offset);
+
+/**
+ * Parses a coordinate from a memory block, scaling it up with the given
+ * scaling factor as needed.
+ *
+ * The offset is automatically advanced after reading the coordinate.
+ */
+static float sb_i_parse_coordinate(const uint8_t* buf, size_t* offset, float scale);
+
+/**
  * Parses an angle from the memory block that defines the trajectory.
  *
  * The offset is automatically advanced after reading the angle.
@@ -597,6 +612,24 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
 
 /* ************************************************************************** */
 
+static float sb_i_parse_angle(const uint8_t* buffer, size_t* offset)
+{
+    int16_t angle = sb_parse_int16(buffer, offset) % 3600;
+
+    if (angle < 0) {
+        angle += 3600;
+    }
+
+    return angle / 10.0f;
+}
+
+static float sb_i_parse_coordinate(const uint8_t* buffer, size_t* offset, float scale)
+{
+    return sb_parse_int16(buffer, offset) * scale;
+}
+
+/* ************************************************************************** */
+
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory)
 {
     uint8_t* buf = SB_BUFFER(trajectory->buffer);
@@ -618,18 +651,12 @@ static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory)
 
 static float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size_t* offset)
 {
-    int16_t angle = sb_parse_int16(SB_BUFFER(trajectory->buffer), offset) % 3600;
-
-    if (angle < 0) {
-        angle += 3600;
-    }
-
-    return angle / 10.0f;
+    return sb_i_parse_angle(SB_BUFFER(trajectory->buffer), offset);
 }
 
 static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory, size_t* offset)
 {
-    return sb_parse_int16(SB_BUFFER(trajectory->buffer), offset) * trajectory->scale;
+    return sb_i_parse_coordinate(SB_BUFFER(trajectory->buffer), offset, trajectory->scale);
 }
 
 /* ************************************************************************** */
