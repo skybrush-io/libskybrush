@@ -75,7 +75,8 @@ sb_error_t sb_trajectory_stats_calculator_run(
 {
     sb_trajectory_stat_components_t components = calc->components;
     sb_trajectory_player_t player;
-    const sb_trajectory_segment_t* segment;
+    sb_trajectory_segment_t* segment;
+    sb_poly_4d_t* poly;
     sb_vector3_with_yaw_t start, end;
     sb_trajectory_player_state_t state;
     sb_bool_t state_valid;
@@ -139,7 +140,8 @@ sb_error_t sb_trajectory_stats_calculator_run(
         if (components & SB_TRAJECTORY_STATS_TAKEOFF_TIME) {
             /* If we are calculating the takeoff time, check whether we have
              * now reached the takeoff altitude */
-            if (sb_poly_touches(&segment->poly.z, takeoff_altitude, &rel_t)) {
+            poly = sb_trajectory_segment_get_poly(segment);
+            if (sb_poly_touches(&poly->z, takeoff_altitude, &rel_t)) {
                 result->earliest_above_sec = segment->start_time_sec + rel_t * segment->duration_sec;
 
                 /* Also clear the flag so we don't keep on checking */
@@ -236,7 +238,8 @@ sb_error_t sb_trajectory_stats_calculator_run(
                         altitude = segment->end.z;
                     } else {
                         /* We can consume only part of the segment */
-                        if (!sb_poly_touches(&segment->poly.z, altitude - to_descend, &rel_t)) {
+                        poly = sb_trajectory_segment_get_poly(segment);
+                        if (!sb_poly_touches(&poly->z, altitude - to_descend, &rel_t)) {
                             /* should not happen, let's just land at the beginning
                              * of the segment */
                             rel_t = 0;

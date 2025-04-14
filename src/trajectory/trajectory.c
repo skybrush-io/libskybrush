@@ -34,8 +34,9 @@ static sb_error_t sb_i_trajectory_init_from_bytes(sb_trajectory_t* trajectory, u
 static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser);
 
 typedef enum {
-    SB_TRAJECTORY_SEGMENT_DPOLY_VALID = 1,
-    SB_TRAJECTORY_SEGMENT_DDPOLY_VALID = 2,
+    SB_TRAJECTORY_SEGMENT_POLY_VALID = 1,
+    SB_TRAJECTORY_SEGMENT_DPOLY_VALID = 2,
+    SB_TRAJECTORY_SEGMENT_DDPOLY_VALID = 4,
 } sb_trajectory_segment_flags_t;
 
 /**
@@ -74,13 +75,13 @@ static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory,
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory);
 
 /**
- * Calculates the polygon representing the first derivative of the trajectory
+ * Calculates the polynomial representing the first derivative of the trajectory
  * segment if needed and returns it.
  */
 static sb_poly_4d_t* sb_i_get_dpoly(sb_trajectory_segment_t* segment);
 
 /**
- * Calculates the polygon representing the second derivative of the trajectory
+ * Calculates the polynomial representing the second derivative of the trajectory
  * segment if needed and returns it.
  */
 static sb_poly_4d_t* sb_i_get_ddpoly(sb_trajectory_segment_t* segment);
@@ -385,18 +386,19 @@ sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
     SB_CHECK(sb_trajectory_player_init(&player, trajectory));
 
     while (sb_trajectory_player_has_more_segments(&player)) {
-        const sb_trajectory_segment_t* segment = sb_trajectory_player_get_current_segment(&player);
+        sb_trajectory_segment_t* segment = sb_trajectory_player_get_current_segment(&player);
+        sb_poly_4d_t poly = *sb_trajectory_segment_get_poly(segment);
         sb_interval_t interval;
 
-#define CHECK_DIM(DIM)                                      \
-    {                                                       \
-        sb_poly_get_extrema(&segment->poly.DIM, &interval); \
-        if (interval.min < result->DIM.min) {               \
-            result->DIM.min = interval.min;                 \
-        }                                                   \
-        if (interval.max > result->DIM.max) {               \
-            result->DIM.max = interval.max;                 \
-        }                                                   \
+#define CHECK_DIM(DIM)                             \
+    {                                              \
+        sb_poly_get_extrema(&poly.DIM, &interval); \
+        if (interval.min < result->DIM.min) {      \
+            result->DIM.min = interval.min;        \
+        }                                          \
+        if (interval.max > result->DIM.max) {      \
+            result->DIM.max = interval.max;        \
+        }                                          \
     }
 
         CHECK_DIM(x);
@@ -721,6 +723,7 @@ void sb_trajectory_player_dump_state(const sb_trajectory_player_t* player)
 #ifdef LIBSKYBRUSH_DEBUG
     sb_vector3_with_yaw_t pos, vel, acc;
     const sb_trajectory_segment_t* current = sb_trajectory_player_get_current_segment(player);
+    const sb_poly_4d_t* poly = sb_trajectory_segment_get_poly(current);
     const sb_poly_4d_t* dpoly = sb_i_get_dpoly(current);
     const sb_poly_4d_t* ddpoly = sb_i_get_dpoly(current);
 
@@ -729,21 +732,21 @@ void sb_trajectory_player_dump_state(const sb_trajectory_player_t* player)
     printf("Start time = %.3fs\n", current->start_time_sec);
     printf("Duration = %.3fs\n", current->duration_sec);
 
-    pos = sb_poly_4d_eval(&current->poly, 0);
+    pos = sb_poly_4d_eval(poly, 0);
     vel = sb_poly_4d_eval(dpoly, 0);
     acc = sb_poly_4d_eval(ddpoly, 0);
     printf(
         "Starts at = (%.2f, %.2f, %.2f) yaw=%.2f, vel = (%.2f, %.2f, %.2f), acc = (%.2f, %.2f, %.2f)\n",
         pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z, acc.x, acc.y, acc.z);
 
-    pos = sb_poly_4d_eval(&current->poly, 0.5);
+    pos = sb_poly_4d_eval(poly, 0.5);
     vel = sb_poly_4d_eval(dpoly, 0.5);
     acc = sb_poly_4d_eval(ddpoly, 0.5);
     printf(
         "Midpoint at = (%.2f, %.2f, %.2f) yaw=%.2f, vel = (%.2f, %.2f, %.2f), acc = (%.2f, %.2f, %.2f)\n",
         pos.x, pos.y, pos.z, pos.yaw, vel.x, vel.y, vel.z, acc.x, acc.y, acc.z);
 
-    pos = sb_poly_4d_eval(&current->poly, 1.0);
+    pos = sb_poly_4d_eval(poly, 1.0);
     vel = sb_poly_4d_eval(dpoly, 1.0);
     acc = sb_poly_4d_eval(ddpoly, 1.0);
     printf(
@@ -757,8 +760,8 @@ void sb_trajectory_player_dump_state(const sb_trajectory_player_t* player)
 /**
  * Returns a pointer to the current trajectory segment of the trajectory player.
  */
-const sb_trajectory_segment_t* sb_trajectory_player_get_current_segment(
-    const sb_trajectory_player_t* player)
+sb_trajectory_segment_t* sb_trajectory_player_get_current_segment(
+    sb_trajectory_player_t* player)
 {
     return &player->state.segment;
 }
@@ -774,7 +777,8 @@ sb_error_t sb_trajectory_player_get_position_at(sb_trajectory_player_t* player, 
     SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
 
     if (result) {
-        *result = sb_poly_4d_eval(&player->state.segment.poly, rel_t);
+        *result = sb_poly_4d_eval(
+            sb_trajectory_segment_get_poly(&player->state.segment), rel_t);
     }
 
     return SB_SUCCESS;
@@ -922,8 +926,6 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     uint8_t* buf = SB_BUFFER(trajectory->buffer);
     size_t buffer_length = sb_buffer_size(&trajectory->buffer);
     sb_trajectory_segment_t* segment = &player->state.segment;
-    float coords[8];
-    unsigned int i;
 
     uint8_t header;
     size_t num_coords;
@@ -932,6 +934,9 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     memset(&player->state, 0, sizeof(player->state));
     player->state.start = offset;
     player->state.length = 0;
+
+    segment->scale = player->trajectory->scale;
+    segment->buf = SB_BUFFER(player->trajectory->buffer) + offset;
 
     /* Store the start point and the start time as instructed */
     segment->start = start;
@@ -949,6 +954,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
         segment->end_time_msec = UINT32_MAX;
         segment->end_time_sec = INFINITY;
 
+        segment->flags = SB_TRAJECTORY_SEGMENT_POLY_VALID;
         segment->end = start;
 
         return SB_SUCCESS;
@@ -963,43 +969,45 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     segment->end_time_msec = segment->start_time_msec + segment->duration_msec;
     segment->end_time_sec = segment->end_time_msec / 1000.0f;
 
-    /* Parse X coordinates */
+    /* Polynomials will be created lazily */
+
+    /* Read the last X coordinate and store it */
     num_coords = sb_i_get_num_coords(header >> 0);
-    coords[0] = start.x;
-    for (i = 1; i < num_coords; i++) {
-        coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+    if (num_coords > 1) {
+        offset += 2 * (num_coords - 2);
+        segment->end.x = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+    } else {
+        segment->end.x = segment->start.x;
     }
-    segment->end.x = coords[num_coords - 1];
-    sb_poly_make_bezier(&segment->poly.x, 1, coords, num_coords);
 
-    /* Parse Y coordinates */
+    /* Read the last Y coordinate and store it */
     num_coords = sb_i_get_num_coords(header >> 2);
-    coords[0] = start.y;
-    for (i = 1; i < num_coords; i++) {
-        coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+    if (num_coords > 1) {
+        offset += 2 * (num_coords - 2);
+        segment->end.y = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+    } else {
+        segment->end.y = segment->start.y;
     }
-    segment->end.y = coords[num_coords - 1];
-    sb_poly_make_bezier(&segment->poly.y, 1, coords, num_coords);
 
-    /* Parse Z coordinates */
+    /* Read the last Z coordinate and store it */
     num_coords = sb_i_get_num_coords(header >> 4);
-    coords[0] = start.z;
-    for (i = 1; i < num_coords; i++) {
-        coords[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+    if (num_coords > 1) {
+        offset += 2 * (num_coords - 2);
+        segment->end.z = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+    } else {
+        segment->end.z = segment->start.z;
     }
-    segment->end.z = coords[num_coords - 1];
-    sb_poly_make_bezier(&segment->poly.z, 1, coords, num_coords);
 
-    /* Parse yaw coordinates */
+    /* Read the last yaw coordinate and store it */
     num_coords = sb_i_get_num_coords(header >> 6);
-    coords[0] = start.yaw;
-    for (i = 1; i < num_coords; i++) {
-        coords[i] = sb_i_trajectory_parse_angle(trajectory, &offset);
+    if (num_coords > 1) {
+        offset += 2 * (num_coords - 2);
+        segment->end.yaw = sb_i_trajectory_parse_angle(trajectory, &offset);
+    } else {
+        segment->end.yaw = segment->start.yaw;
     }
-    segment->end.yaw = coords[num_coords - 1];
-    sb_poly_make_bezier(&segment->poly.yaw, 1, coords, num_coords);
 
-    /* Store that neither dpoly nor ddpoly are valid */
+    /* Store that the polynomials are not calculated yet */
     segment->flags = 0;
 
     /* Update the length of the current segment now that we have parsed it */
@@ -1008,40 +1016,114 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     return SB_SUCCESS;
 }
 
-static sb_poly_4d_t* sb_i_get_dpoly(sb_trajectory_segment_t* data)
+/**
+ * Calculates the polynomial representing the trajectory segment if needed and
+ * returns it.
+ *
+ * The polynomial is cached for subsequent calls, therefore this function cannot
+ * use a const segment as its input and cannot return a const poly either. Use
+ * copying if needed.
+ *
+ * The return value of this function is guaranteed not to be NULL.
+ */
+sb_poly_4d_t* sb_trajectory_segment_get_poly(sb_trajectory_segment_t* segment)
 {
-    if (data->flags & SB_TRAJECTORY_SEGMENT_DPOLY_VALID) {
-        return &data->dpoly;
+    uint8_t* buf;
+    size_t offset;
+    uint8_t header;
+    size_t num_coords;
+    float scale;
+    float coords[8];
+    int i;
+
+    if (segment->flags & SB_TRAJECTORY_SEGMENT_POLY_VALID) {
+        return &segment->poly;
+    }
+
+    /* Parse header */
+    scale = segment->scale;
+    buf = segment->buf;
+    offset = 0;
+    header = buf[offset++];
+
+    /* Skip duration, we know it already */
+    offset += 2;
+
+    /* Parse X coordinates */
+    num_coords = sb_i_get_num_coords(header >> 0);
+    coords[0] = segment->start.x;
+    for (i = 1; i < num_coords; i++) {
+        coords[i] = sb_i_parse_coordinate(buf, &offset, scale);
+    }
+    segment->end.x = coords[num_coords - 1];
+    sb_poly_make_bezier(&segment->poly.x, 1, coords, num_coords);
+
+    /* Parse Y coordinates */
+    num_coords = sb_i_get_num_coords(header >> 2);
+    coords[0] = segment->start.y;
+    for (i = 1; i < num_coords; i++) {
+        coords[i] = sb_i_parse_coordinate(buf, &offset, scale);
+    }
+    segment->end.y = coords[num_coords - 1];
+    sb_poly_make_bezier(&segment->poly.y, 1, coords, num_coords);
+
+    /* Parse Z coordinates */
+    num_coords = sb_i_get_num_coords(header >> 4);
+    coords[0] = segment->start.z;
+    for (i = 1; i < num_coords; i++) {
+        coords[i] = sb_i_parse_coordinate(buf, &offset, scale);
+    }
+    segment->end.z = coords[num_coords - 1];
+    sb_poly_make_bezier(&segment->poly.z, 1, coords, num_coords);
+
+    /* Parse yaw coordinates */
+    num_coords = sb_i_get_num_coords(header >> 6);
+    coords[0] = segment->start.yaw;
+    for (i = 1; i < num_coords; i++) {
+        coords[i] = sb_i_parse_angle(buf, &offset);
+    }
+    segment->end.yaw = coords[num_coords - 1];
+    sb_poly_make_bezier(&segment->poly.yaw, 1, coords, num_coords);
+
+    segment->flags |= SB_TRAJECTORY_SEGMENT_POLY_VALID;
+
+    return &segment->poly;
+}
+
+static sb_poly_4d_t* sb_i_get_dpoly(sb_trajectory_segment_t* segment)
+{
+    if (segment->flags & SB_TRAJECTORY_SEGMENT_DPOLY_VALID) {
+        return &segment->dpoly;
     }
 
     /* Calculate first derivatives for velocity */
-    data->dpoly = data->poly;
-    sb_poly_4d_deriv(&data->dpoly);
-    if (fabsf(data->duration_sec) > 1.0e-6f) {
-        sb_poly_4d_scale(&data->dpoly, 1.0f / data->duration_sec);
+    segment->dpoly = *sb_trajectory_segment_get_poly(segment);
+    sb_poly_4d_deriv(&segment->dpoly);
+    if (fabsf(segment->duration_sec) > 1.0e-6f) {
+        sb_poly_4d_scale(&segment->dpoly, 1.0f / segment->duration_sec);
     }
 
-    data->flags |= SB_TRAJECTORY_SEGMENT_DPOLY_VALID;
+    segment->flags |= SB_TRAJECTORY_SEGMENT_DPOLY_VALID;
 
-    return &data->dpoly;
+    return &segment->dpoly;
 }
 
-static sb_poly_4d_t* sb_i_get_ddpoly(sb_trajectory_segment_t* data)
+static sb_poly_4d_t* sb_i_get_ddpoly(sb_trajectory_segment_t* segment)
 {
-    if (data->flags & SB_TRAJECTORY_SEGMENT_DDPOLY_VALID) {
-        return &data->ddpoly;
+    if (segment->flags & SB_TRAJECTORY_SEGMENT_DDPOLY_VALID) {
+        return &segment->ddpoly;
     }
 
     /* Calculate second derivatives for acceleration */
-    data->ddpoly = *sb_i_get_dpoly(data);
-    sb_poly_4d_deriv(&data->ddpoly);
-    if (fabsf(data->duration_sec) > 1.0e-6f) {
-        sb_poly_4d_scale(&data->ddpoly, 1.0f / data->duration_sec);
+    segment->ddpoly = *sb_i_get_dpoly(segment);
+    sb_poly_4d_deriv(&segment->ddpoly);
+    if (fabsf(segment->duration_sec) > 1.0e-6f) {
+        sb_poly_4d_scale(&segment->ddpoly, 1.0f / segment->duration_sec);
     }
 
-    data->flags |= SB_TRAJECTORY_SEGMENT_DDPOLY_VALID;
+    segment->flags |= SB_TRAJECTORY_SEGMENT_DDPOLY_VALID;
 
-    return &data->ddpoly;
+    return &segment->ddpoly;
 }
 
 static uint8_t sb_i_get_num_coords(uint8_t header_bits)

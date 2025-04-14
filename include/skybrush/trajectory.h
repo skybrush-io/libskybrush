@@ -102,6 +102,15 @@ typedef struct
     /** The last point of the trajectory segment */
     sb_vector3_with_yaw_t end;
 
+    /** Scale of the trajectory, copied from \c sb_trajectory_t */
+    float scale;
+
+    /**
+     * Pointer into the buffer where the trajectory data is stored in its
+     * encoded form.
+     */
+    uint8_t* buf;
+
     /** Flags storing which parts of the segment are up-to-date. */
     uint8_t flags;
 
@@ -111,6 +120,8 @@ typedef struct
      * between the start and end time of the trajectory.
      *
      * This polynomial is calculated lazily. Do not access this field directly.
+     * Use \ref sb_trajectory_segment_get_poly() instead if you really need the
+     * entire polynomial.
      */
     sb_poly_4d_t poly;
 
@@ -134,6 +145,10 @@ typedef struct
      */
     sb_poly_4d_t ddpoly;
 } sb_trajectory_segment_t;
+
+sb_poly_4d_t* sb_trajectory_segment_get_poly(sb_trajectory_segment_t* segment);
+
+/* ************************************************************************* */
 
 /**
  * Structure representing the trajectory of a single drone in a Skybrush
@@ -163,6 +178,7 @@ sb_error_t sb_trajectory_init_from_builder(
 sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory);
 void sb_trajectory_destroy(sb_trajectory_t* trajectory);
 
+sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
 sb_error_t sb_trajectory_cut_at(sb_trajectory_t* builder, float duration_sec);
 sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory);
 sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
@@ -180,8 +196,6 @@ float sb_trajectory_propose_takeoff_time_sec(
 float sb_trajectory_propose_landing_time_sec(
     const sb_trajectory_t* trajectory, float preferred_descent,
     float verticality_threshold);
-
-sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
 
 /* ************************************************************************* */
 
@@ -213,8 +227,8 @@ sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, const sb_tr
 void sb_trajectory_player_destroy(sb_trajectory_player_t* player);
 sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* player);
 void sb_trajectory_player_dump_state(const sb_trajectory_player_t* player);
-const sb_trajectory_segment_t* sb_trajectory_player_get_current_segment(
-    const sb_trajectory_player_t* player);
+sb_trajectory_segment_t* sb_trajectory_player_get_current_segment(
+    sb_trajectory_player_t* player);
 sb_error_t sb_trajectory_player_get_position_at(
     sb_trajectory_player_t* player, float t, sb_vector3_with_yaw_t* result);
 sb_error_t sb_trajectory_player_get_velocity_at(
