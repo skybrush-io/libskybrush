@@ -37,6 +37,7 @@ void sb_write_uint16(uint8_t* buf, size_t* offset, uint16_t value);
 void sb_write_int32(uint8_t* buf, size_t* offset, int32_t value);
 void sb_write_uint32(uint8_t* buf, size_t* offset, uint32_t value);
 
+uint8_t sb_parse_uint8(const uint8_t* buf, size_t* offset);
 int16_t sb_parse_int16(const uint8_t* buf, size_t* offset);
 uint16_t sb_parse_uint16(const uint8_t* buf, size_t* offset);
 int32_t sb_parse_int32(const uint8_t* buf, size_t* offset);

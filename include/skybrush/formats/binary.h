@@ -54,7 +54,10 @@ typedef enum {
     SB_BINARY_BLOCK_RTH_PLAN = 4,
 
     /** Block that contains yaw control setpoints */
-    SB_BINARY_BLOCK_YAW_CONTROL = 5
+    SB_BINARY_BLOCK_YAW_CONTROL = 5,
+
+    /** Block that controls an event list */
+    SB_BINARY_BLOCK_EVENT_LIST = 6
 } sb_binary_block_type_t;
 
 /**

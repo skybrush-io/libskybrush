@@ -20,6 +20,18 @@
 #include "parsing.h"
 
 /**
+ * Parses an unsigned 8-bit integer from a buffer.
+ *
+ * The offset is automatically advanced after reading the integer.
+ */
+uint8_t sb_parse_uint8(const uint8_t* buf, size_t* offset)
+{
+    uint8_t result = buf[*offset];
+    *offset += 1;
+    return result;
+}
+
+/**
  * Parses a signed 16-bit little-endian integer from a buffer.
  *
  * The offset is automatically advanced after reading the integer.

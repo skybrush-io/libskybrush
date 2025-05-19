@@ -29,6 +29,7 @@
 #include <skybrush/buffer.h>
 #include <skybrush/colors.h>
 #include <skybrush/error.h>
+#include <skybrush/events.h>
 #include <skybrush/lights.h>
 #include <skybrush/poly.h>
 #include <skybrush/rth_plan.h>
