@@ -22,6 +22,7 @@
  * @brief Handling of timeline events in Skybrush missions.
  */
 
+#include <math.h>
 #include <skybrush/events.h>
 #include <skybrush/formats/binary.h>
 #include <skybrush/memory.h>
@@ -142,32 +143,21 @@ sb_event_t* sb_event_list_get_ptr(sb_event_list_t* events, size_t index)
 }
 
 /**
- * \brief Ensures that the event list has enough free space to store a new
- * event.
+ * \brief Returns a pointer to the event at the given index in the event list (const variant).
  *
- * If the list does not have enough free space, it will be resized to
- * accommodate the new event.
+ * The event returned by the provided pointer should not be modified.
  *
- * \param events  the event list to check
- * \return \c SB_SUCCESS if there is enough free space,
- *         \c SB_ENOMEM if memory allocation failed
+ * \param events  the event list to query
+ * \param index   the index of the event to return
+ * \return a pointer to the event at the given index
  */
-static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events)
+const sb_event_t* sb_event_list_get_ptr_const(const sb_event_list_t* events, size_t index)
 {
-    size_t free_space = events->max_entries - events->num_entries;
-
-    if (free_space == 0) {
-        size_t new_capacity = events->max_entries * 2;
-        sb_event_t* new_entries = sb_realloc(events->entries, sb_event_t, new_capacity);
-        if (new_entries == 0) {
-            return SB_ENOMEM; /* LCOV_EXCL_LINE */
-        }
-
-        events->entries = new_entries;
-        events->max_entries = new_capacity;
+    if (index >= events->num_entries) {
+        return NULL;
+    } else {
+        return &events->entries[index];
     }
-
-    return SB_SUCCESS;
 }
 
 /**
@@ -248,7 +238,39 @@ sb_error_t sb_event_list_update_from_binary_file_in_memory(
     return retval;
 }
 
-static sb_error_t sb_i_event_list_extend_from_bytes(sb_event_list_t* events, uint8_t* buf, size_t nbytes, sb_bool_t owned)
+/* ************************************************************************** */
+
+/**
+ * \brief Ensures that the event list has enough free space to store a new
+ * event.
+ *
+ * If the list does not have enough free space, it will be resized to
+ * accommodate the new event.
+ *
+ * \param events  the event list to check
+ * \return \c SB_SUCCESS if there is enough free space,
+ *         \c SB_ENOMEM if memory allocation failed
+ */
+static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events)
+{
+    size_t free_space = events->max_entries - events->num_entries;
+
+    if (free_space == 0) {
+        size_t new_capacity = events->max_entries * 2;
+        sb_event_t* new_entries = sb_realloc(events->entries, sb_event_t, new_capacity);
+        if (new_entries == 0) {
+            return SB_ENOMEM; /* LCOV_EXCL_LINE */
+        }
+
+        events->entries = new_entries;
+        events->max_entries = new_capacity;
+    }
+
+    return SB_SUCCESS;
+}
+
+static sb_error_t sb_i_event_list_extend_from_bytes(sb_event_list_t* events,
+    uint8_t* buf, size_t nbytes, sb_bool_t owned)
 {
     /* Each entry in the serialized representation of the event list is 10 bytes
      * as follows:
@@ -279,7 +301,8 @@ static sb_error_t sb_i_event_list_extend_from_bytes(sb_event_list_t* events, uin
     return SB_SUCCESS;
 }
 
-static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events, sb_binary_file_parser_t* parser)
+static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events,
+    sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
     uint8_t* buf;
@@ -296,4 +319,77 @@ static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events, sb
     }
 
     return retval;
+}
+
+/* ************************************************************************** */
+
+sb_error_t sb_event_list_player_init(sb_event_list_player_t* player,
+    const sb_event_list_t* events)
+{
+    player->events = events;
+    player->current_index = 0;
+    return SB_SUCCESS;
+}
+
+void sb_event_list_player_destroy(sb_event_list_player_t* player)
+{
+    /* nop */
+}
+
+const sb_event_t* sb_event_list_player_peek_next_event(const sb_event_list_player_t* player)
+{
+    return sb_event_list_get_ptr_const(player->events, player->current_index);
+}
+
+const sb_event_t* sb_event_list_player_get_next_event(sb_event_list_player_t* player)
+{
+    const sb_event_t* result = sb_event_list_player_peek_next_event(player);
+    if (result != NULL) {
+        player->current_index++;
+    }
+    return result;
+}
+
+const sb_event_t* sb_event_list_player_get_next_event_not_later_than(sb_event_list_player_t* player, float t)
+{
+    const sb_event_t* result = sb_event_list_player_peek_next_event(player);
+    if (result != NULL) {
+        if (result->time_msec <= t * 1000) {
+            player->current_index++;
+        } else {
+            result = NULL;
+        }
+    }
+    return result;
+}
+
+void sb_event_list_player_rewind(sb_event_list_player_t* player)
+{
+    sb_event_list_player_seek(player, 0);
+}
+
+void sb_event_list_player_seek(sb_event_list_player_t* player, float t)
+{
+    if (!isfinite(t) || t <= 0) {
+        player->current_index = 0;
+        return;
+    }
+
+    if (t > UINT32_MAX / 1000) {
+        player->current_index = player->events->num_entries;
+        return;
+    }
+
+    uint32_t t_msec = t * 1000;
+
+    player->current_index = 0;
+
+    /* TODO(ntamas): use binary search if this becomes a bottleneck */
+    while (player->current_index < player->events->num_entries) {
+        const sb_event_t* event = sb_event_list_get_ptr_const(player->events, player->current_index);
+        if (event->time_msec >= t_msec) {
+            break;
+        }
+        player->current_index++;
+    }
 }

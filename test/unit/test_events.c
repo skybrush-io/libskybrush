@@ -174,6 +174,21 @@ void test_loaded_events(void)
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr(&events, 3)->type);
     TEST_ASSERT_EQUAL(4, sb_event_list_get_ptr(&events, 3)->subtype);
     TEST_ASSERT_NULL(sb_event_list_get_ptr(&events, 4));
+
+    TEST_ASSERT_EQUAL(4, sb_event_list_size(&events));
+    TEST_ASSERT_EQUAL(10000, sb_event_list_get_ptr_const(&events, 0)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr_const(&events, 0)->type);
+    TEST_ASSERT_EQUAL(1, sb_event_list_get_ptr_const(&events, 0)->subtype);
+    TEST_ASSERT_EQUAL(50000, sb_event_list_get_ptr_const(&events, 1)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr_const(&events, 1)->type);
+    TEST_ASSERT_EQUAL(2, sb_event_list_get_ptr_const(&events, 1)->subtype);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr_const(&events, 2)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr_const(&events, 2)->type);
+    TEST_ASSERT_EQUAL(3, sb_event_list_get_ptr_const(&events, 2)->subtype);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr_const(&events, 3)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr_const(&events, 3)->type);
+    TEST_ASSERT_EQUAL(4, sb_event_list_get_ptr_const(&events, 3)->subtype);
+    TEST_ASSERT_NULL(sb_event_list_get_ptr_const(&events, 4));
 }
 
 void test_loaded_events_in_memory(void)
@@ -181,6 +196,16 @@ void test_loaded_events_in_memory(void)
     closeFixture();
     loadFixtureInMemory("fixtures/pyro_events.skyb");
     test_loaded_events();
+}
+
+void test_append_with_earlier_timestamp(void)
+{
+    sb_event_t event;
+    event.time_msec = 0; /* earlier than what is already in the list */
+    event.type = SB_EVENT_TYPE_PYRO;
+    event.subtype = 1;
+
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_event_list_append(&events, &event));
 }
 
 int main(int argc, char* argv[])
@@ -192,6 +217,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_init_with_zero_length);
     RUN_TEST(test_loaded_events);
     RUN_TEST(test_loaded_events_in_memory);
+    RUN_TEST(test_append_with_earlier_timestamp);
 
     return UNITY_END();
 }

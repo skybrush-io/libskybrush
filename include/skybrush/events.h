@@ -90,6 +90,7 @@ size_t sb_event_list_size(const sb_event_list_t* events);
 sb_bool_t sb_event_list_is_empty(const sb_event_list_t* events);
 sb_error_t sb_event_list_append(sb_event_list_t* events, const sb_event_t* event);
 sb_event_t* sb_event_list_get_ptr(sb_event_list_t* events, size_t index);
+const sb_event_t* sb_event_list_get_ptr_const(const sb_event_list_t* events, size_t index);
 sb_error_t sb_event_list_update_from_binary_file(sb_event_list_t* events, int fd);
 sb_error_t sb_event_list_update_from_binary_file_in_memory(sb_event_list_t* events, uint8_t* buf, size_t nbytes);
 sb_error_t sb_event_list_update_from_buffer(sb_event_list_t* events, uint8_t* buf, size_t nbytes);
@@ -102,10 +103,17 @@ sb_error_t sb_event_list_update_from_buffer(sb_event_list_t* events, uint8_t* bu
  */
 typedef struct sb_event_list_player_s {
     const sb_event_list_t* events; /**< The event list */
+    size_t current_index; /**< The index of the current event */
 } sb_event_list_player_t;
 
-sb_error_t sb_event_list_player_init(sb_event_list_player_t* player, const sb_event_list_t* ctrl);
+sb_error_t sb_event_list_player_init(sb_event_list_player_t* player, const sb_event_list_t* events);
 void sb_event_list_player_destroy(sb_event_list_player_t* player);
+const sb_event_t* sb_event_list_player_get_next_event(sb_event_list_player_t* player);
+const sb_event_t* sb_event_list_player_get_next_event_not_later_than(
+    sb_event_list_player_t* player, float t);
+const sb_event_t* sb_event_list_player_peek_next_event(const sb_event_list_player_t* player);
+void sb_event_list_player_rewind(sb_event_list_player_t* player);
+void sb_event_list_player_seek(sb_event_list_player_t* player, float t);
 
 __END_DECLS
 
