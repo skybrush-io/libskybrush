@@ -66,7 +66,16 @@ typedef struct sb_event_s {
     /**
      * The payload of the event, if applicable.
      */
-    uint8_t payload[4];
+    union {
+        /** The payload as an array of four bytes */
+        uint8_t as_buf[4];
+
+        /** The payload as a 32-bit unsigned integer */
+        uint32_t as_uint32;
+
+        /** The payload as an IEEE float */
+        float as_float;
+    } payload;
 } sb_event_t;
 
 /**

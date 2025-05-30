@@ -66,14 +66,6 @@ void closeFixture(void)
     sb_event_list_destroy(&events);
 }
 
-void test_payload_is_all_zeros(const sb_event_t* event)
-{
-    TEST_ASSERT_EQUAL(0, event->payload[0]);
-    TEST_ASSERT_EQUAL(0, event->payload[1]);
-    TEST_ASSERT_EQUAL(0, event->payload[2]);
-    TEST_ASSERT_EQUAL(0, event->payload[3]);
-}
-
 void test_iteration(void)
 {
     const sb_event_t* event = NULL;
@@ -83,28 +75,28 @@ void test_iteration(void)
     TEST_ASSERT_EQUAL(10000, event->time_msec);
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
     TEST_ASSERT_EQUAL(1, event->subtype);
-    test_payload_is_all_zeros(event);
+    TEST_ASSERT_EQUAL(0, event->payload.as_uint32);
 
     event = sb_event_list_player_get_next_event(&player);
     TEST_ASSERT_NOT_NULL(event);
     TEST_ASSERT_EQUAL(50000, event->time_msec);
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
     TEST_ASSERT_EQUAL(2, event->subtype);
-    test_payload_is_all_zeros(event);
+    TEST_ASSERT_EQUAL(0, event->payload.as_uint32);
 
     event = sb_event_list_player_get_next_event(&player);
     TEST_ASSERT_NOT_NULL(event);
     TEST_ASSERT_EQUAL(90000, event->time_msec);
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
     TEST_ASSERT_EQUAL(3, event->subtype);
-    test_payload_is_all_zeros(event);
+    TEST_ASSERT_EQUAL(0, event->payload.as_uint32);
 
     event = sb_event_list_player_get_next_event(&player);
     TEST_ASSERT_NOT_NULL(event);
     TEST_ASSERT_EQUAL(90000, event->time_msec);
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
     TEST_ASSERT_EQUAL(4, event->subtype);
-    test_payload_is_all_zeros(event);
+    TEST_ASSERT_EQUAL(0, event->payload.as_uint32);
 }
 
 void test_iteration_by_time(void)
@@ -116,14 +108,14 @@ void test_iteration_by_time(void)
     TEST_ASSERT_EQUAL(10000, event->time_msec);
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
     TEST_ASSERT_EQUAL(1, event->subtype);
-    test_payload_is_all_zeros(event);
+    TEST_ASSERT_EQUAL(0, event->payload.as_uint32);
 
     event = sb_event_list_player_get_next_event_not_later_than(&player, 60);
     TEST_ASSERT_NOT_NULL(event);
     TEST_ASSERT_EQUAL(50000, event->time_msec);
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
     TEST_ASSERT_EQUAL(2, event->subtype);
-    test_payload_is_all_zeros(event);
+    TEST_ASSERT_EQUAL(0, event->payload.as_uint32);
 
     event = sb_event_list_player_get_next_event_not_later_than(&player, 60);
     TEST_ASSERT_NULL(event);
@@ -135,21 +127,21 @@ void test_iteration_by_time(void)
     TEST_ASSERT_EQUAL(50000, event->time_msec);
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
     TEST_ASSERT_EQUAL(2, event->subtype);
-    test_payload_is_all_zeros(event);
+    TEST_ASSERT_EQUAL(0, event->payload.as_uint32);
 
     event = sb_event_list_player_get_next_event_not_later_than(&player, 90);
     TEST_ASSERT_NOT_NULL(event);
     TEST_ASSERT_EQUAL(90000, event->time_msec);
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
     TEST_ASSERT_EQUAL(3, event->subtype);
-    test_payload_is_all_zeros(event);
+    TEST_ASSERT_EQUAL(0, event->payload.as_uint32);
 
     event = sb_event_list_player_get_next_event_not_later_than(&player, 90);
     TEST_ASSERT_NOT_NULL(event);
     TEST_ASSERT_EQUAL(90000, event->time_msec);
     TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
     TEST_ASSERT_EQUAL(4, event->subtype);
-    test_payload_is_all_zeros(event);
+    TEST_ASSERT_EQUAL(0, event->payload.as_uint32);
 
     event = sb_event_list_player_get_next_event_not_later_than(&player, 90);
     TEST_ASSERT_NULL(event);

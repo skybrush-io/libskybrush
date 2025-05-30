@@ -291,7 +291,7 @@ static sb_error_t sb_i_event_list_extend_from_bytes(sb_event_list_t* events,
         }
 
         event.subtype = (sb_event_subtype_t)sb_parse_uint8(buf, &offset);
-        memcpy(event.payload, buf + offset, sizeof(event.payload));
+        memcpy(event.payload.as_buf, buf + offset, sizeof(event.payload.as_buf));
 
         SB_CHECK(sb_event_list_append(events, &event));
 
