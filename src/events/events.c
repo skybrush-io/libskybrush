@@ -30,6 +30,8 @@
 
 #include "../parsing.h"
 
+static int sb_i_event_cmp_timestamps(const void* first, const void* second);
+
 static sb_error_t sb_i_event_list_extend_from_bytes(sb_event_list_t* events, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events, sb_binary_file_parser_t* parser);
 static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events);
@@ -121,6 +123,27 @@ size_t sb_event_list_size(const sb_event_list_t* events)
 sb_bool_t sb_event_list_is_empty(const sb_event_list_t* events)
 {
     return sb_event_list_size(events) == 0;
+}
+
+/**
+ * @brief Returns whether the event list is sorted by timestamp.
+ *
+ * @param events  the event list to query
+ * @return sb_bool_t  true if the event list is sorted, false otherwise
+ */
+sb_bool_t sb_event_list_is_sorted(const sb_event_list_t* events)
+{
+    if (events->num_entries < 2) {
+        return 1; /* An empty list or a list with one event is sorted */
+    }
+
+    for (size_t i = 1; i < events->num_entries; i++) {
+        if (events->entries[i].time_msec < events->entries[i - 1].time_msec) {
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 /**
@@ -236,6 +259,78 @@ sb_error_t sb_event_list_update_from_binary_file_in_memory(
     sb_binary_file_parser_destroy(&parser);
 
     return retval;
+}
+
+static int sb_i_event_cmp_timestamps(const void* first, const void* second)
+{
+    const sb_event_t* event1 = (const sb_event_t*)first;
+    const sb_event_t* event2 = (const sb_event_t*)second;
+
+    if (event1->time_msec < event2->time_msec) {
+        return -1;
+    } else if (event1->time_msec > event2->time_msec) {
+        return 1;
+    } else {
+        return 0; /* Timestamps are equal */
+    }
+}
+
+/**
+ * @brief Sorts the event list by timestamp.
+ *
+ * The sorting is not guaranteed to be stable, i.e. events with the same
+ * timestamp may be reordered.
+ *
+ * @param events  the event list to sort
+ */
+void sb_event_list_sort(sb_event_list_t* events)
+{
+    qsort(events->entries, events->num_entries, sizeof(sb_event_t), sb_i_event_cmp_timestamps);
+}
+
+/**
+ * @brief Adjusts the timestamps of events with a given type in the list by a given delta.
+ *
+ * This function can be used to adjust the timestamps of pyro events in the list
+ * if the pyro device needs to be activated a given number of milliseconds earlier
+ * than the desired time of the event.
+ *
+ * Note that even with negative adjustments the timestamp may not be earlier than
+ * zero seconds. Timestamps that would become negative will be clamped to zero.
+ *
+ * @param events      the event list to adjust
+ * @param type        the type of events to adjust
+ * @param delta_msec  the number of milliseconds to adjust the timestamps by
+ *                    (can be negative to move the events earlier)
+ */
+void sb_event_list_adjust_timestamps_by_type(
+    sb_event_list_t* events, sb_event_type_t type, int32_t delta_msec)
+{
+    size_t n = sb_event_list_size(events);
+    sb_event_t* event;
+
+    for (size_t i = 0; i < n; i++) {
+        event = sb_event_list_get_ptr(events, i);
+        if (event->type == type) {
+            if (delta_msec > 0) {
+                /* If the adjustment would overflow, clamp to UINT32_MAX */
+                if (event->time_msec <= UINT32_MAX - delta_msec) {
+                    event->time_msec += delta_msec;
+                } else {
+                    event->time_msec = UINT32_MAX;
+                }
+            } else if (delta_msec < 0) {
+                /* If the adjustment is negative, ensure we don't go below zero */
+                if (event->time_msec >= (uint32_t)(-delta_msec)) {
+                    event->time_msec += delta_msec;
+                } else {
+                    event->time_msec = 0;
+                }
+            }
+        }
+    }
+
+    sb_event_list_sort(events);
 }
 
 /* ************************************************************************** */

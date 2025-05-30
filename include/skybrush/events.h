@@ -93,16 +93,26 @@ typedef struct sb_event_list_s {
 
 sb_error_t sb_event_list_init(sb_event_list_t* events, size_t max_events);
 void sb_event_list_destroy(sb_event_list_t* events);
+
 void sb_event_list_clear(sb_event_list_t* events);
 size_t sb_event_list_capacity(const sb_event_list_t* events);
-size_t sb_event_list_size(const sb_event_list_t* events);
 sb_bool_t sb_event_list_is_empty(const sb_event_list_t* events);
-sb_error_t sb_event_list_append(sb_event_list_t* events, const sb_event_t* event);
+size_t sb_event_list_size(const sb_event_list_t* events);
+
 sb_event_t* sb_event_list_get_ptr(sb_event_list_t* events, size_t index);
 const sb_event_t* sb_event_list_get_ptr_const(const sb_event_list_t* events, size_t index);
+
+sb_error_t sb_event_list_append(sb_event_list_t* events, const sb_event_t* event);
+
 sb_error_t sb_event_list_update_from_binary_file(sb_event_list_t* events, int fd);
 sb_error_t sb_event_list_update_from_binary_file_in_memory(sb_event_list_t* events, uint8_t* buf, size_t nbytes);
 sb_error_t sb_event_list_update_from_buffer(sb_event_list_t* events, uint8_t* buf, size_t nbytes);
+
+sb_bool_t sb_event_list_is_sorted(const sb_event_list_t* events);
+void sb_event_list_sort(sb_event_list_t* events);
+
+void sb_event_list_adjust_timestamps_by_type(
+    sb_event_list_t* events, sb_event_type_t type, int32_t delta_msec);
 
 /* ************************************************************************* */
 

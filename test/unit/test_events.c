@@ -208,6 +208,118 @@ void test_append_with_earlier_timestamp(void)
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_event_list_append(&events, &event));
 }
 
+void test_is_sorted(void)
+{
+    uint32_t timestamp;
+    sb_event_t event;
+    sb_event_t* event_ptr;
+
+    TEST_ASSERT_TRUE(sb_event_list_is_sorted(&events));
+
+    /* Mix up the event timestamps a bit */
+    event_ptr = sb_event_list_get_ptr(&events, 1);
+    timestamp = event_ptr->time_msec;
+    event_ptr = sb_event_list_get_ptr(&events, 0);
+    event_ptr->time_msec = timestamp + 1000; /* later than the second event */
+
+    TEST_ASSERT_FALSE(sb_event_list_is_sorted(&events));
+
+    /* Test special cases */
+    sb_event_list_clear(&events);
+    TEST_ASSERT_TRUE(sb_event_list_is_sorted(&events));
+
+    event.time_msec = 100;
+    event.type = SB_EVENT_TYPE_PYRO;
+    event.subtype = 1;
+    TEST_ASSERT_TRUE(sb_event_list_is_sorted(&events));
+}
+
+void test_sort(void)
+{
+    uint32_t timestamp;
+    sb_event_t* event_ptr;
+
+    /* Mix up the event timestamps a bit */
+    event_ptr = sb_event_list_get_ptr(&events, 1);
+    timestamp = event_ptr->time_msec;
+    event_ptr = sb_event_list_get_ptr(&events, 0);
+    event_ptr->time_msec = timestamp + 1000; /* later than the second event */
+
+    TEST_ASSERT_FALSE(sb_event_list_is_sorted(&events));
+    sb_event_list_sort(&events);
+    TEST_ASSERT_TRUE(sb_event_list_is_sorted(&events));
+}
+
+void test_adjust_timestamps(void)
+{
+    sb_event_t* event_ptr;
+
+    /* Adjust the timestamps of the pyro events forward by 1000 ms */
+    sb_event_list_adjust_timestamps_by_type(&events, SB_EVENT_TYPE_PYRO, 1000);
+
+    /* Check that the timestamps were adjusted correctly */
+    event_ptr = sb_event_list_get_ptr(&events, 0);
+    TEST_ASSERT_EQUAL(11000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 1);
+    TEST_ASSERT_EQUAL(51000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 2);
+    TEST_ASSERT_EQUAL(91000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 3);
+    TEST_ASSERT_EQUAL(91000, event_ptr->time_msec); /* last one should not change */
+
+    /* Check that the event type is really considered */
+    sb_event_list_adjust_timestamps_by_type(&events, SB_EVENT_TYPE_NONE, 1000);
+    event_ptr = sb_event_list_get_ptr(&events, 0);
+    TEST_ASSERT_EQUAL(11000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 1);
+    TEST_ASSERT_EQUAL(51000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 2);
+    TEST_ASSERT_EQUAL(91000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 3);
+    TEST_ASSERT_EQUAL(91000, event_ptr->time_msec); /* last one should not change */
+
+    /* Adjust the timestamps of the pyro events back by 1000 ms */
+    sb_event_list_adjust_timestamps_by_type(&events, SB_EVENT_TYPE_PYRO, -1000);
+
+    /* Check that the timestamps were adjusted correctly */
+    event_ptr = sb_event_list_get_ptr(&events, 0);
+    TEST_ASSERT_EQUAL(10000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 1);
+    TEST_ASSERT_EQUAL(50000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 2);
+    TEST_ASSERT_EQUAL(90000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 3);
+    TEST_ASSERT_EQUAL(90000, event_ptr->time_msec);
+
+    /* Adjust the timestamps of the pyro events such that they would underflow */
+    sb_event_list_adjust_timestamps_by_type(&events, SB_EVENT_TYPE_PYRO, -50000);
+
+    /* Check that the timestamps were adjusted correctly */
+    event_ptr = sb_event_list_get_ptr(&events, 0);
+    TEST_ASSERT_EQUAL(0, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 1);
+    TEST_ASSERT_EQUAL(0, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 2);
+    TEST_ASSERT_EQUAL(40000, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 3);
+    TEST_ASSERT_EQUAL(40000, event_ptr->time_msec);
+
+    /* Adjust the timestamps of the pyro events such that they would overflow */
+    sb_event_list_adjust_timestamps_by_type(&events, SB_EVENT_TYPE_PYRO, INT32_MAX);
+    sb_event_list_adjust_timestamps_by_type(&events, SB_EVENT_TYPE_PYRO, INT32_MAX);
+
+    /* Check that the timestamps were adjusted correctly.
+     * Note that 2 * INT32_MAX == UINT32_MAX - 1 */
+    event_ptr = sb_event_list_get_ptr(&events, 0);
+    TEST_ASSERT_EQUAL(UINT32_MAX - 1, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 1);
+    TEST_ASSERT_EQUAL(UINT32_MAX - 1, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 2);
+    TEST_ASSERT_EQUAL(UINT32_MAX, event_ptr->time_msec);
+    event_ptr = sb_event_list_get_ptr(&events, 3);
+    TEST_ASSERT_EQUAL(UINT32_MAX, event_ptr->time_msec);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -218,6 +330,9 @@ int main(int argc, char* argv[])
     RUN_TEST(test_loaded_events);
     RUN_TEST(test_loaded_events_in_memory);
     RUN_TEST(test_append_with_earlier_timestamp);
+    RUN_TEST(test_is_sorted);
+    RUN_TEST(test_sort);
+    RUN_TEST(test_adjust_timestamps);
 
     return UNITY_END();
 }
