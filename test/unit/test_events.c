@@ -208,6 +208,82 @@ void test_append_with_earlier_timestamp(void)
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_event_list_append(&events, &event));
 }
 
+void test_insertion(void)
+{
+    sb_event_t event;
+    event.type = SB_EVENT_TYPE_PYRO;
+    event.subtype = 1;
+
+    /* 10000, 50000, 90000, 90000 -- inserting in front */
+    event.time_msec = 5000;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_insert(&events, &event));
+    TEST_ASSERT_EQUAL(5, sb_event_list_size(&events));
+    TEST_ASSERT_EQUAL(5000, sb_event_list_get_ptr(&events, 0)->time_msec);
+    TEST_ASSERT_EQUAL(10000, sb_event_list_get_ptr(&events, 1)->time_msec);
+    TEST_ASSERT_EQUAL(50000, sb_event_list_get_ptr(&events, 2)->time_msec);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr(&events, 3)->time_msec);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr(&events, 4)->time_msec);
+
+    /* 5000, 10000, 50000, 90000, 90000 -- inserting at end */
+    event.time_msec = 110000;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_insert(&events, &event));
+    TEST_ASSERT_EQUAL(6, sb_event_list_size(&events));
+    TEST_ASSERT_EQUAL(5000, sb_event_list_get_ptr(&events, 0)->time_msec);
+    TEST_ASSERT_EQUAL(10000, sb_event_list_get_ptr(&events, 1)->time_msec);
+    TEST_ASSERT_EQUAL(50000, sb_event_list_get_ptr(&events, 2)->time_msec);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr(&events, 3)->time_msec);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr(&events, 4)->time_msec);
+    TEST_ASSERT_EQUAL(110000, sb_event_list_get_ptr(&events, 5)->time_msec);
+
+    /* 5000, 10000, 50000, 90000, 90000, 110000 -- inserting in the middle */
+    event.time_msec = 40000;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_insert(&events, &event));
+    TEST_ASSERT_EQUAL(7, sb_event_list_size(&events));
+    TEST_ASSERT_EQUAL(5000, sb_event_list_get_ptr(&events, 0)->time_msec);
+    TEST_ASSERT_EQUAL(10000, sb_event_list_get_ptr(&events, 1)->time_msec);
+    TEST_ASSERT_EQUAL(40000, sb_event_list_get_ptr(&events, 2)->time_msec);
+    TEST_ASSERT_EQUAL(50000, sb_event_list_get_ptr(&events, 3)->time_msec);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr(&events, 4)->time_msec);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr(&events, 5)->time_msec);
+    TEST_ASSERT_EQUAL(110000, sb_event_list_get_ptr(&events, 6)->time_msec);
+
+    /* 5000, 10000, 40000, 50000, 90000, 90000, 110000 -- inserting with same timestamp in the middle */
+    event.time_msec = 40000;
+    event.subtype = 3; /* different subtype */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_insert(&events, &event));
+    TEST_ASSERT_EQUAL(8, sb_event_list_size(&events));
+    TEST_ASSERT_EQUAL(5000, sb_event_list_get_ptr(&events, 0)->time_msec);
+    TEST_ASSERT_EQUAL(10000, sb_event_list_get_ptr(&events, 1)->time_msec);
+    TEST_ASSERT_EQUAL(40000, sb_event_list_get_ptr(&events, 2)->time_msec);
+    TEST_ASSERT_EQUAL(1, sb_event_list_get_ptr(&events, 2)->subtype);
+    TEST_ASSERT_EQUAL(40000, sb_event_list_get_ptr(&events, 3)->time_msec);
+    TEST_ASSERT_EQUAL(3, sb_event_list_get_ptr(&events, 3)->subtype);
+    TEST_ASSERT_EQUAL(50000, sb_event_list_get_ptr(&events, 4)->time_msec);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr(&events, 5)->time_msec);
+    TEST_ASSERT_EQUAL(90000, sb_event_list_get_ptr(&events, 6)->time_msec);
+    TEST_ASSERT_EQUAL(110000, sb_event_list_get_ptr(&events, 7)->time_msec);
+
+    /* Inserting with same timestamp in front */
+    event.time_msec = 5000;
+    event.subtype = 3; /* different subtype */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_insert(&events, &event));
+    TEST_ASSERT_EQUAL(9, sb_event_list_size(&events));
+    TEST_ASSERT_EQUAL(5000, sb_event_list_get_ptr(&events, 0)->time_msec);
+    TEST_ASSERT_EQUAL(1, sb_event_list_get_ptr(&events, 0)->subtype);
+    TEST_ASSERT_EQUAL(5000, sb_event_list_get_ptr(&events, 1)->time_msec);
+    TEST_ASSERT_EQUAL(3, sb_event_list_get_ptr(&events, 1)->subtype);
+
+    /* Inserting with same timestamp at end */
+    event.time_msec = 110000;
+    event.subtype = 3; /* different subtype */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_insert(&events, &event));
+    TEST_ASSERT_EQUAL(10, sb_event_list_size(&events));
+    TEST_ASSERT_EQUAL(110000, sb_event_list_get_ptr(&events, 8)->time_msec);
+    TEST_ASSERT_EQUAL(1, sb_event_list_get_ptr(&events, 8)->subtype);
+    TEST_ASSERT_EQUAL(110000, sb_event_list_get_ptr(&events, 8)->time_msec);
+    TEST_ASSERT_EQUAL(3, sb_event_list_get_ptr(&events, 9)->subtype);
+}
+
 void test_is_sorted(void)
 {
     uint32_t timestamp;
@@ -320,6 +396,91 @@ void test_adjust_timestamps(void)
     TEST_ASSERT_EQUAL(UINT32_MAX, event_ptr->time_msec);
 }
 
+void test_add_pyro_off_events(void)
+{
+    sb_error_t retval;
+
+    sb_event_list_get_ptr(&events, 0)->subtype = 1;
+    sb_event_list_get_ptr(&events, 1)->subtype = 2;
+    sb_event_list_get_ptr(&events, 2)->subtype = 3;
+    sb_event_list_get_ptr(&events, 3)->subtype = 4;
+
+    /* Add pyro off events with 1000 ms duration */
+    retval = sb_event_list_add_pyro_off_events(&events, 1000);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, retval);
+    TEST_ASSERT_EQUAL(8, sb_event_list_size(&events));
+
+    /* Check that the pyro off events were added correctly */
+    TEST_ASSERT_EQUAL(11000, sb_event_list_get_ptr(&events, 1)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr(&events, 1)->type);
+    TEST_ASSERT_EQUAL(1, sb_event_list_get_ptr(&events, 1)->subtype);
+    TEST_ASSERT_EQUAL(UINT32_MAX, sb_event_list_get_ptr(&events, 1)->payload.as_uint32);
+
+    TEST_ASSERT_EQUAL(51000, sb_event_list_get_ptr(&events, 3)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr(&events, 3)->type);
+    TEST_ASSERT_EQUAL(2, sb_event_list_get_ptr(&events, 3)->subtype);
+    TEST_ASSERT_EQUAL(UINT32_MAX, sb_event_list_get_ptr(&events, 3)->payload.as_uint32);
+
+    TEST_ASSERT_EQUAL(91000, sb_event_list_get_ptr(&events, 6)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr(&events, 6)->type);
+    TEST_ASSERT_EQUAL(3, sb_event_list_get_ptr(&events, 6)->subtype);
+    TEST_ASSERT_EQUAL(UINT32_MAX, sb_event_list_get_ptr(&events, 6)->payload.as_uint32);
+
+    TEST_ASSERT_EQUAL(91000, sb_event_list_get_ptr(&events, 7)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr(&events, 7)->type);
+    TEST_ASSERT_EQUAL(4, sb_event_list_get_ptr(&events, 7)->subtype);
+    TEST_ASSERT_EQUAL(UINT32_MAX, sb_event_list_get_ptr(&events, 7)->payload.as_uint32);
+
+    /* Add pyro off events again with a larger allowed duration -- should not
+     * add any new events */
+    retval = sb_event_list_add_pyro_off_events(&events, 2000);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, retval);
+    TEST_ASSERT_EQUAL(8, sb_event_list_size(&events));
+
+    /* Add pyro off events again with exactly the same allowed duration --
+     * should not add any new events */
+    retval = sb_event_list_add_pyro_off_events(&events, 1000);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, retval);
+    TEST_ASSERT_EQUAL(8, sb_event_list_size(&events));
+}
+
+void test_add_pyro_off_events_overlapping(void)
+{
+    sb_error_t retval;
+
+    sb_event_list_get_ptr(&events, 0)->subtype = 1;
+    sb_event_list_get_ptr(&events, 1)->subtype = 2;
+    sb_event_list_get_ptr(&events, 2)->subtype = 3;
+    sb_event_list_get_ptr(&events, 3)->subtype = 4;
+
+    /* Add pyro off events with 60000 ms duration -- large enough such that
+     * on and off events overlap */
+    retval = sb_event_list_add_pyro_off_events(&events, 60000);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, retval);
+    TEST_ASSERT_EQUAL(8, sb_event_list_size(&events));
+
+    /* Check that the pyro off events were added correctly */
+    TEST_ASSERT_EQUAL(70000, sb_event_list_get_ptr(&events, 2)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr(&events, 2)->type);
+    TEST_ASSERT_EQUAL(1, sb_event_list_get_ptr(&events, 2)->subtype);
+    TEST_ASSERT_EQUAL(UINT32_MAX, sb_event_list_get_ptr(&events, 2)->payload.as_uint32);
+
+    TEST_ASSERT_EQUAL(110000, sb_event_list_get_ptr(&events, 5)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr(&events, 5)->type);
+    TEST_ASSERT_EQUAL(2, sb_event_list_get_ptr(&events, 5)->subtype);
+    TEST_ASSERT_EQUAL(UINT32_MAX, sb_event_list_get_ptr(&events, 5)->payload.as_uint32);
+
+    TEST_ASSERT_EQUAL(150000, sb_event_list_get_ptr(&events, 6)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr(&events, 6)->type);
+    TEST_ASSERT_EQUAL(3, sb_event_list_get_ptr(&events, 6)->subtype);
+    TEST_ASSERT_EQUAL(UINT32_MAX, sb_event_list_get_ptr(&events, 6)->payload.as_uint32);
+
+    TEST_ASSERT_EQUAL(150000, sb_event_list_get_ptr(&events, 7)->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, sb_event_list_get_ptr(&events, 7)->type);
+    TEST_ASSERT_EQUAL(4, sb_event_list_get_ptr(&events, 7)->subtype);
+    TEST_ASSERT_EQUAL(UINT32_MAX, sb_event_list_get_ptr(&events, 7)->payload.as_uint32);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -330,9 +491,12 @@ int main(int argc, char* argv[])
     RUN_TEST(test_loaded_events);
     RUN_TEST(test_loaded_events_in_memory);
     RUN_TEST(test_append_with_earlier_timestamp);
+    RUN_TEST(test_insertion);
     RUN_TEST(test_is_sorted);
     RUN_TEST(test_sort);
     RUN_TEST(test_adjust_timestamps);
+    RUN_TEST(test_add_pyro_off_events);
+    RUN_TEST(test_add_pyro_off_events_overlapping);
 
     return UNITY_END();
 }

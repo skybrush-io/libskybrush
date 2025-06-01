@@ -213,6 +213,78 @@ sb_error_t sb_event_list_append(sb_event_list_t* events, const sb_event_t* event
 }
 
 /**
+ * @brief Inserts a new event in the event list.
+ *
+ * The timestamp of the event determines the location where the event will be
+ * inserted in the event list: it will be inserted after the \em latest event
+ * that has a timestamp \em smaller than or equal to the event being inserted.
+ * last event in the list.
+ *
+ * @param events  the event list to insert the event into
+ * @param event   the event to insert. It will be copied into the list.
+ * @return \c SB_SUCCESS if the event was inserted successfully,
+ *         \c SB_ENOMEM if a memory allocation failed,
+ *         \c SB_EINVAL if the event's timestamp is earlier than the last event
+ */
+sb_error_t sb_event_list_insert(sb_event_list_t* events, const sb_event_t* event)
+{
+    size_t n = events->num_entries;
+    size_t left = 0, right = n;
+    size_t insert_pos = 0;
+
+    SB_CHECK(sb_i_event_list_ensure_has_free_space(events));
+
+    // Binary search for the correct insertion point
+    while (left < right) {
+        size_t mid = left + (right - left) / 2;
+        if (events->entries[mid].time_msec <= event->time_msec) {
+            left = mid + 1;
+        } else {
+            right = mid;
+        }
+    }
+    insert_pos = left;
+
+    // Shift events after insert_pos to the right
+    if (insert_pos < n) {
+        memmove(
+            &events->entries[insert_pos + 1],
+            &events->entries[insert_pos],
+            (n - insert_pos) * sizeof(sb_event_t));
+    }
+    events->entries[insert_pos] = *event;
+    events->num_entries++;
+
+    return SB_SUCCESS;
+}
+
+/**
+ * @brief Removes an event from the event list at the given index.
+ *
+ * @param events  the event list to remove the event from
+ * @param index   the index of the event to remove
+ * @return \c SB_SUCCESS if the event was removed successfully,
+ *         \c SB_EINVAL if the index is out of bounds
+ */
+sb_error_t sb_event_list_remove(sb_event_list_t* events, size_t index)
+{
+    if (index >= events->num_entries) {
+        return SB_EINVAL;
+    }
+
+    // Shift events after index to the left
+    if (index < events->num_entries - 1) {
+        memmove(
+            &events->entries[index],
+            &events->entries[index + 1],
+            (events->num_entries - index - 1) * sizeof(sb_event_t));
+    }
+    events->num_entries--;
+
+    return SB_SUCCESS;
+}
+
+/**
  * Initializes an event list from the contents of a Skybrush file in
  * binary format.
  *
@@ -286,6 +358,74 @@ static int sb_i_event_cmp_timestamps(const void* first, const void* second)
 void sb_event_list_sort(sb_event_list_t* events)
 {
     qsort(events->entries, events->num_entries, sizeof(sb_event_t), sb_i_event_cmp_timestamps);
+}
+
+static sb_bool_t is_pyro_on_event(const sb_event_t* event)
+{
+    return event->type == SB_EVENT_TYPE_PYRO && event->payload.as_uint32 != UINT32_MAX;
+}
+
+static sb_bool_t is_pyro_off_event(const sb_event_t* event)
+{
+    return event->type == SB_EVENT_TYPE_PYRO && event->payload.as_uint32 == UINT32_MAX;
+}
+
+/**
+ * @brief Helper function to add "pyro off" events to the event list.
+ *
+ * This function adds "pyro off" events to the event list for all "pyro on"
+ * events that have no corresponding "off" event in the event list or where the
+ * "off" event is farther ahead in time than the given duration. The "off"
+ * events are added after the "on" events with the given duration.
+ *
+ * @param events     the event list to adjust
+ * @param time_msec  duration of each pyro ignition event
+ */
+sb_error_t sb_event_list_add_pyro_off_events(sb_event_list_t* events, uint32_t time_msec)
+{
+    size_t i, j, n = sb_event_list_size(events);
+    sb_event_t *event, *other_event;
+
+    for (i = 0; i < n; i++) {
+        event = sb_event_list_get_ptr(events, i);
+        if (is_pyro_on_event(event)) {
+            // Check if there is already a matching "off" event
+            sb_bool_t found_off_event = 0;
+            for (j = i + 1; j < n; j++) {
+                other_event = sb_event_list_get_ptr(events, j);
+                if (is_pyro_off_event(other_event) && other_event->subtype == event->subtype) {
+                    found_off_event = 1;
+                    break;
+                }
+            }
+
+            // If a matching "off" event was found, check if it is too far in the future
+            if (found_off_event && other_event->time_msec > event->time_msec + time_msec) {
+                // Remove the found "off" event
+                SB_CHECK(sb_event_list_remove(events, j));
+                found_off_event = 0; // Reset flag since we removed the event
+                n--; // Adjust the size of the list since we removed an event
+            }
+
+            // If no matching "off" event was found, create one
+            if (!found_off_event) {
+                sb_event_t off_event;
+                off_event.time_msec = event->time_msec + time_msec;
+                off_event.type = SB_EVENT_TYPE_PYRO;
+                off_event.subtype = event->subtype;
+                off_event.payload.as_uint32 = UINT32_MAX; // Indicating "off"
+
+                SB_CHECK(sb_event_list_insert(events, &off_event));
+
+                // No need to adjust 'i' because the event list is sorted and
+                // the addition above is _after_ the current "on" event.
+
+                n++; // Adjust the size of the list since we added an event
+            }
+        }
+    }
+
+    return SB_SUCCESS;
 }
 
 /**

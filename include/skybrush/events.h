@@ -42,6 +42,14 @@ typedef enum {
     SB_EVENT_TYPE_MAX /**< Maximum number of event types */
 } sb_event_type_t;
 
+/*
+ * Payload descriptions for the event types:
+ *
+ * - SB_EVENT_TYPE_NONE: No payload.
+ * - SB_EVENT_TYPE_PYRO: The payload is a 32-bit unsigned integer. If it is
+ *   0xFFFFFFFF, the pyro channel is turned off. If it is 0x00000000, the pyro
+ *   channel is turned on. Other values are not supported yet.
+ */
 typedef uint8_t sb_event_subtype_t;
 
 /**
@@ -103,6 +111,8 @@ sb_event_t* sb_event_list_get_ptr(sb_event_list_t* events, size_t index);
 const sb_event_t* sb_event_list_get_ptr_const(const sb_event_list_t* events, size_t index);
 
 sb_error_t sb_event_list_append(sb_event_list_t* events, const sb_event_t* event);
+sb_error_t sb_event_list_insert(sb_event_list_t* events, const sb_event_t* event);
+sb_error_t sb_event_list_remove(sb_event_list_t* events, size_t index);
 
 sb_error_t sb_event_list_update_from_binary_file(sb_event_list_t* events, int fd);
 sb_error_t sb_event_list_update_from_binary_file_in_memory(sb_event_list_t* events, uint8_t* buf, size_t nbytes);
@@ -111,6 +121,7 @@ sb_error_t sb_event_list_update_from_buffer(sb_event_list_t* events, uint8_t* bu
 sb_bool_t sb_event_list_is_sorted(const sb_event_list_t* events);
 void sb_event_list_sort(sb_event_list_t* events);
 
+sb_error_t sb_event_list_add_pyro_off_events(sb_event_list_t* events, uint32_t time_msec);
 void sb_event_list_adjust_timestamps_by_type(
     sb_event_list_t* events, sb_event_type_t type, int32_t delta_msec);
 
