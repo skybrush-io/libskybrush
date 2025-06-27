@@ -63,6 +63,27 @@ sb_error_t sb_light_program_init_from_binary_file_in_memory(
     sb_light_program_t* program, uint8_t* buf, size_t length);
 
 /**
+ * Initializes a light program object from the contents of a memory buffer, optional ownership transfer
+ *
+ * \param program  the light program to initialize
+ * \param buf   the buffer holding the encoded light program
+ * \param nbytes  the length of the buffer
+ * \param owned   to take ownership or not 
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain a light program
+ */
+sb_error_t sb_i_light_program_init_from_bytes(
+    sb_light_program_t* program, uint8_t* buf, size_t nbytes, sb_bool_t owned);
+
+/**
+ * Initializes a light program object from the contents of a memory buffer,
+ * taking ownership.
+ */
+sb_error_t sb_light_program_init_from_bytes(
+    sb_light_program_t* program, uint8_t* buf, size_t size);
+
+/**
  * Initializes a light program object from the contents of a memory buffer.
  *
  * \return \c SB_SUCCESS if the object was initialized successfully,
