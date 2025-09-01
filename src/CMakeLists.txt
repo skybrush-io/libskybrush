@@ -7,6 +7,8 @@ add_library(
     parsing.c
     utils.c
 
+    events/events.c
+
     formats/binary.c
 
     lights/colors.c
