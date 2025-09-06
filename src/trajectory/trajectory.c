@@ -1031,10 +1031,9 @@ sb_poly_4d_t* sb_trajectory_segment_get_poly(sb_trajectory_segment_t* segment)
     uint8_t* buf;
     size_t offset;
     uint8_t header;
-    size_t num_coords;
+    size_t i, num_coords;
     float scale;
     float coords[8];
-    int i;
 
     if (segment->flags & SB_TRAJECTORY_SEGMENT_POLY_VALID) {
         return &segment->poly;
