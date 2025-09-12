@@ -147,7 +147,7 @@ sb_error_t sb_buffer_ensure_owned(sb_buffer_t* buf)
         size_t alloc_size = size > 0 ? size : 1;
         uint8_t* new_storage = sb_calloc(uint8_t, alloc_size);
         if (!new_storage) {
-            return SB_ENOMEM;
+            return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }
 
         memcpy(new_storage, buf->stor_begin, size);
@@ -326,12 +326,12 @@ static sb_error_t sb_i_buffer_ensure_free_space(sb_buffer_t* buf, size_t min_spa
     new_size = old_size + min_space;
     if (new_size < old_size) {
         /* overflow */
-        return SB_ENOMEM;
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
     }
 
     while (new_size > desired_capacity) {
         if (desired_capacity >= SIZE_MAX - 1) {
-            return SB_ENOMEM;
+            return SB_ENOMEM; /* LCOV_EXCL_LINE */
         } else if (desired_capacity <= (SIZE_MAX >> 1)) {
             desired_capacity <<= 1;
         } else {
