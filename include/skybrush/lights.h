@@ -72,6 +72,16 @@ sb_error_t sb_light_program_init_from_buffer(
     sb_light_program_t* program, uint8_t* buf, size_t length);
 
 /**
+ * Initializes a light program object from the contents of a memory buffer,
+ * taking ownership.
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain a light program
+ */
+ sb_error_t sb_light_program_init_from_bytes(
+    sb_light_program_t* program, uint8_t* buf, size_t size);
+
+ /**
  * Initializes an empty light program.
  */
 sb_error_t sb_light_program_init_empty(sb_light_program_t* program);

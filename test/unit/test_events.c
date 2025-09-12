@@ -287,7 +287,6 @@ void test_insertion(void)
 void test_is_sorted(void)
 {
     uint32_t timestamp;
-    sb_event_t event;
     sb_event_t* event_ptr;
 
     TEST_ASSERT_TRUE(sb_event_list_is_sorted(&events));
@@ -302,11 +301,6 @@ void test_is_sorted(void)
 
     /* Test special cases */
     sb_event_list_clear(&events);
-    TEST_ASSERT_TRUE(sb_event_list_is_sorted(&events));
-
-    event.time_msec = 100;
-    event.type = SB_EVENT_TYPE_PYRO;
-    event.subtype = 1;
     TEST_ASSERT_TRUE(sb_event_list_is_sorted(&events));
 }
 
