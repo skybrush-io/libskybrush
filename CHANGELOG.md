@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2025-06-02
+
+### Added
+
+- Added some helper functions to manipulate event blocks to allow the
+  insertion of "pyro off" events as needed.
+
+## [4.1.0] - 2025-05-30
+
+### Added
+
+- Added support for event blocks in `.skyb` files and an event player that
+  iterates over events from an event block.
+
 ## [4.0.0] - 2025-03-29
 
 ### Changed
