@@ -135,6 +135,33 @@ size_t sb_buffer_capacity(const sb_buffer_t* buf)
 }
 
 /**
+ * @brief Ensures that the buffer owns the memory area it is backed with, i.e. it is not a view.
+ *
+ * @param buf the buffer
+ * @return error code
+ */
+sb_error_t sb_buffer_ensure_owned(sb_buffer_t* buf)
+{
+    if (sb_buffer_is_view(buf)) {
+        size_t size = sb_buffer_size(buf);
+        size_t alloc_size = size > 0 ? size : 1;
+        uint8_t* new_storage = sb_calloc(uint8_t, alloc_size);
+        if (!new_storage) {
+            return SB_ENOMEM;
+        }
+
+        memcpy(new_storage, buf->stor_begin, size);
+
+        buf->stor_begin = new_storage;
+        buf->stor_end = new_storage + alloc_size;
+        buf->end = new_storage + size;
+        buf->owned = 1;
+    }
+
+    return SB_SUCCESS;
+}
+
+/**
  * @brief Returns whether the buffer is a view into an array.
  *
  * @param buf the buffer
@@ -172,11 +199,11 @@ sb_error_t sb_buffer_resize(sb_buffer_t* buf, size_t new_size)
 {
     size_t current_size = sb_buffer_size(buf);
 
-    if (!buf->owned) {
-        return SB_FAILURE;
-    }
-
     if (current_size < new_size) {
+        if (sb_buffer_is_view(buf)) {
+            return SB_EPERM;
+        }
+
         SB_CHECK(sb_i_buffer_realloc(buf, new_size));
         memset(buf->end, 0, new_size - current_size);
     }
@@ -325,8 +352,8 @@ sb_error_t sb_i_buffer_realloc(sb_buffer_t* buf, size_t new_capacity)
     }
 
     if (capacity != new_capacity) {
-        if (!buf->owned) {
-            return SB_FAILURE;
+        if (sb_buffer_is_view(buf)) {
+            return SB_EPERM;
         }
 
         size = sb_buffer_size(buf);

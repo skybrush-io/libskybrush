@@ -289,15 +289,15 @@ void test_init_view(void)
     TEST_ASSERT_EQUAL(str, SB_BUFFER(buf));
 }
 
-void test_init_view_cannot_grow_or_shrink(void)
+void test_view_cannot_grow_but_can_shrink(void)
 {
     sb_buffer_t buf;
     char* str = "hello world";
 
     sb_buffer_init_view(&buf, str, strlen(str));
-    TEST_ASSERT_EQUAL(SB_FAILURE, sb_buffer_resize(&buf, sb_buffer_size(&buf) + 1));
-    TEST_ASSERT_EQUAL(SB_FAILURE, sb_buffer_resize(&buf, sb_buffer_size(&buf) - 1));
-    TEST_ASSERT_EQUAL(SB_FAILURE, sb_buffer_clear(&buf));
+    TEST_ASSERT_EQUAL(SB_EPERM, sb_buffer_resize(&buf, sb_buffer_size(&buf) + 1));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_resize(&buf, sb_buffer_size(&buf) - 1));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_clear(&buf));
 }
 
 void test_init_from_bytes(void)
@@ -327,6 +327,27 @@ void test_init_from_bytes_zero_size(void)
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_buffer_init_from_bytes(&buf, str, 0));
 }
 
+void test_ensure_owned(void)
+{
+    sb_buffer_t buf;
+    char* str = "hello world";
+
+    sb_buffer_init_view(&buf, str, strlen(str));
+
+    TEST_ASSERT(sb_buffer_is_view(&buf));
+    TEST_ASSERT((void*)str == (void*)SB_BUFFER(buf));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&buf));
+    TEST_ASSERT_EQUAL(0, memcmp(str, SB_BUFFER(buf), strlen(str)));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_ensure_owned(&buf));
+    TEST_ASSERT(!sb_buffer_is_view(&buf));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&buf));
+    TEST_ASSERT_EQUAL(0, memcmp(str, SB_BUFFER(buf), strlen(str)));
+    TEST_ASSERT((void*)str != (void*)SB_BUFFER(buf));
+
+    sb_buffer_destroy(&buf);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -343,10 +364,12 @@ int main(int argc, char* argv[])
     RUN_TEST(test_extend_with_zeros);
 
     RUN_TEST(test_init_view);
-    RUN_TEST(test_init_view_cannot_grow_or_shrink);
+    RUN_TEST(test_view_cannot_grow_but_can_shrink);
 
     RUN_TEST(test_init_from_bytes);
     RUN_TEST(test_init_from_bytes_zero_size);
+
+    RUN_TEST(test_ensure_owned);
 
     return UNITY_END();
 }

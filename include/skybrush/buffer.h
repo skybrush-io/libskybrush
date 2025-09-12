@@ -55,6 +55,7 @@ void sb_buffer_init_view(sb_buffer_t* buf, void* bytes, size_t num_bytes);
 void sb_buffer_destroy(sb_buffer_t* buf);
 
 size_t sb_buffer_capacity(const sb_buffer_t* buf);
+sb_error_t sb_buffer_ensure_owned(sb_buffer_t* buf);
 sb_bool_t sb_buffer_is_view(const sb_buffer_t* buf);
 size_t sb_buffer_size(const sb_buffer_t* buf);
 
