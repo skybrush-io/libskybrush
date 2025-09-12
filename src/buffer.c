@@ -187,6 +187,22 @@ sb_error_t sb_buffer_clear(sb_buffer_t* buf)
 }
 
 /**
+ * @brief Ensures that the buffer can grow to the given size without needing a reallocation.
+ *
+ * @param buf  the buffer
+ * @param new_capacity the desired capacity (\em not size)
+ * @return error code.
+ */
+sb_error_t sb_buffer_reserve(sb_buffer_t* buf, size_t new_capacity)
+{
+    if (sb_buffer_capacity(buf) < new_capacity) {
+        return sb_i_buffer_realloc(buf, new_capacity);
+    } else {
+        return SB_SUCCESS;
+    }
+}
+
+/**
  * @brief Sets the size of the buffer, allocating more memory if needed.
  *
  * Note that this function does not deallocate any memory if the size of the

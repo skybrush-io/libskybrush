@@ -60,6 +60,7 @@ sb_bool_t sb_buffer_is_view(const sb_buffer_t* buf);
 size_t sb_buffer_size(const sb_buffer_t* buf);
 
 sb_error_t sb_buffer_clear(sb_buffer_t* buf);
+sb_error_t sb_buffer_reserve(sb_buffer_t* buf, size_t new_capacity);
 sb_error_t sb_buffer_resize(sb_buffer_t* buf, size_t new_size);
 sb_error_t sb_buffer_prune(sb_buffer_t* buf);
 

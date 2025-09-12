@@ -177,6 +177,73 @@ void test_resize_too_large(void)
     TEST_ASSERT_EQUAL(SB_ENOMEM, sb_buffer_append_bytes(&buf, s, SIZE_MAX));
 }
 
+void test_reserve_same_or_larger(void)
+{
+    sb_buffer_t buf;
+    size_t i, capacity;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init(&buf, 8));
+    TEST_ASSERT_EQUAL(8, sb_buffer_size(&buf));
+    capacity = sb_buffer_capacity(&buf);
+    TEST_ASSERT_GREATER_OR_EQUAL(8, capacity);
+
+    SB_BUFFER(buf)
+    [0] = 42;
+    SB_BUFFER(buf)
+    [1] = 84;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_reserve(&buf, capacity + 4));
+    TEST_ASSERT_EQUAL(8, sb_buffer_size(&buf));
+    TEST_ASSERT_GREATER_OR_EQUAL(capacity + 4, sb_buffer_capacity(&buf));
+
+    TEST_ASSERT_EQUAL(42, SB_BUFFER(buf)[0]);
+    TEST_ASSERT_EQUAL(84, SB_BUFFER(buf)[1]);
+    for (i = 2; i < sb_buffer_size(&buf); i++) {
+        TEST_ASSERT_EQUAL(0, SB_BUFFER(buf)[i]);
+    }
+
+    capacity = sb_buffer_capacity(&buf);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_reserve(&buf, capacity));
+    TEST_ASSERT_EQUAL(8, sb_buffer_size(&buf));
+    TEST_ASSERT_GREATER_OR_EQUAL(capacity, sb_buffer_capacity(&buf));
+
+    TEST_ASSERT_EQUAL(42, SB_BUFFER(buf)[0]);
+    TEST_ASSERT_EQUAL(84, SB_BUFFER(buf)[1]);
+    for (i = 2; i < sb_buffer_size(&buf); i++) {
+        TEST_ASSERT_EQUAL(0, SB_BUFFER(buf)[i]);
+    }
+
+    sb_buffer_destroy(&buf);
+}
+
+void test_reserve_smaller(void)
+{
+    sb_buffer_t buf;
+    size_t i, capacity;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init(&buf, 8));
+    TEST_ASSERT_EQUAL(8, sb_buffer_size(&buf));
+    capacity = sb_buffer_capacity(&buf);
+    TEST_ASSERT_GREATER_OR_EQUAL(8, capacity);
+
+    SB_BUFFER(buf)
+    [0] = 42;
+    SB_BUFFER(buf)
+    [1] = 84;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_reserve(&buf, capacity - 2));
+    TEST_ASSERT_EQUAL(8, sb_buffer_size(&buf));
+    TEST_ASSERT_EQUAL(capacity, sb_buffer_capacity(&buf));
+
+    TEST_ASSERT_EQUAL(42, SB_BUFFER(buf)[0]);
+    TEST_ASSERT_EQUAL(84, SB_BUFFER(buf)[1]);
+    for (i = 2; i < sb_buffer_size(&buf); i++) {
+        TEST_ASSERT_EQUAL(0, SB_BUFFER(buf)[i]);
+    }
+
+    sb_buffer_destroy(&buf);
+}
+
 void test_fill(void)
 {
     sb_buffer_t buf;
@@ -354,10 +421,14 @@ int main(int argc, char* argv[])
 
     RUN_TEST(test_init_destroy);
     RUN_TEST(test_init_destroy_zero_size);
+
     RUN_TEST(test_clear_and_prune);
     RUN_TEST(test_resize_same_or_larger);
     RUN_TEST(test_resize_smaller);
     RUN_TEST(test_resize_too_large);
+    RUN_TEST(test_reserve_same_or_larger);
+    RUN_TEST(test_reserve_smaller);
+
     RUN_TEST(test_fill);
     RUN_TEST(test_append);
     RUN_TEST(test_append_zero_length);
