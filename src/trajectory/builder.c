@@ -78,7 +78,8 @@ sb_error_t sb_trajectory_builder_init_from_trajectory(sb_trajectory_builder_t* b
     sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* last_position)
 {
     sb_buffer_init_view(&builder->buffer, SB_BUFFER(trajectory->buffer),
-        sb_buffer_size(&trajectory->buffer));
+        sb_buffer_capacity(&trajectory->buffer));
+    SB_CHECK(sb_buffer_resize(&builder->buffer, sb_buffer_size(&trajectory->buffer)));
     if (last_position) {
         builder->last_position = *last_position;
     } else {
