@@ -259,7 +259,7 @@ sb_error_t sb_bezier_cut_at(float* dst, const float* src, uint8_t num_points, fl
 {
     uint8_t i, j;
 
-    if (ratio < 0 || ratio > 1 || num_points < 0 || num_points > 8) {
+    if (ratio < 0 || ratio > 1 || num_points > 8) {
         return SB_EINVAL;
     }
 

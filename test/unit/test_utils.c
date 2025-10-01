@@ -178,7 +178,7 @@ void test_scale_update(void)
 void test_bezier_cut_at(void)
 {
     float dst[8];
-    float src[8];
+    float src[8] = {0};
 
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_bezier_cut_at(dst, src, -1, 0.5));
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_bezier_cut_at(dst, src, 9, 0.5));
