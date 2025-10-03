@@ -620,13 +620,15 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
  * \param  landing_time_sec  the landing time in seconds, after which the
  *         trajectory should replaced
  * \param  landing_position  the new landing position to direct the trajectory to
+ * \param  landing_velocity_mm_sec  the new landing speed in mm/seconds to use
  *
  * \return true on success, false on error
  */
 sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_trajectory_t* trajectory, 
     float* landing_time_sec,
-    sb_vector3_with_yaw_t landing_position
+    sb_vector3_with_yaw_t landing_position,
+    uint32_t landing_velocity_mm_sec
 ) {
     sb_error_t retval;
     sb_vector3_with_yaw_t pos_at_landing_time, vel_at_landing_time;
@@ -652,8 +654,6 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     );
     */
 
-    // TODO: query landing velocity from parameters
-    const uint32_t landing_velocity_mm_sec = 500;
     duration_sec = pos_at_landing_time.z < 0 ? 0 : (pos_at_landing_time.z / (float)landing_velocity_mm_sec);
 
     // Limit the landing duration to one minute because we are going to
