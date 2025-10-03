@@ -75,12 +75,6 @@ static float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory,
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory);
 
 /**
- * Calculates the polynomial representing the first derivative of the trajectory
- * segment if needed and returns it.
- */
-static sb_poly_4d_t* sb_i_get_dpoly(sb_trajectory_segment_t* segment);
-
-/**
  * Calculates the polynomial representing the second derivative of the trajectory
  * segment if needed and returns it.
  */
@@ -443,7 +437,7 @@ sb_error_t sb_trajectory_get_segment_at(sb_trajectory_t* trajectory, float time_
     SB_CHECK(sb_trajectory_player_init(&player, trajectory));
     retval = sb_i_trajectory_player_seek_to_time(&player, time_sec, rel_time);
     /* Calculate dpoly and ddpoly behind the scenes before we return the segment */
-    sb_i_get_dpoly(&player.state.segment);
+    sb_trajectory_segment_get_dpoly(&player.state.segment);
     sb_i_get_ddpoly(&player.state.segment);
     sb_trajectory_player_save_state(&player, state);
     sb_trajectory_player_destroy(&player);
@@ -613,48 +607,28 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
 }
 
 /**
- * Replaces the end of a trajectory from the given landing time to land smoothly to
- * the given landing position.
+ * Replaces the end of a trajectory to land smoothly to the given landing position.
  * 
  * \param  trajectory  the trajectory to modify
- * \param  landing_time_sec  the landing time in seconds, after which the
- *         trajectory should replaced
- * \param  landing_position  the new landing position to direct the trajectory to
- * \param  landing_velocity_mm_sec  the new landing speed in mm/seconds to use
+ * \param  stats  the valid statistics of the trajectory to use and update
+ * \param  new_landing_position  the new landing position to direct the trajectory to
+ * \param  new_landing_velocity_mm_sec  the new landing speed in mm/seconds to use
  *
- * \return true on success, false on error
+ * \return \c SB_SUCCESS success
+ *         error code on error
  */
 sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_trajectory_t* trajectory, 
-    float* landing_time_sec,
-    sb_vector3_with_yaw_t landing_position,
-    uint32_t landing_velocity_mm_sec
+    sb_trajectory_stats_t* stats,
+    sb_vector3_with_yaw_t new_landing_position,
+    uint32_t new_landing_velocity_mm_sec
 ) {
     sb_error_t retval;
-    sb_vector3_with_yaw_t pos_at_landing_time, vel_at_landing_time;
     sb_vector3_with_yaw_t c1, c2, zero;
-    sb_trajectory_player_t player;
     sb_trajectory_builder_t builder;
     float duration_sec;
-
-    // Calculate the position and velocity of the drone at the time when the
-    // landing should start
-    // TODO(ntamas): Is there a way to get this faster, where we calculate the
-    // trajectory stats?
-    SB_CHECK(sb_trajectory_player_init(&player, trajectory));
-    SB_CHECK(sb_trajectory_player_get_position_at(&player, *landing_time_sec, &pos_at_landing_time));
-    SB_CHECK(sb_trajectory_player_get_velocity_at(&player, *landing_time_sec, &vel_at_landing_time));
-    sb_trajectory_player_destroy(&player);    
     
-    /*
-    gcs().send_text(MAV_SEVERITY_WARNING,
-        "Pos and vel at landing: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)",
-        pos_at_landing_time.x, pos_at_landing_time.y, pos_at_landing_time.z,
-        vel_at_landing_time.x, vel_at_landing_time.y, vel_at_landing_time.z
-    );
-    */
-
-    duration_sec = pos_at_landing_time.z < 0 ? 0 : (pos_at_landing_time.z / (float)landing_velocity_mm_sec);
+    duration_sec = stats->pos_at_landing_time.z < 0 ? 0 : (stats->pos_at_landing_time.z / (float)new_landing_velocity_mm_sec);
 
     // Limit the landing duration to one minute because we are going to
     // append a single Bezier segment and the trajectory format has its
@@ -668,9 +642,9 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     // threshold from above
     zero.x = zero.y = zero.z = zero.yaw = 0;
     sb_get_cubic_bezier_from_velocity_constraints(
-        /* start = */ pos_at_landing_time,
-        /* start_vel = */ vel_at_landing_time,
-        /* end = */ landing_position,
+        /* start = */ stats->pos_at_landing_time,
+        /* start_vel = */ stats->vel_at_landing_time,
+        /* end = */ new_landing_position,
         /* end_vel = */ zero,
         /* duration_sec = */ duration_sec,
         &c1, &c2
@@ -686,47 +660,32 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
 
     // Shorten the trajectory so that it ends at the time when we cross
     // the takeoff altitude from above
-    SB_CHECK(sb_trajectory_cut_at(trajectory, *landing_time_sec));
+    SB_CHECK(sb_trajectory_cut_at(trajectory, stats->landing_time_sec));
 
     // Initialize a trajectory builder so we can add the final segment
     SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, 0));
 
-    /*
-    gcs().send_text(MAV_SEVERITY_WARNING,
-        "c1: (%.2f, %.2f, %.2f)",
-        c1.x, c1.y, c1.z
-    );
-    gcs().send_text(MAV_SEVERITY_WARNING,
-        "c2: (%.2f, %.2f, %.2f)",
-        c2.x, c2.y, c2.z
-    );
-    gcs().send_text(MAV_SEVERITY_WARNING,
-        "end: (%.2f, %.2f, %.2f)",
-        landing_position.x, landing_position.y, landing_position.z
-    );
-    */
-
     // Add the final segment
-    /*
-    gcs().send_text(MAV_SEVERITY_WARNING, "before: %.2f sec", sb_trajectory_get_total_duration_sec(trajectory));
-    */
     retval = sb_trajectory_builder_append_cubic_bezier(
-        &builder, c1, c2, landing_position,
+        &builder, c1, c2, new_landing_position,
         (uint32_t)(duration_sec * 1000.0f) /* [s] --> [ms] */
     );
     if (retval) {
         sb_trajectory_builder_destroy(&builder);
         return retval;
     }
-    /*
-    gcs().send_text(MAV_SEVERITY_WARNING, "after: %.2f sec", sb_trajectory_get_total_duration_sec(trajectory));
-    */
 
     // Update the size of the trajectory buffer
     trajectory->buffer.end = builder.buffer.end;
     sb_trajectory_builder_destroy(&builder);
     
-    *landing_time_sec += duration_sec;
+    // Update trajectory statistics
+    stats->landing_time_sec += duration_sec;
+    stats->pos_at_landing_time = new_landing_position;
+    stats->vel_at_landing_time = zero;
+    stats->start_to_end_distance_xy = hypotf(
+        new_landing_position.x - trajectory->start.x, 
+        new_landing_position.y - trajectory->start.y);
     
     return SB_SUCCESS;
 }
@@ -843,8 +802,8 @@ void sb_trajectory_player_dump_state(const sb_trajectory_player_t* player)
     sb_vector3_with_yaw_t pos, vel, acc;
     const sb_trajectory_segment_t* current = sb_trajectory_player_get_current_segment(player);
     const sb_poly_4d_t* poly = sb_trajectory_segment_get_poly(current);
-    const sb_poly_4d_t* dpoly = sb_i_get_dpoly(current);
-    const sb_poly_4d_t* ddpoly = sb_i_get_dpoly(current);
+    const sb_poly_4d_t* dpoly = sb_trajectory_segment_get_dpoly(current);
+    const sb_poly_4d_t* ddpoly = sb_i_get_ddpoly(current);
 
     printf("Start offset = %ld bytes\n", (long int)player->state.start);
     printf("Length = %ld bytes\n", (long int)player->state.length);
@@ -914,7 +873,7 @@ sb_error_t sb_trajectory_player_get_velocity_at(sb_trajectory_player_t* player, 
     SB_CHECK(sb_i_trajectory_player_seek_to_time(player, t, &rel_t));
 
     if (result) {
-        *result = sb_poly_4d_eval(sb_i_get_dpoly(&player->state.segment), rel_t);
+        *result = sb_poly_4d_eval(sb_trajectory_segment_get_dpoly(&player->state.segment), rel_t);
     }
 
     return SB_SUCCESS;
@@ -1208,7 +1167,11 @@ sb_poly_4d_t* sb_trajectory_segment_get_poly(sb_trajectory_segment_t* segment)
     return &segment->poly;
 }
 
-static sb_poly_4d_t* sb_i_get_dpoly(sb_trajectory_segment_t* segment)
+/**
+ * Calculates the polynomial representing the first derivative of the trajectory
+ * segment if needed and returns it.
+ */
+sb_poly_4d_t* sb_trajectory_segment_get_dpoly(sb_trajectory_segment_t* segment)
 {
     if (segment->flags & SB_TRAJECTORY_SEGMENT_DPOLY_VALID) {
         return &segment->dpoly;
@@ -1233,7 +1196,7 @@ static sb_poly_4d_t* sb_i_get_ddpoly(sb_trajectory_segment_t* segment)
     }
 
     /* Calculate second derivatives for acceleration */
-    segment->ddpoly = *sb_i_get_dpoly(segment);
+    segment->ddpoly = *sb_trajectory_segment_get_dpoly(segment);
     sb_poly_4d_deriv(&segment->ddpoly);
     if (fabsf(segment->duration_sec) > 1.0e-6f) {
         sb_poly_4d_scale(&segment->ddpoly, 1.0f / segment->duration_sec);

@@ -166,6 +166,9 @@ sb_error_t sb_trajectory_stats_calculator_run(
                 /* This segment is not vertical so we cannot land earlier than
                  * the end of this segment */
                 result->landing_time_sec = segment->end_time_sec;
+                result->pos_at_landing_time = segment->end;
+                poly = sb_trajectory_segment_get_dpoly(segment);
+                result->vel_at_landing_time = sb_poly_4d_eval(poly, 1);
                 state_valid = 0;
             }
         }
@@ -245,6 +248,9 @@ sb_error_t sb_trajectory_stats_calculator_run(
                             rel_t = 0;
                         }
                         result->landing_time_sec = segment->start_time_sec + rel_t * segment->duration_sec;
+                        result->pos_at_landing_time = sb_poly_4d_eval(poly, rel_t);
+                        poly = sb_trajectory_segment_get_dpoly(segment);
+                        result->vel_at_landing_time = sb_poly_4d_eval(poly, rel_t);
                         break;
                     }
 
@@ -257,6 +263,9 @@ sb_error_t sb_trajectory_stats_calculator_run(
                 /* The last vertical section is too short so we just trigger
                  * landing at its beginning */
                 result->landing_time_sec = segment->start_time_sec;
+                result->pos_at_landing_time = segment->start;
+                poly = sb_trajectory_segment_get_dpoly(segment);
+                result->vel_at_landing_time = sb_poly_4d_eval(poly, 0);
             }
         }
     }

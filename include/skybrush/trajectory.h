@@ -147,6 +147,69 @@ typedef struct
 } sb_trajectory_segment_t;
 
 sb_poly_4d_t* sb_trajectory_segment_get_poly(sb_trajectory_segment_t* segment);
+sb_poly_4d_t* sb_trajectory_segment_get_dpoly(sb_trajectory_segment_t* segment);
+
+/* ************************************************************************* */
+
+/**
+ * Structure holding basic statistics about a trajectory that can be gathered
+ * while iterating over it once.
+ */
+ typedef struct sb_trajectory_stats_s {
+    /** Total duration, in milliseconds */
+    uint32_t duration_msec;
+
+    /** Total duration, in seconds */
+    uint32_t duration_sec;
+
+    /** Earliest time above the takeoff altitude, in seconds */
+    float earliest_above_sec;
+
+    /**
+     * Proposed takeoff time, in seconds. Infinity if it has not been
+     * calculated or when the entire trajectory is below the takeoff altitude.
+     */
+    float takeoff_time_sec;
+
+    /**
+     * Proposed landing time, in seconds. Infinity if it has not been
+     * calculated.
+     */
+    float landing_time_sec;
+
+    /**
+     * Position at landing time. Infinity if it has not been calculated.
+     */
+    sb_vector3_with_yaw_t pos_at_landing_time;
+
+    /**
+     * Velocity at landing time. Infinity if it has not been calculated.
+     */
+    sb_vector3_with_yaw_t vel_at_landing_time;
+
+     /** Distance between first and last point of trajectory, in the XY plane */
+    float start_to_end_distance_xy;
+} sb_trajectory_stats_t;
+
+/**
+ * \brief Flags that specify what to calculate in the trajectory statistics.
+ */
+typedef enum {
+    SB_TRAJECTORY_STATS_NONE = 0,
+    SB_TRAJECTORY_STATS_DURATION = 1,
+    SB_TRAJECTORY_STATS_START_END_DISTANCE = 2,
+    SB_TRAJECTORY_STATS_TAKEOFF_TIME = 4,
+    SB_TRAJECTORY_STATS_LANDING_TIME = 8,
+
+    /* clang-format off */
+    SB_TRAJECTORY_STATS_ALL = (
+        SB_TRAJECTORY_STATS_DURATION |
+        SB_TRAJECTORY_STATS_START_END_DISTANCE |
+        SB_TRAJECTORY_STATS_TAKEOFF_TIME |
+        SB_TRAJECTORY_STATS_LANDING_TIME
+    )
+    /* clang-format on */
+} sb_trajectory_stat_components_t;
 
 /* ************************************************************************* */
 
@@ -198,11 +261,10 @@ float sb_trajectory_propose_landing_time_sec(
     float verticality_threshold);
 sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_trajectory_t* trajectory, 
-    float* landing_time_sec,
-    sb_vector3_with_yaw_t landing_position,
-    uint32_t landing_velocity_mm_sec
-);
-
+    sb_trajectory_stats_t* stats,
+    sb_vector3_with_yaw_t new_landing_position,
+    uint32_t new_landing_velocity_mm_sec);
+    
 /* ************************************************************************* */
 
 /**
@@ -280,56 +342,6 @@ sb_error_t sb_trajectory_builder_hold_position_for(
     sb_trajectory_builder_t* builder, uint32_t duration_msec);
 
 /* ************************************************************************* */
-
-/**
- * Structure holding basic statistics about a trajectory that can be gathered
- * while iterating over it once.
- */
-typedef struct sb_trajectory_stats_s {
-    /** Total duration, in milliseconds */
-    uint32_t duration_msec;
-
-    /** Total duration, in seconds */
-    uint32_t duration_sec;
-
-    /** Earliest time above the takeoff altitude, in seconds */
-    float earliest_above_sec;
-
-    /**
-     * Proposed takeoff time, in seconds. Infinity if it has not been
-     * calculated or when the entire trajectory is below the takeoff altitude.
-     */
-    float takeoff_time_sec;
-
-    /**
-     * Proposed landing time, in seconds. Infinity if it has not been
-     * calculated.
-     */
-    float landing_time_sec;
-
-    /** Distance between first and last point of trajectory, in the XY plane */
-    float start_to_end_distance_xy;
-} sb_trajectory_stats_t;
-
-/**
- * \brief Flags that specify what to calculate in the trajectory statistics.
- */
-typedef enum {
-    SB_TRAJECTORY_STATS_NONE = 0,
-    SB_TRAJECTORY_STATS_DURATION = 1,
-    SB_TRAJECTORY_STATS_START_END_DISTANCE = 2,
-    SB_TRAJECTORY_STATS_TAKEOFF_TIME = 4,
-    SB_TRAJECTORY_STATS_LANDING_TIME = 8,
-
-    /* clang-format off */
-    SB_TRAJECTORY_STATS_ALL = (
-        SB_TRAJECTORY_STATS_DURATION |
-        SB_TRAJECTORY_STATS_START_END_DISTANCE |
-        SB_TRAJECTORY_STATS_TAKEOFF_TIME |
-        SB_TRAJECTORY_STATS_LANDING_TIME
-    )
-    /* clang-format on */
-} sb_trajectory_stat_components_t;
 
 /**
  * Structure containing the configuration of the parameters of the

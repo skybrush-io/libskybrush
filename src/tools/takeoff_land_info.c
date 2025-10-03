@@ -85,6 +85,20 @@ int main(int argc, char* argv[])
             error = "takeoff time is not finite";
         } else if (!isfinite(stats.landing_time_sec)) {
             error = "landing time is not finite";
+        } else if (
+            !isfinite(stats.pos_at_landing_time.x) || 
+            !isfinite(stats.pos_at_landing_time.y) || 
+            !isfinite(stats.pos_at_landing_time.z) || 
+            !isfinite(stats.pos_at_landing_time.yaw)
+        ) {
+            error = "position at landing time is not finite";
+        } else if (
+            !isfinite(stats.vel_at_landing_time.x) || 
+            !isfinite(stats.vel_at_landing_time.y) || 
+            !isfinite(stats.vel_at_landing_time.z) || 
+            !isfinite(stats.vel_at_landing_time.yaw)
+        ) {
+            error = "velocity at landing time is not finite";
         } else if (stats.landing_time_sec < stats.takeoff_time_sec) {
             error = "landing time is before takeoff time";
         } else if (stats.duration_msec < 0) {
@@ -103,7 +117,9 @@ int main(int argc, char* argv[])
 
             sb_trajectory_player_destroy(&player);
 
-            if (lands_from_altitude < ends_at_altitude) {
+            if (lands_from_altitude != stats.pos_at_landing_time.z) {
+                error = "land altitude mismatch";
+            } else if (lands_from_altitude < ends_at_altitude) {
                 error = "lands below end altitude";
             } else if (lands_from_altitude > ends_at_altitude + 2600) {
                 error = "lands from too high";
@@ -115,7 +131,11 @@ int main(int argc, char* argv[])
         sb_trajectory_destroy(&trajectory);
 
         if (first) {
-            printf("filename\tduration [s]\ttakeoff_time [s]\trel_landing_time [s]\tstart_alt [m]\tend_alt [m]\tland_alt [m]\terror\n");
+            printf(
+                "filename\tduration [s]\ttakeoff_time [s]\trel_landing_time [s]\tstart_alt [m]\tend_alt [m]"
+                "\tlanding_pos_x [m]\tlanding_pos_y [m]\tlanding_pos_z [m]"
+                "\tlanding_vel_x [m/s]\tlanding_vel_y [m/s]\tlanding_vel_z [m/s]"
+                "\terror\n");
             first = 0;
         }
 
@@ -126,7 +146,12 @@ int main(int argc, char* argv[])
             stats.landing_time_sec - stats.duration_msec / 1000.0,
             starts_at_altitude / 1000.0,
             ends_at_altitude / 1000.0,
-            lands_from_altitude / 1000.0,
+            stats.pos_at_landing_time.x / 1000,
+            stats.pos_at_landing_time.y / 1000,
+            stats.pos_at_landing_time.z / 1000,
+            stats.vel_at_landing_time.x / 1000,
+            stats.vel_at_landing_time.y / 1000,
+            stats.vel_at_landing_time.z / 1000,
             error);
     }
 
