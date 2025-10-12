@@ -681,6 +681,8 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     
     // Update trajectory statistics
     stats->landing_time_sec += duration_sec;
+    stats->duration_sec += duration_sec;
+    stats->duration_msec += (uint32_t)(duration_sec * 1000);
     stats->pos_at_landing_time = new_landing_position;
     stats->vel_at_landing_time = zero;
     stats->start_to_end_distance_xy = hypotf(
