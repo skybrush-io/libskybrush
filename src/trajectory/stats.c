@@ -21,12 +21,23 @@
 #include <memory.h>
 
 #include <skybrush/error.h>
+#include <skybrush/stats.h>
 #include <skybrush/trajectory.h>
 #include <skybrush/utils.h>
 
 static sb_bool_t sb_i_is_segment_descending_vertically(
     const sb_trajectory_segment_t* segment, float threshold);
 
+
+/**
+ * \brief Initializes (clears) a trajectory statistics structure.
+ *
+ * \param stats the statistics to initialize/clear
+ */
+sb_error_t sb_trajectory_stats_init(sb_trajectory_stats_t* stats) {
+    memset(stats, 0, sizeof(sb_trajectory_stats_t));
+    return SB_SUCCESS;
+}
 /**
  * \brief Initializes a trajectory statistics calculator with sane defaults.
  *
