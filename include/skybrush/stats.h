@@ -144,6 +144,7 @@ typedef enum {
 /* ************************************************************************* */
 
 sb_error_t sb_trajectory_stats_init(sb_trajectory_stats_t* stats);
+void sb_trajectory_stats_destroy(sb_trajectory_stats_t* stats);
 
 sb_error_t sb_trajectory_stats_calculator_init(sb_trajectory_stats_calculator_t* calc, float scale);
 void sb_trajectory_stats_calculator_destroy(sb_trajectory_stats_calculator_t* calc);
