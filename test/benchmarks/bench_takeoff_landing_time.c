@@ -22,7 +22,7 @@
 
 int main(int argc, char* argv[])
 {
-    BENCH_INIT("takeoff_time");
+    BENCH_INIT("takeoff_landing_time");
 
     sb_trajectory_t trajectory;
 
