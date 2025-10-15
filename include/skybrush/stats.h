@@ -85,6 +85,7 @@ typedef struct sb_trajectory_stats_s {
 /* ************************************************************************* */
 
 sb_error_t sb_trajectory_stats_init(sb_trajectory_stats_t* stats);
+void sb_trajectory_stats_clear(sb_trajectory_stats_t* stats);
 void sb_trajectory_stats_destroy(sb_trajectory_stats_t* stats);
 
 /* ************************************************************************* */

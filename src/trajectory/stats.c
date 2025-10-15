@@ -29,14 +29,24 @@ static sb_bool_t sb_i_is_segment_descending_vertically(
     const sb_trajectory_segment_t* segment, float threshold);
 
 /**
- * \brief Initializes (clears) a trajectory statistics structure.
+ * \brief Initializes a trajectory statistics structure.
  *
- * \param stats the statistics to initialize/clear
+ * \param stats the statistics to initialize
  */
-sb_error_t sb_trajectory_stats_init(sb_trajectory_stats_t* stats) 
+sb_error_t sb_trajectory_stats_init(sb_trajectory_stats_t* stats)
+{
+    sb_trajectory_stats_clear(stats);
+    return SB_SUCCESS;
+}
+
+/**
+ * @brief Clears a trajectory statistics structure.
+ *
+ * \param stats the statistics to clear
+ */
+void sb_trajectory_stats_clear(sb_trajectory_stats_t* stats)
 {
     memset(stats, 0, sizeof(sb_trajectory_stats_t));
-    return SB_SUCCESS;
 }
 
 /**
@@ -44,9 +54,9 @@ sb_error_t sb_trajectory_stats_init(sb_trajectory_stats_t* stats)
  *
  * \param stats the statistics to destroy
  */
-void sb_trajectory_stats_destroy(sb_trajectory_stats_t* stats) 
+void sb_trajectory_stats_destroy(sb_trajectory_stats_t* stats)
 {
-    /* Nothing to do */    
+    /* Nothing to do */
 }
 
 /**
@@ -90,6 +100,16 @@ void sb_trajectory_stats_calculator_set_components(
     calc->components = components & SB_TRAJECTORY_STATS_ALL;
 }
 
+/**
+ * \brief Executes the trajectory statistics calculation.
+ *
+ * @param calc  the calculator to use
+ * @param trajectory  the trajectory to analyze
+ * @param result  the structure to store the results in. It must already be
+ *        initialized by \ref sb_trajectory_stats_init(). Fields that are not
+ *        affected by the current calculation are left unchanged.
+ * @return sb_error_t  an error code indicating success or failure
+ */
 sb_error_t sb_trajectory_stats_calculator_run(
     const sb_trajectory_stats_calculator_t* calc,
     const sb_trajectory_t* trajectory,
