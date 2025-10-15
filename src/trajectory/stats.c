@@ -73,7 +73,10 @@ void sb_trajectory_stats_destroy(sb_trajectory_stats_t* stats)
  * \param calc  the calculator to initialize
  * \param scale the scaling factor for the coordinates, in unit/meter. Setting
  *        it to 1 means that one unit is one meter. Setting it to 1000 means
- *        that one unit is one millimeter (i.e. 1000 units = 1 meter).
+ *        that one unit is one millimeter (i.e. 1000 units = 1 meter). The
+ *        factor is only used in setting up the default values of the
+ *        calculator; it does not affect the actual calculations and it is not
+ *        stored either.
  */
 sb_error_t sb_trajectory_stats_calculator_init(sb_trajectory_stats_calculator_t* calc, float scale)
 {
