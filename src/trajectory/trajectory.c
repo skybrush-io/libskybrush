@@ -679,13 +679,11 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
         (uint32_t)(duration_sec * 1000.0f) /* [s] --> [ms] */
     );
     if (retval) {
-        sb_trajectory_builder_destroy(&builder);
-        return retval;
+        goto cleanup;
     }
 
     // Update the size of the trajectory buffer
     trajectory->buffer.end = builder.buffer.end;
-    sb_trajectory_builder_destroy(&builder);
 
     // Update trajectory statistics
     stats->landing_time_sec += duration_sec;
@@ -701,7 +699,10 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
             new_landing_position.y - trajectory->start.y);
     }
 
-    return SB_SUCCESS;
+cleanup:
+    sb_trajectory_builder_destroy(&builder);
+
+    return retval;
 }
 
 /* ************************************************************************** */
