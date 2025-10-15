@@ -529,7 +529,13 @@ void test_replace_end_to_land_at(void)
     TEST_ASSERT_EQUAL(45, stats.landing_time_sec);
     TEST_ASSERT_EQUAL(5000, stats.pos_at_landing_time.z);
     TEST_ASSERT_EQUAL(-1000, stats.vel_at_landing_time.z);
+    TEST_ASSERT_EQUAL(50, stats.duration_sec);
+    TEST_ASSERT_EQUAL(50000, stats.duration_msec);
+    TEST_ASSERT_EQUAL(0, stats.start_to_end_distance_xy);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_replace_end_to_land_at(&trajectory, &stats, origin, 500));
+    TEST_ASSERT_EQUAL(55, stats.duration_sec);
+    TEST_ASSERT_EQUAL(55000, stats.duration_msec);
+    TEST_ASSERT_EQUAL(1000, stats.start_to_end_distance_xy);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, &trajectory));
 
