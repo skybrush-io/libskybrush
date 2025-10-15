@@ -36,7 +36,7 @@
 
 #include <skybrush/decls.h>
 
-struct sb_trajectory_s; 
+struct sb_trajectory_s;
 
 __BEGIN_DECLS
 
@@ -46,7 +46,7 @@ __BEGIN_DECLS
  * Structure holding basic statistics about a trajectory that can be gathered
  * while iterating over it once.
  */
- typedef struct sb_trajectory_stats_s {
+typedef struct sb_trajectory_stats_s {
     /** Total duration, in milliseconds */
     uint32_t duration_msec;
 
@@ -78,9 +78,16 @@ __BEGIN_DECLS
      */
     sb_vector3_with_yaw_t vel_at_landing_time;
 
-     /** Distance between first and last point of trajectory, in the XY plane */
+    /** Distance between first and last point of trajectory, in the XY plane */
     float start_to_end_distance_xy;
 } sb_trajectory_stats_t;
+
+/* ************************************************************************* */
+
+sb_error_t sb_trajectory_stats_init(sb_trajectory_stats_t* stats);
+void sb_trajectory_stats_destroy(sb_trajectory_stats_t* stats);
+
+/* ************************************************************************* */
 
 /**
  * \brief Flags that specify what to calculate in the trajectory statistics.
@@ -106,7 +113,7 @@ typedef enum {
  * Structure containing the configuration of the parameters of the
  * trajectory statistics calculation.
  */
- typedef struct sb_trajectory_stats_calculator_s {
+typedef struct sb_trajectory_stats_calculator_s {
     /**
      * Specifies which components of the statistics to calculate.
      */
@@ -142,9 +149,6 @@ typedef enum {
 } sb_trajectory_stats_calculator_t;
 
 /* ************************************************************************* */
-
-sb_error_t sb_trajectory_stats_init(sb_trajectory_stats_t* stats);
-void sb_trajectory_stats_destroy(sb_trajectory_stats_t* stats);
 
 sb_error_t sb_trajectory_stats_calculator_init(sb_trajectory_stats_calculator_t* calc, float scale);
 void sb_trajectory_stats_calculator_destroy(sb_trajectory_stats_calculator_t* calc);
