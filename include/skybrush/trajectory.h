@@ -265,7 +265,7 @@ typedef struct sb_trajectory_builder_s {
 sb_error_t sb_trajectory_builder_init(
     sb_trajectory_builder_t* builder, uint8_t scale, uint8_t flags);
 sb_error_t sb_trajectory_builder_init_from_trajectory(sb_trajectory_builder_t* builder,
-    sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* last_position);
+    sb_trajectory_t* trajectory, const sb_vector3_with_yaw_t* last_position);
 void sb_trajectory_builder_destroy(sb_trajectory_builder_t* builder);
 
 sb_error_t sb_trajectory_builder_set_start_position(

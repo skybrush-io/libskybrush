@@ -75,11 +75,17 @@ sb_error_t sb_trajectory_builder_init(sb_trajectory_builder_t* builder, uint8_t 
  * @param last_position The last position of the trajectory, if known, \c NULL otherwise
  */
 sb_error_t sb_trajectory_builder_init_from_trajectory(sb_trajectory_builder_t* builder,
-    sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* last_position)
+    sb_trajectory_t* trajectory, const sb_vector3_with_yaw_t* last_position)
 {
+    /* Construct a view into the entire buffer of the trajectory, _including_
+     * the allocated-but-not-used space at the end */
     sb_buffer_init_view(&builder->buffer, SB_BUFFER(trajectory->buffer),
         sb_buffer_capacity(&trajectory->buffer));
+
+    /* If the original buffer had extra space at the end, shrink the buffer of
+     * the builder in a similar manner */
     SB_CHECK(sb_buffer_resize(&builder->buffer, sb_buffer_size(&trajectory->buffer)));
+
     if (last_position) {
         builder->last_position = *last_position;
     } else {
