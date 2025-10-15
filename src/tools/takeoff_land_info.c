@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
             first = 0;
         }
 
-        printf("%s\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%s\n",
+        printf("%s\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%s\n",
             argv[i],
             stats.duration_msec / 1000.0,
             (double)stats.takeoff_time_sec,
