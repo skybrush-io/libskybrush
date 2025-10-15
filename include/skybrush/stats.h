@@ -43,6 +43,26 @@ __BEGIN_DECLS
 /* ************************************************************************* */
 
 /**
+ * \brief Flags that specify what to calculate in the trajectory statistics.
+ */
+typedef enum {
+    SB_TRAJECTORY_STATS_NONE = 0,
+    SB_TRAJECTORY_STATS_DURATION = 1,
+    SB_TRAJECTORY_STATS_START_END_DISTANCE = 2,
+    SB_TRAJECTORY_STATS_TAKEOFF_TIME = 4,
+    SB_TRAJECTORY_STATS_LANDING_TIME = 8,
+
+    /* clang-format off */
+    SB_TRAJECTORY_STATS_ALL = (
+        SB_TRAJECTORY_STATS_DURATION |
+        SB_TRAJECTORY_STATS_START_END_DISTANCE |
+        SB_TRAJECTORY_STATS_TAKEOFF_TIME |
+        SB_TRAJECTORY_STATS_LANDING_TIME
+    )
+    /* clang-format on */
+} sb_trajectory_stat_components_t;
+
+/**
  * Structure holding basic statistics about a trajectory that can be gathered
  * while iterating over it once.
  */
@@ -80,6 +100,9 @@ typedef struct sb_trajectory_stats_s {
 
     /** Distance between first and last point of trajectory, in the XY plane */
     float start_to_end_distance_xy;
+
+    /** Valid components of the trajectory */
+    sb_trajectory_stat_components_t valid_components;
 } sb_trajectory_stats_t;
 
 /* ************************************************************************* */
@@ -89,26 +112,6 @@ void sb_trajectory_stats_clear(sb_trajectory_stats_t* stats);
 void sb_trajectory_stats_destroy(sb_trajectory_stats_t* stats);
 
 /* ************************************************************************* */
-
-/**
- * \brief Flags that specify what to calculate in the trajectory statistics.
- */
-typedef enum {
-    SB_TRAJECTORY_STATS_NONE = 0,
-    SB_TRAJECTORY_STATS_DURATION = 1,
-    SB_TRAJECTORY_STATS_START_END_DISTANCE = 2,
-    SB_TRAJECTORY_STATS_TAKEOFF_TIME = 4,
-    SB_TRAJECTORY_STATS_LANDING_TIME = 8,
-
-    /* clang-format off */
-    SB_TRAJECTORY_STATS_ALL = (
-        SB_TRAJECTORY_STATS_DURATION |
-        SB_TRAJECTORY_STATS_START_END_DISTANCE |
-        SB_TRAJECTORY_STATS_TAKEOFF_TIME |
-        SB_TRAJECTORY_STATS_LANDING_TIME
-    )
-    /* clang-format on */
-} sb_trajectory_stat_components_t;
 
 /**
  * Structure containing the configuration of the parameters of the

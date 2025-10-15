@@ -65,6 +65,7 @@ void closeFixture(void)
 
 void check_stats(const sb_trajectory_stats_t* stats)
 {
+    TEST_ASSERT_EQUAL(SB_TRAJECTORY_STATS_ALL, stats->valid_components);
     TEST_ASSERT_EQUAL(600850, stats->duration_msec);
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 15228.2646f, stats->start_to_end_distance_xy);
 }

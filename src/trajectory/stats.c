@@ -54,6 +54,7 @@ void sb_trajectory_stats_clear(sb_trajectory_stats_t* stats)
     memset(stats, 0, sizeof(sb_trajectory_stats_t));
     stats->earliest_above_sec = INFINITY;
     stats->takeoff_time_sec = INFINITY;
+    stats->valid_components = SB_TRAJECTORY_STATS_NONE;
 }
 
 /**
@@ -231,6 +232,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
 
     if (components & SB_TRAJECTORY_STATS_DURATION) {
         result->duration_sec = result->duration_msec / 1000.0f;
+        result->valid_components |= SB_TRAJECTORY_STATS_DURATION;
     }
 
     if (components & SB_TRAJECTORY_STATS_TAKEOFF_TIME) {
@@ -242,6 +244,8 @@ sb_error_t sb_trajectory_stats_calculator_run(
         } else {
             result->takeoff_time_sec = INFINITY;
         }
+
+        result->valid_components |= SB_TRAJECTORY_STATS_TAKEOFF_TIME;
     }
 
     if (components & SB_TRAJECTORY_STATS_START_END_DISTANCE) {
@@ -252,6 +256,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
         }
 
         result->start_to_end_distance_xy = hypotf(end.x - start.x, end.y - start.y);
+        result->valid_components |= SB_TRAJECTORY_STATS_START_END_DISTANCE;
     }
 
     if (components & SB_TRAJECTORY_STATS_LANDING_TIME) {
@@ -323,7 +328,11 @@ sb_error_t sb_trajectory_stats_calculator_run(
             poly = sb_trajectory_segment_get_dpoly(segment);
             result->vel_at_landing_time = sb_poly_4d_eval(poly, 0);
         }
+
+        result->valid_components |= SB_TRAJECTORY_STATS_LANDING_TIME;
     }
+
+    assert(result->valid_components == components);
 
 cleanup:
     sb_trajectory_player_destroy(&player);
