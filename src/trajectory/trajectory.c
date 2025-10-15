@@ -616,8 +616,7 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
  * \param  new_landing_position  the new landing position to direct the trajectory to
  * \param  new_landing_velocity  the new landing velocity to use
  *
- * \return \c SB_SUCCESS success
- *         error code on error
+ * \return error code
  */
 sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_trajectory_t* trajectory,
@@ -629,6 +628,10 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_vector3_with_yaw_t c1, c2, zero;
     sb_trajectory_builder_t builder;
     float duration_sec;
+
+    if (!(stats->valid_components & SB_TRAJECTORY_STATS_LANDING_TIME)) {
+        return SB_EINVAL;
+    }
 
     duration_sec = stats->pos_at_landing_time.z < 0 ? 0 : (stats->pos_at_landing_time.z / (float)new_landing_velocity);
 
@@ -682,13 +685,17 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
 
     // Update trajectory statistics
     stats->landing_time_sec += duration_sec;
-    stats->duration_sec += duration_sec;
-    stats->duration_msec += (uint32_t)(duration_sec * 1000);
     stats->pos_at_landing_time = new_landing_position;
     stats->vel_at_landing_time = zero;
-    stats->start_to_end_distance_xy = hypotf(
-        new_landing_position.x - trajectory->start.x,
-        new_landing_position.y - trajectory->start.y);
+    if (stats->valid_components & SB_TRAJECTORY_STATS_DURATION) {
+        stats->duration_sec += duration_sec;
+        stats->duration_msec += (uint32_t)(duration_sec * 1000);
+    }
+    if (stats->valid_components & SB_TRAJECTORY_STATS_START_END_DISTANCE) {
+        stats->start_to_end_distance_xy = hypotf(
+            new_landing_position.x - trajectory->start.x,
+            new_landing_position.y - trajectory->start.y);
+    }
 
     return SB_SUCCESS;
 }
