@@ -17,6 +17,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <math.h>
 #include <memory.h>
 
@@ -254,7 +255,11 @@ sb_error_t sb_trajectory_stats_calculator_run(
     }
 
     if (components & SB_TRAJECTORY_STATS_LANDING_TIME) {
-        /* Did the trajectory end with a sequence of vertically descending segments? */
+        /* Did the trajectory end with a sequence of vertically descending segments?
+         *
+         * If so, we might need to update \c landing_time_sec, \c pos_at_landing_time
+         * and \c vel_at_landing_time. If the sequence ended with a non-vertical
+         * segment, there is nothing to do. */
         if (state_valid) {
             /* Jump back to the first such segment */
             sb_trajectory_player_restore_state(&player, &state);
@@ -269,50 +274,54 @@ sb_error_t sb_trajectory_stats_calculator_run(
                 (last_vertical_section_end_altitude + calc->preferred_descent)
                 /* clang-format on */
             );
+        } else {
+            to_descend = 0;
+        }
 
-            if (to_descend > 0) {
-                /* The last vertical section is longer than the preferred
-                 * descent so find the point in the last vertical section where
-                 * we need to trigger the landing */
-                altitude = segment->start.z;
-                while (sb_trajectory_player_has_more_segments(&player)) {
-                    /* Can we consume the current segment in full? */
-                    delta = altitude - segment->end.z;
-                    if (delta < 0) {
-                        /* Segment is ascending, this should not happen */
-                        goto cleanup;
-                    } else if (delta <= to_descend) {
-                        /* We can consume the entire segment */
-                        to_descend -= delta;
-                        altitude = segment->end.z;
-                    } else {
-                        /* We can consume only part of the segment */
-                        poly = sb_trajectory_segment_get_poly(segment);
-                        if (!sb_poly_touches(&poly->z, altitude - to_descend, &rel_t)) {
-                            /* should not happen, let's just land at the beginning
-                             * of the segment */
-                            rel_t = 0;
-                        }
-                        result->landing_time_sec = segment->start_time_sec + rel_t * segment->duration_sec;
-                        result->pos_at_landing_time = sb_poly_4d_eval(poly, rel_t);
-                        poly = sb_trajectory_segment_get_dpoly(segment);
-                        result->vel_at_landing_time = sb_poly_4d_eval(poly, rel_t);
-                        break;
-                    }
+        if (to_descend > 0) {
+            /* The last vertical section is longer than the preferred
+             * descent so find the point in the last vertical section where
+             * we need to trigger the landing */
+            assert(state_valid);
 
-                    /* Jump to the next segment */
-                    if (sb_trajectory_player_build_next_segment(&player)) {
-                        goto cleanup;
+            altitude = segment->start.z;
+            while (sb_trajectory_player_has_more_segments(&player)) {
+                /* Can we consume the current segment in full? */
+                delta = altitude - segment->end.z;
+                if (delta < 0) {
+                    /* Segment is ascending, this should not happen */
+                    goto cleanup;
+                } else if (delta <= to_descend) {
+                    /* We can consume the entire segment */
+                    to_descend -= delta;
+                    altitude = segment->end.z;
+                } else {
+                    /* We can consume only part of the segment */
+                    poly = sb_trajectory_segment_get_poly(segment);
+                    if (!sb_poly_touches(&poly->z, altitude - to_descend, &rel_t)) {
+                        /* should not happen, let's just land at the beginning
+                         * of the segment */
+                        rel_t = 0;
                     }
+                    result->landing_time_sec = segment->start_time_sec + rel_t * segment->duration_sec;
+                    result->pos_at_landing_time = sb_poly_4d_eval(poly, rel_t);
+                    poly = sb_trajectory_segment_get_dpoly(segment);
+                    result->vel_at_landing_time = sb_poly_4d_eval(poly, rel_t);
+                    break;
                 }
-            } else {
-                /* The last vertical section is too short so we just trigger
-                 * landing at its beginning */
-                result->landing_time_sec = segment->start_time_sec;
-                result->pos_at_landing_time = segment->start;
-                poly = sb_trajectory_segment_get_dpoly(segment);
-                result->vel_at_landing_time = sb_poly_4d_eval(poly, 0);
+
+                /* Jump to the next segment */
+                if (sb_trajectory_player_build_next_segment(&player)) {
+                    goto cleanup;
+                }
             }
+        } else {
+            /* The last vertical section is too short so we just trigger
+             * landing at its beginning */
+            result->landing_time_sec = segment->start_time_sec;
+            result->pos_at_landing_time = segment->start;
+            poly = sb_trajectory_segment_get_dpoly(segment);
+            result->vel_at_landing_time = sb_poly_4d_eval(poly, 0);
         }
     }
 
