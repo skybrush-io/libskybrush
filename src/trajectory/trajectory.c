@@ -671,7 +671,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     }
 
     // Initialize a trajectory builder so we can add the final segment
-    SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, 0));
+    SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, &stats->pos_at_landing_time));
 
     // Add the final segment
     retval = sb_trajectory_builder_append_cubic_bezier(
