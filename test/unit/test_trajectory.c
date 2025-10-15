@@ -592,6 +592,15 @@ void test_replace_end_to_land_at(void)
     sb_trajectory_player_destroy(&player);
 }
 
+void test_replace_end_to_land_at_missing_stats(void)
+{
+    sb_vector3_with_yaw_t origin = { 1000, 0, 0, 0 };
+    sb_trajectory_stats_t stats;
+
+    sb_trajectory_stats_init(&stats);
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at(&trajectory, &stats, origin, 500));
+}
+
 void test_load_truncated_file(void)
 {
     closeFixture();
@@ -633,6 +642,7 @@ int main(int argc, char* argv[])
     /* editing tests */
     RUN_TEST(test_cut_at);
     RUN_TEST(test_replace_end_to_land_at);
+    RUN_TEST(test_replace_end_to_land_at_missing_stats);
 
     /* regression tests */
     RUN_TEST(test_propose_takeoff_time_hover_3m);
