@@ -73,7 +73,7 @@ void test_calculate_stats(void)
     sb_trajectory_stats_calculator_t calc;
     sb_trajectory_stats_t stats;
 
-    sb_trajectory_init(&stats);
+    sb_trajectory_stats_init(&stats);
 
     sb_trajectory_stats_calculator_init(&calc, 1000);
     sb_trajectory_stats_calculator_run(&calc, &trajectory, &stats);
@@ -81,7 +81,7 @@ void test_calculate_stats(void)
 
     check_stats(&stats);
 
-    sb_trajectory_destroy(&stats);
+    sb_trajectory_stats_destroy(&stats);
 }
 
 int main(int argc, char* argv[])
