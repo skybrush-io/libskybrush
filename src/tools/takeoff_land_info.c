@@ -77,6 +77,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    SB_CHECK_MAIN(sb_trajectory_stats_init(&stats));
+
     for (i = 1; i < argc; i++) {
         SB_CHECK_MAIN(load_trajectory(&trajectory, argv[i]));
         SB_CHECK_MAIN(calculate_stats(&trajectory, &stats));
@@ -86,18 +88,10 @@ int main(int argc, char* argv[])
         } else if (!isfinite(stats.landing_time_sec)) {
             error = "landing time is not finite";
         } else if (
-            !isfinite(stats.pos_at_landing_time.x) || 
-            !isfinite(stats.pos_at_landing_time.y) || 
-            !isfinite(stats.pos_at_landing_time.z) || 
-            !isfinite(stats.pos_at_landing_time.yaw)
-        ) {
+            !isfinite(stats.pos_at_landing_time.x) || !isfinite(stats.pos_at_landing_time.y) || !isfinite(stats.pos_at_landing_time.z) || !isfinite(stats.pos_at_landing_time.yaw)) {
             error = "position at landing time is not finite";
         } else if (
-            !isfinite(stats.vel_at_landing_time.x) || 
-            !isfinite(stats.vel_at_landing_time.y) || 
-            !isfinite(stats.vel_at_landing_time.z) || 
-            !isfinite(stats.vel_at_landing_time.yaw)
-        ) {
+            !isfinite(stats.vel_at_landing_time.x) || !isfinite(stats.vel_at_landing_time.y) || !isfinite(stats.vel_at_landing_time.z) || !isfinite(stats.vel_at_landing_time.yaw)) {
             error = "velocity at landing time is not finite";
         } else if (stats.landing_time_sec < stats.takeoff_time_sec) {
             error = "landing time is before takeoff time";
@@ -154,6 +148,8 @@ int main(int argc, char* argv[])
             stats.vel_at_landing_time.z / 1000,
             error);
     }
+
+    sb_trajectory_stats_destroy(&stats);
 
     return 0;
 }
