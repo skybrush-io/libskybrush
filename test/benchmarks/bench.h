@@ -74,11 +74,13 @@ static inline void sb_trajectory_init_from_fixture(sb_trajectory_t* trajectory, 
 
     fp = fopen(fname, "rb");
     if (fp == 0) {
+        perror(fname);
         abort();
     }
 
     fd = fileno(fp);
     if (fd < 0) {
+        perror(fname);
         abort();
     }
 
