@@ -665,6 +665,10 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     // Shorten the trajectory so that it ends at the time when we cross
     // the takeoff altitude from above
     SB_CHECK(sb_trajectory_cut_at(trajectory, stats->landing_time_sec));
+    if (stats->valid_components & SB_TRAJECTORY_STATS_DURATION) {
+        stats->duration_sec = stats->landing_time_sec;
+        stats->duration_msec = (uint32_t)(stats->duration_sec * 1000);
+    }
 
     // Initialize a trajectory builder so we can add the final segment
     SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, 0));
