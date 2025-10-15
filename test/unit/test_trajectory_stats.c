@@ -19,6 +19,7 @@
 
 #include <skybrush/formats/binary.h>
 #include <skybrush/trajectory.h>
+#include <string.h> /* memcmp() */
 
 #include "unity.h"
 
@@ -76,6 +77,7 @@ void test_calculate_stats(void)
     sb_trajectory_stats_init(&stats);
 
     sb_trajectory_stats_calculator_init(&calc, 1000);
+    sb_trajectory_stats_calculator_set_components(&calc, SB_TRAJECTORY_STATS_ALL);
     sb_trajectory_stats_calculator_run(&calc, &trajectory, &stats);
     sb_trajectory_stats_calculator_destroy(&calc);
 
@@ -84,11 +86,32 @@ void test_calculate_stats(void)
     sb_trajectory_stats_destroy(&stats);
 }
 
+void test_calculate_stats_none(void)
+{
+    sb_trajectory_stats_calculator_t calc;
+    sb_trajectory_stats_t stats;
+    sb_trajectory_stats_t empty_stats;
+
+    sb_trajectory_stats_init(&stats);
+    sb_trajectory_stats_init(&empty_stats);
+
+    sb_trajectory_stats_calculator_init(&calc, 1000);
+    sb_trajectory_stats_calculator_set_components(&calc, SB_TRAJECTORY_STATS_NONE);
+    sb_trajectory_stats_calculator_run(&calc, &trajectory, &stats);
+    sb_trajectory_stats_calculator_destroy(&calc);
+
+    TEST_ASSERT_EQUAL(0, memcmp(&stats, &empty_stats, sizeof(sb_trajectory_stats_t)));
+
+    sb_trajectory_stats_destroy(&empty_stats);
+    sb_trajectory_stats_destroy(&stats);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
     RUN_TEST(test_calculate_stats);
+    RUN_TEST(test_calculate_stats_none);
 
     return UNITY_END();
 }

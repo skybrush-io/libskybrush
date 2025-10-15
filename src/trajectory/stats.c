@@ -42,11 +42,17 @@ sb_error_t sb_trajectory_stats_init(sb_trajectory_stats_t* stats)
 /**
  * @brief Clears a trajectory statistics structure.
  *
+ * This sets all components of the statistics structure to zero, except for
+ * \c earliest_above_sec and \c takeoff_time_sec, which are set to
+ * \c INFINITY.
+ *
  * \param stats the statistics to clear
  */
 void sb_trajectory_stats_clear(sb_trajectory_stats_t* stats)
 {
     memset(stats, 0, sizeof(sb_trajectory_stats_t));
+    stats->earliest_above_sec = INFINITY;
+    stats->takeoff_time_sec = INFINITY;
 }
 
 /**
@@ -56,7 +62,7 @@ void sb_trajectory_stats_clear(sb_trajectory_stats_t* stats)
  */
 void sb_trajectory_stats_destroy(sb_trajectory_stats_t* stats)
 {
-    /* Nothing to do */
+    sb_trajectory_stats_clear(stats);
 }
 
 /**
@@ -107,7 +113,7 @@ void sb_trajectory_stats_calculator_set_components(
  * @param trajectory  the trajectory to analyze
  * @param result  the structure to store the results in. It must already be
  *        initialized by \ref sb_trajectory_stats_init(). Fields that are not
- *        affected by the current calculation are left unchanged.
+ *        affected by the current calculation are reset to their default values.
  * @return sb_error_t  an error code indicating success or failure
  */
 sb_error_t sb_trajectory_stats_calculator_run(
@@ -148,10 +154,8 @@ sb_error_t sb_trajectory_stats_calculator_run(
         return SB_EINVAL;
     }
 
-    /* Initialize the result */
-    memset(result, 0, sizeof(sb_trajectory_stats_t));
-    result->earliest_above_sec = INFINITY;
-    result->takeoff_time_sec = INFINITY;
+    /* Cleat the result */
+    sb_trajectory_stats_clear(result);
 
     /* If there is nothing to calculate, exit here */
     if (components == SB_TRAJECTORY_STATS_NONE) {
