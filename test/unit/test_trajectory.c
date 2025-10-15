@@ -497,6 +497,101 @@ void test_cut_at(void)
     // TODO: add more tests with known higher-order input
 }
 
+void prepare_stats_for_replace_end_to_land_at(
+    const sb_trajectory_t* trajectory,
+    sb_trajectory_stats_t* stats)
+{
+    sb_trajectory_stats_calculator_t calc;
+
+    sb_trajectory_stats_calculator_init(&calc, 1000);
+    calc.min_ascent = 5 * 1000;
+    calc.preferred_descent = 5 * 1000;
+    sb_trajectory_stats_calculator_run(&calc, trajectory, stats);
+    sb_trajectory_stats_calculator_destroy(&calc);
+}
+
+void test_replace_end_to_land_at(void)
+{
+    sb_vector3_with_yaw_t origin = { 1000, 0, 0, 0 };
+    sb_vector3_with_yaw_t pos, vel;
+    sb_trajectory_stats_t stats;
+    sb_trajectory_player_t player;
+
+    prepare_stats_for_replace_end_to_land_at(&trajectory, &stats);
+
+    /* Trajectory ends at (0, 0, 0) at T=60. Descent starts from an altitude
+     * of 10m at T=40. Midpoint at 5m is reached at T=45. We will bend the
+     * trajectory from there to reach (1, 0, 0) instead of (0, 0, 0).
+     * Since the duration is determined from the altitude difference only,
+     * the new landing segment will be 10 seconds long if we ask for a
+     * landing speed of 0.5 m/s (even though the descent starts with a
+     * vertical speed of 1 m/s) */
+    TEST_ASSERT_EQUAL(45, stats.landing_time_sec);
+    TEST_ASSERT_EQUAL(5000, stats.pos_at_landing_time.z);
+    TEST_ASSERT_EQUAL(-1000, stats.vel_at_landing_time.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_replace_end_to_land_at(&trajectory, &stats, origin, 500));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, &trajectory));
+
+    /* Solution for the last segment:
+     *
+     * x(t) = -2000 * t^3 + 3000 * t^2
+     * z(t) = 5000 * t^2 - 10000 * t + 5000, t goes from 0 to 1 */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 45, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 45, &vel));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(5000, pos.z);
+    TEST_ASSERT_EQUAL(0, vel.x);
+    TEST_ASSERT_EQUAL(0, vel.y);
+    TEST_ASSERT_EQUAL(-1000, vel.z);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 47.5, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 47.5, &vel));
+    /* t = 0.25 */
+    /* Minor differences are expected below between the position and velocity calculated
+     * from the exact formula above and the observed position and velocity
+     * due to rounding in coordinates when the trajectory is written
+     * into binary form and then parsed back from there */
+    TEST_ASSERT_EQUAL_FLOAT(156.25, pos.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.y);
+    TEST_ASSERT_FLOAT_WITHIN(1, 2809, pos.z); /* should be 2812.5 */
+    TEST_ASSERT_EQUAL_FLOAT(112.5, vel.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, vel.y);
+    TEST_ASSERT_FLOAT_WITHIN(1, -750, vel.z);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 50, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 50, &vel));
+    /* t = 0.5 */
+    TEST_ASSERT_EQUAL_FLOAT(500, pos.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.y);
+    TEST_ASSERT_FLOAT_WITHIN(1, 1247.5, pos.z); /* should be 1250 */
+    TEST_ASSERT_EQUAL_FLOAT(150, vel.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, vel.y);
+    TEST_ASSERT_FLOAT_WITHIN(1, -500, vel.z);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 52.5, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 52.5, &vel));
+    /* t = 0.75 */
+    TEST_ASSERT_EQUAL_FLOAT(843.75, pos.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.y);
+    TEST_ASSERT_FLOAT_WITHIN(1, 311.5, pos.z); /* should be 312.5 */
+    TEST_ASSERT_EQUAL_FLOAT(112.5, vel.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, vel.y);
+    TEST_ASSERT_FLOAT_WITHIN(1, -250, vel.z);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 55, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 55, &vel));
+    TEST_ASSERT_EQUAL_FLOAT(1000, pos.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.y);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.z);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, vel.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, vel.y);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, vel.z);
+
+    sb_trajectory_player_destroy(&player);
+}
+
 void test_load_truncated_file(void)
 {
     closeFixture();
@@ -537,6 +632,7 @@ int main(int argc, char* argv[])
 
     /* editing tests */
     RUN_TEST(test_cut_at);
+    RUN_TEST(test_replace_end_to_land_at);
 
     /* regression tests */
     RUN_TEST(test_propose_takeoff_time_hover_3m);

@@ -614,7 +614,7 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
  *         is assumed that at least the following components are valid in the stats:
  *         landing time, position and velocity at landing time.
  * \param  new_landing_position  the new landing position to direct the trajectory to
- * \param  new_landing_velocity  the new landing velocity to use
+ * \param  new_landing_velocity  the new vertical landing velocity to use
  *
  * \return error code
  */
