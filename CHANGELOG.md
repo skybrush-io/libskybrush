@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2025-10-15
+
+### Added
+
+- Added `sb_trajectory_replace_end_to_land_at()` to "bend" the landing segment
+  of a trajectory towards a nearby point in a smooth manner in order to
+  achieve more accurate landing back into docking stations.
+
+## [4.2.1] - 2025-10-05
+
+### Fixed
+
+- Added missing `sb_light_program_init_from_bytes()` declaration in the
+  appropriate header.
+
 ## [4.2.0] - 2025-06-02
 
 ### Added
