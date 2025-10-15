@@ -622,7 +622,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_trajectory_t* trajectory,
     sb_trajectory_stats_t* stats,
     sb_vector3_with_yaw_t new_landing_position,
-    uint32_t new_landing_velocity)
+    float new_landing_velocity)
 {
     sb_error_t retval;
     sb_vector3_with_yaw_t c1, c2, zero;
@@ -633,7 +633,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
         return SB_EINVAL;
     }
 
-    duration_sec = stats->pos_at_landing_time.z < 0 ? 0 : (stats->pos_at_landing_time.z / (float)new_landing_velocity);
+    duration_sec = stats->pos_at_landing_time.z < 0 ? 0 : (stats->pos_at_landing_time.z / new_landing_velocity);
 
     // Limit the landing duration to one minute because we are going to
     // append a single Bezier segment and the trajectory format has its
