@@ -608,27 +608,29 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
 
 /**
  * Replaces the end of a trajectory to land smoothly to the given landing position.
- * 
+ *
  * \param  trajectory  the trajectory to modify
- * \param  stats  the valid statistics of the trajectory to use and update
+ * \param  stats  the valid statistics of the trajectory to use and update. It
+ *         is assumed that at least the following components are valid in the stats:
+ *         landing time, position and velocity at landing time.
  * \param  new_landing_position  the new landing position to direct the trajectory to
- * \param  new_landing_velocity_mm_sec  the new landing speed in mm/seconds to use
+ * \param  new_landing_velocity  the new landing velocity to use
  *
  * \return \c SB_SUCCESS success
  *         error code on error
  */
 sb_error_t sb_trajectory_replace_end_to_land_at(
-    sb_trajectory_t* trajectory, 
+    sb_trajectory_t* trajectory,
     sb_trajectory_stats_t* stats,
     sb_vector3_with_yaw_t new_landing_position,
-    uint32_t new_landing_velocity_mm_sec
-) {
+    uint32_t new_landing_velocity)
+{
     sb_error_t retval;
     sb_vector3_with_yaw_t c1, c2, zero;
     sb_trajectory_builder_t builder;
     float duration_sec;
-    
-    duration_sec = stats->pos_at_landing_time.z < 0 ? 0 : (stats->pos_at_landing_time.z / (float)new_landing_velocity_mm_sec);
+
+    duration_sec = stats->pos_at_landing_time.z < 0 ? 0 : (stats->pos_at_landing_time.z / (float)new_landing_velocity);
 
     // Limit the landing duration to one minute because we are going to
     // append a single Bezier segment and the trajectory format has its
@@ -636,7 +638,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     if (duration_sec > 60) {
         duration_sec = 60;
     }
-    
+
     // Calculate the cubic Bezier curve that will send the drone back to its
     // takeoff position from the point where it crosses the takeoff altitude
     // threshold from above
@@ -647,8 +649,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
         /* end = */ new_landing_position,
         /* end_vel = */ zero,
         /* duration_sec = */ duration_sec,
-        &c1, &c2
-    );
+        &c1, &c2);
 
     // Ensure that we own the trajectory and we can modify it at will
     // (i.e. it is not a view into the already loaded show file)
@@ -678,7 +679,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     // Update the size of the trajectory buffer
     trajectory->buffer.end = builder.buffer.end;
     sb_trajectory_builder_destroy(&builder);
-    
+
     // Update trajectory statistics
     stats->landing_time_sec += duration_sec;
     stats->duration_sec += duration_sec;
@@ -686,9 +687,9 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     stats->pos_at_landing_time = new_landing_position;
     stats->vel_at_landing_time = zero;
     stats->start_to_end_distance_xy = hypotf(
-        new_landing_position.x - trajectory->start.x, 
+        new_landing_position.x - trajectory->start.x,
         new_landing_position.y - trajectory->start.y);
-    
+
     return SB_SUCCESS;
 }
 

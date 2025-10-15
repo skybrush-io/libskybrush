@@ -38,7 +38,6 @@
 
 #include <skybrush/decls.h>
 
-
 __BEGIN_DECLS
 
 /** Enum containing constants that help the interpretation of the header byte
@@ -200,11 +199,11 @@ float sb_trajectory_propose_landing_time_sec(
     const sb_trajectory_t* trajectory, float preferred_descent,
     float verticality_threshold);
 sb_error_t sb_trajectory_replace_end_to_land_at(
-    sb_trajectory_t* trajectory, 
+    sb_trajectory_t* trajectory,
     sb_trajectory_stats_t* stats,
     sb_vector3_with_yaw_t new_landing_position,
-    uint32_t new_landing_velocity_mm_sec);
-    
+    uint32_t new_landing_velocity);
+
 /* ************************************************************************* */
 
 /**
