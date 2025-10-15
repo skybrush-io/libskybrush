@@ -38,10 +38,10 @@ static inline void igraph_get_cpu_time(double* data)
     data[2] = (double)self.ru_stime.tv_sec + 1e-6 * self.ru_stime.tv_usec; /* system */
 }
 
-#define BENCH_INIT(name)                      \
-    do {                                      \
-        printf("\n|> Benchmark: %s\n", name); \
-        usleep(200000);                       \
+#define BENCH_INIT(name)                                             \
+    do {                                                             \
+        printf("\n|> Benchmark: %-71sreal    user  system\n", name); \
+        usleep(200000);                                              \
     } while (0)
 
 #define REPEAT(CODE, N)                       \
