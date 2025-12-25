@@ -38,9 +38,9 @@ target_include_directories(
 )
 
 target_compile_options(
-	skybrush
-	PRIVATE
-	-Wdouble-promotion
+    skybrush
+    PRIVATE
+    -Wdouble-promotion
 )
 
 # The line below is not okay; it overwrites the installed library every time

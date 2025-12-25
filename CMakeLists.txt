@@ -28,11 +28,11 @@ set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic -Wno-unknown-pragmas -Wno-float-equ
 
 # Force colored output when using Ninja
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdiagnostics-color=always")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdiagnostics-color=always")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 endif()
 
 # Add configuration for profiling
@@ -48,10 +48,10 @@ option(LIBSKYBRUSH_BUILD_TOOLS "Build supplementary tools" OFF)
 # Check for code coverage support
 option(LIBSKYBRUSH_ENABLE_CODE_COVERAGE "Enable code coverage calculation" OFF)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND LIBSKYBRUSH_ENABLE_CODE_COVERAGE)
-  include(CodeCoverage)
-  append_coverage_compiler_flags()
-  set(GCOVR_ADDITIONAL_ARGS --gcov-delete --exclude-lines-by-pattern .*assert.*)
-  setup_target_for_coverage_gcovr_html(
+    include(CodeCoverage)
+    append_coverage_compiler_flags()
+    set(GCOVR_ADDITIONAL_ARGS --gcov-delete --exclude-lines-by-pattern .*assert.*)
+    setup_target_for_coverage_gcovr_html(
     NAME coverage
     EXECUTABLE "${CMAKE_COMMAND}" "--build" "${CMAKE_BINARY_DIR}" "--target" "test"
     EXCLUDE "/Applications/Xcode*" "/Library/Developer*" "test/*" "vendor/unity/*"
@@ -61,13 +61,13 @@ endif()
 # Use cppcheck for static checks if available
 option(LIBSKYBRUSH_ENABLE_CODE_ANALYSIS "Enable code analysis" OFF)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND LIBSKYBRUSH_ENABLE_CODE_ANALYSIS)
-  find_program(CPPCHECK cppcheck)
-  if(CPPCHECK)
-    set(CMAKE_C_CPPCHECK "${CPPCHECK}" "--enable=warning,style" "--inconclusive" "--inline-suppr"
+    find_program(CPPCHECK cppcheck)
+    if(CPPCHECK)
+        set(CMAKE_C_CPPCHECK "${CPPCHECK}" "--enable=warning,style" "--inconclusive" "--inline-suppr"
         "--template='{file}:{line}: warning: {id} ({severity}): {message}'")
-    set(CMAKE_CXX_CPPCHECK "${CPPCHECK}" "--enable=warning,style" "--inconclusive" "--inline-suppr"
+        set(CMAKE_CXX_CPPCHECK "${CPPCHECK}" "--enable=warning,style" "--inconclusive" "--inline-suppr"
         "--template='{file}:{line}: warning: {id} ({severity}): {message}'")
-  endif()
+    endif()
 endif()
 
 # Traverse source code
@@ -76,8 +76,8 @@ add_subdirectory(vendor)
 
 # Enable unit test support
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-  include(CTest)
+    include(CTest)
     if(BUILD_TESTING)
-    add_subdirectory(test)
-  endif()
+        add_subdirectory(test)
+    endif()
 endif()
