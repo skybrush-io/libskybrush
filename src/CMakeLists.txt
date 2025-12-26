@@ -7,6 +7,8 @@ add_library(
     parsing.c
     utils.c
 
+    conductor/time_axis.c
+
     events/events.c
 
     formats/binary.c
