@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -463,7 +463,7 @@ void test_conversion_to_trajectory(void)
     TEST_ASSERT_EQUAL(270, vec.yaw);
 
     sb_trajectory_player_destroy(&player);
-    sb_trajectory_destroy(&trajectory);
+    SB_DECREF_LOCAL(&trajectory);
 }
 
 int main(int argc, char* argv[])

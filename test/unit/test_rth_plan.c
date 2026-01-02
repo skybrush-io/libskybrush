@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -298,7 +298,7 @@ void test_plan_duration_too_large(void)
     }
 }
 
-void assert_trajectory_is_constant(const sb_trajectory_t* trajectory, float start, float end, sb_vector3_with_yaw_t pos)
+void assert_trajectory_is_constant(sb_trajectory_t* trajectory, float start, float end, sb_vector3_with_yaw_t pos)
 {
     float t;
     const float step = 0.5f;
@@ -360,7 +360,7 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_msec(&trajectory));
         assert_trajectory_is_constant(&trajectory, 0.0f, 10.0f, start);
 
-        sb_trajectory_destroy(&trajectory);
+        SB_DECREF_LOCAL(&trajectory);
     }
 
     /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
@@ -393,7 +393,7 @@ void test_convert_to_trajectory(void)
 
         sb_trajectory_player_destroy(&player);
 
-        sb_trajectory_destroy(&trajectory);
+        SB_DECREF_LOCAL(&trajectory);
     }
 
     /* Command is "go to (-40m, -30m) in 50s with pre-delay=2s" from T=15
@@ -426,7 +426,7 @@ void test_convert_to_trajectory(void)
 
         sb_trajectory_player_destroy(&player);
 
-        sb_trajectory_destroy(&trajectory);
+        SB_DECREF_LOCAL(&trajectory);
     }
 
     /* Command is "go to (30m, 40m) in 30s" from T=45 (exclusive) to T=80 (inclusive).
@@ -460,7 +460,7 @@ void test_convert_to_trajectory(void)
 
         sb_trajectory_player_destroy(&player);
 
-        sb_trajectory_destroy(&trajectory);
+        SB_DECREF_LOCAL(&trajectory);
     }
 
     /* Command is "go straight (30m, 40m, 20m) in 30s+5s" from T=80 (exclusive) to T=90 (inclusive).
@@ -501,7 +501,7 @@ void test_convert_to_trajectory(void)
 
         sb_trajectory_player_destroy(&player);
 
-        sb_trajectory_destroy(&trajectory);
+        SB_DECREF_LOCAL(&trajectory);
     }
 
     /* Command is "land" afterwards, to be executed at T=115 */
@@ -515,7 +515,7 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(t * 1000, sb_trajectory_get_total_duration_msec(&trajectory));
         assert_trajectory_is_constant(&trajectory, 0.0f, t, start);
 
-        sb_trajectory_destroy(&trajectory);
+        SB_DECREF_LOCAL(&trajectory);
     }
 }
 

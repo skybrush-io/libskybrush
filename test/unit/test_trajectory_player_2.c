@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -89,7 +89,7 @@ void loadFixture(const char* fname)
 void closeFixture(void)
 {
     sb_trajectory_player_destroy(&player);
-    sb_trajectory_destroy(&trajectory);
+    SB_DECREF_LOCAL(&trajectory);
 }
 
 void test_position_at(void)

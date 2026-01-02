@@ -24,9 +24,12 @@ add_library(
     screenplay/time_axis.c
 
     trajectory/builder.c
+    trajectory/player.c
     trajectory/poly.c
-    trajectory/trajectory.c
+    trajectory/segment.c
     trajectory/stats.c
+    trajectory/trajectory.c
+    trajectory/utils.c
 
     yaw_control/yaw_control.c
 )

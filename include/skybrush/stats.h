@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -160,7 +160,7 @@ void sb_trajectory_stats_calculator_set_components(
     sb_trajectory_stats_calculator_t* calc, sb_trajectory_stat_components_t components);
 sb_error_t sb_trajectory_stats_calculator_run(
     const sb_trajectory_stats_calculator_t* calc,
-    const struct sb_trajectory_s* trajectory,
+    struct sb_trajectory_s* trajectory,
     sb_trajectory_stats_t* result);
 
 __END_DECLS

@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -44,7 +44,7 @@ static sb_error_t load_trajectory(sb_trajectory_t* trajectory, const char* filen
     return retval;
 }
 
-static sb_error_t calculate_stats(const sb_trajectory_t* trajectory, sb_trajectory_stats_t* stats)
+static sb_error_t calculate_stats(sb_trajectory_t* trajectory, sb_trajectory_stats_t* stats)
 {
     sb_trajectory_stats_calculator_t calc;
     sb_error_t retval = sb_trajectory_stats_calculator_init(&calc, 1000.0f);
@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        sb_trajectory_destroy(&trajectory);
+        SB_DECREF_LOCAL(&trajectory);
 
         if (first) {
             printf(

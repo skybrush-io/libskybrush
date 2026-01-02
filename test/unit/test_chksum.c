@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -23,7 +23,6 @@
 #include "unity.h"
 
 sb_trajectory_t trajectory;
-sb_trajectory_player_t player;
 
 void loadFixture(const char* fname);
 void closeFixture(void);
@@ -56,7 +55,6 @@ void loadFixtureAndValidate(const char* fname, sb_error_t expected_retval)
     TEST_ASSERT_EQUAL(expected_retval, retval);
 
     fclose(fp);
-    sb_trajectory_player_destroy(&player);
 }
 
 void test_valid_checksum(void)

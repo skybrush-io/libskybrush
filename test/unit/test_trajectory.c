@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -106,7 +106,7 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
 void closeFixture(void)
 {
-    sb_trajectory_destroy(&trajectory);
+    SB_DECREF_LOCAL(&trajectory);
     trajectory_loaded = 0;
 
     if (buf) {
@@ -498,7 +498,7 @@ void test_cut_at(void)
 }
 
 void prepare_stats_for_replace_end_to_land_at(
-    const sb_trajectory_t* trajectory,
+    sb_trajectory_t* trajectory,
     sb_trajectory_stats_t* stats)
 {
     sb_trajectory_stats_calculator_t calc;

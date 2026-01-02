@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
         "get proposed landing time, 10000x",
         REPEAT(sb_trajectory_propose_landing_time_sec(&trajectory, 2500, 50), 10000));
 
-    sb_trajectory_destroy(&trajectory);
+    SB_DECREF_LOCAL(&trajectory);
 
     return 0;
 }

@@ -17,23 +17,20 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bench.h"
-#include <skybrush/skybrush.h>
+#ifndef SKYBRUSH_I_TRAJECTORY_SEGMENT_H
+#define SKYBRUSH_I_TRAJECTORY_SEGMENT_H
 
-int main(int argc, char* argv[])
-{
-    BENCH_INIT("get_end_position");
+#include <skybrush/decls.h>
+#include <skybrush/trajectory.h>
 
-    sb_trajectory_t trajectory;
-    sb_vector3_with_yaw_t pos;
+__BEGIN_DECLS
 
-    sb_trajectory_init_from_fixture(&trajectory, "fixtures/real_show.skyb");
+typedef enum {
+    SB_TRAJECTORY_SEGMENT_POLY_VALID = 1,
+    SB_TRAJECTORY_SEGMENT_DPOLY_VALID = 2,
+    SB_TRAJECTORY_SEGMENT_DDPOLY_VALID = 4,
+} sb_trajectory_segment_flags_t;
 
-    BENCH(
-        "get end position of trajectory, 10000x",
-        REPEAT(sb_trajectory_get_end_position(&trajectory, &pos), 10000));
+__END_DECLS
 
-    SB_DECREF_LOCAL(&trajectory);
-
-    return 0;
-}
+#endif

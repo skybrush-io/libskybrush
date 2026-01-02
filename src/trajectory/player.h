@@ -17,23 +17,16 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bench.h"
-#include <skybrush/skybrush.h>
+#ifndef SKYBRUSH_I_TRAJECTORY_PLAYER_H
+#define SKYBRUSH_I_TRAJECTORY_PLAYER_H
 
-int main(int argc, char* argv[])
-{
-    BENCH_INIT("get_end_position");
+#include <skybrush/decls.h>
+#include <skybrush/trajectory.h>
 
-    sb_trajectory_t trajectory;
-    sb_vector3_with_yaw_t pos;
+__BEGIN_DECLS
 
-    sb_trajectory_init_from_fixture(&trajectory, "fixtures/real_show.skyb");
+sb_error_t sb_i_trajectory_player_seek_to_time(sb_trajectory_player_t* player, float t, float* rel_t);
 
-    BENCH(
-        "get end position of trajectory, 10000x",
-        REPEAT(sb_trajectory_get_end_position(&trajectory, &pos), 10000));
+__END_DECLS
 
-    SB_DECREF_LOCAL(&trajectory);
-
-    return 0;
-}
+#endif

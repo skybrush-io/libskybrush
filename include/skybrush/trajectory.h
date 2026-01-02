@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -34,6 +34,7 @@
 #include <skybrush/buffer.h>
 #include <skybrush/error.h>
 #include <skybrush/poly.h>
+#include <skybrush/refcount.h>
 #include <skybrush/stats.h>
 
 #include <skybrush/decls.h>
@@ -149,6 +150,7 @@ typedef struct
 
 sb_poly_4d_t* sb_trajectory_segment_get_poly(sb_trajectory_segment_t* segment);
 sb_poly_4d_t* sb_trajectory_segment_get_dpoly(sb_trajectory_segment_t* segment);
+sb_poly_4d_t* sb_trajectory_segment_get_ddpoly(sb_trajectory_segment_t* segment);
 
 /* ************************************************************************* */
 
@@ -157,8 +159,8 @@ sb_poly_4d_t* sb_trajectory_segment_get_dpoly(sb_trajectory_segment_t* segment);
  * mission.
  */
 typedef struct sb_trajectory_s {
+    SB_REFCOUNTED;
     sb_buffer_t buffer; /**< The buffer holding the trajectory */
-
     sb_vector3_with_yaw_t start; /**< The start coordinate of the trajectory */
     float scale; /**< Scaling factor for the coordinates */
     sb_bool_t use_yaw; /**< Whether the yaw coordinates are relevant */
@@ -168,6 +170,7 @@ typedef struct sb_trajectory_s {
 struct sb_trajectory_builder_s;
 struct sb_trajectory_player_state_s;
 
+sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory);
 sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int fd);
 sb_error_t sb_trajectory_init_from_binary_file_in_memory(
     sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes);
@@ -177,26 +180,25 @@ sb_error_t sb_trajectory_init_from_bytes(sb_trajectory_t* trajectory,
     uint8_t* buf, size_t nbytes);
 sb_error_t sb_trajectory_init_from_builder(
     sb_trajectory_t* trajectory, struct sb_trajectory_builder_s* builder);
-sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory);
-void sb_trajectory_destroy(sb_trajectory_t* trajectory);
 
 sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
 sb_error_t sb_trajectory_cut_at(sb_trajectory_t* builder, float duration_sec);
 sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory);
 sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
-    const sb_trajectory_t* trajectory, sb_bounding_box_t* result);
+    sb_trajectory_t* trajectory, sb_bounding_box_t* result);
 sb_error_t sb_trajectory_get_end_position(
-    const sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* result);
+    sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* result);
 sb_error_t sb_trajectory_get_segment_at(sb_trajectory_t* trajectory, float time_sec,
     struct sb_trajectory_player_state_s* state, float* rel_time);
 sb_error_t sb_trajectory_get_start_position(
-    const sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* result);
-uint32_t sb_trajectory_get_total_duration_msec(const sb_trajectory_t* trajectory);
-float sb_trajectory_get_total_duration_sec(const sb_trajectory_t* trajectory);
+    sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* result);
+uint32_t sb_trajectory_get_total_duration_msec(sb_trajectory_t* trajectory);
+float sb_trajectory_get_total_duration_sec(sb_trajectory_t* trajectory);
+
 float sb_trajectory_propose_takeoff_time_sec(
-    const sb_trajectory_t* trajectory, float min_ascent, float speed, float acceleration);
+    sb_trajectory_t* trajectory, float min_ascent, float speed, float acceleration);
 float sb_trajectory_propose_landing_time_sec(
-    const sb_trajectory_t* trajectory, float preferred_descent,
+    sb_trajectory_t* trajectory, float preferred_descent,
     float verticality_threshold);
 sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_trajectory_t* trajectory,
@@ -221,7 +223,7 @@ typedef struct sb_trajectory_player_state_s {
  */
 typedef struct sb_trajectory_player_s {
     /** The trajectory that the player plays */
-    const sb_trajectory_t* trajectory;
+    sb_trajectory_t* trajectory;
 
     /**
      * The state of the player, including the current segment that is being
@@ -230,7 +232,7 @@ typedef struct sb_trajectory_player_s {
     sb_trajectory_player_state_t state;
 } sb_trajectory_player_t;
 
-sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, const sb_trajectory_t* trajectory);
+sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, sb_trajectory_t* trajectory);
 void sb_trajectory_player_destroy(sb_trajectory_player_t* player);
 sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* player);
 void sb_trajectory_player_dump_state(const sb_trajectory_player_t* player);

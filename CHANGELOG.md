@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [main]
+
+### Breaking changes
+
+- Migrated several data structures to reference counting to make it easier to
+  share them between different parts of an application without worrying about
+  ownership and lifetimes. Functions returning pointers to reference-counted data
+  structures clearly document whether they return a new reference (where the ownership
+  of the reference is passed to the caller and the caller is responsible to call
+  `SB_DECREF()` later) or a borrowed reference (where the caller does not own the
+  object and _must_ call `SB_INCREF()` on it if it wants to hold on to the object for
+  a longer time). Functions that take pointers to reference-counted objects assume
+  that they receive a _borrowed_ reference and increase the reference count if needed,
+  unless documented otherwise. The only exceptions are `_init()` functions for a
+  reference-counted type; these assume that they receive an uninitialized object and
+  the caller will own a reference to the initialized object when the initializer
+  function returns.
+
+- `sb_trajectory_t` is now reference-counted. `sb_trajectory_destroy()` is removed;
+  you should call `SB_DECREF()` on the trajectory object instead when you want to
+  release it. Trajectories without active references are automatically freed.
+
 ## [4.3.0] - 2025-10-15
 
 ### Added
