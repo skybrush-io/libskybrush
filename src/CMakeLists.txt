@@ -7,8 +7,6 @@ add_library(
     parsing.c
     utils.c
 
-    conductor/time_axis.c
-
     events/events.c
 
     formats/binary.c
@@ -22,6 +20,8 @@ add_library(
     lights/trigger.cpp
 
     rth_plan/rth_plan.c
+
+    screenplay/time_axis.c
 
     trajectory/builder.c
     trajectory/poly.c
