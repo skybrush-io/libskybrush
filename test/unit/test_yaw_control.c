@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -106,7 +106,7 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
 void closeFixture(void)
 {
-    sb_yaw_control_destroy(&ctrl);
+    SB_DECREF_LOCAL(&ctrl);
     yaw_control_loaded = 0;
 }
 

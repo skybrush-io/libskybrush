@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -20,6 +20,7 @@
 #ifndef SKYBRUSH_YAW_CONTROL_H
 #define SKYBRUSH_YAW_CONTROL_H
 
+#include "skybrush/refcount.h"
 #include <skybrush/buffer.h>
 
 #include <skybrush/decls.h>
@@ -77,8 +78,8 @@ typedef struct sb_yaw_setpoint_s {
  * @brief Structure representing the yaw control deltas in a Skybrush mission.
  */
 typedef struct sb_yaw_control_s {
+    SB_REFCOUNTED;
     sb_buffer_t buffer; /**< The buffer holding the yaw control data */
-
     size_t header_length; /**< Number of bytes in the header of the buffer */
     size_t num_deltas; /**< Number of yaw deltas in the yaw control object */
     sb_bool_t auto_yaw; /**< Whether auto yaw mode is in use */
@@ -89,7 +90,6 @@ sb_error_t sb_yaw_control_init_from_binary_file(sb_yaw_control_t* ctrl, int fd);
 sb_error_t sb_yaw_control_init_from_binary_file_in_memory(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes);
 sb_error_t sb_yaw_control_init_from_buffer(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes);
 sb_error_t sb_yaw_control_init_empty(sb_yaw_control_t* ctrl);
-void sb_yaw_control_destroy(sb_yaw_control_t* ctrl);
 sb_bool_t sb_yaw_control_is_empty(const sb_yaw_control_t* ctrl);
 
 /* ************************************************************************* */
@@ -99,7 +99,7 @@ sb_bool_t sb_yaw_control_is_empty(const sb_yaw_control_t* ctrl);
  * yaw and yaw rate along the yaw control curve.
  */
 typedef struct sb_yaw_player_s {
-    const sb_yaw_control_t* ctrl; /**< The yaw control object that the player plays */
+    sb_yaw_control_t* ctrl; /**< The yaw control object that the player plays */
 
     /** The current setpoint that is being evaluated by the player */
     struct
@@ -110,7 +110,7 @@ typedef struct sb_yaw_player_s {
     } current_setpoint;
 } sb_yaw_player_t;
 
-sb_error_t sb_yaw_player_init(sb_yaw_player_t* player, const sb_yaw_control_t* ctrl);
+sb_error_t sb_yaw_player_init(sb_yaw_player_t* player, sb_yaw_control_t* ctrl);
 void sb_yaw_player_destroy(sb_yaw_player_t* player);
 sb_error_t sb_yaw_player_build_next_setpoint(sb_yaw_player_t* player);
 void sb_yaw_player_dump_current_segment(const sb_yaw_player_t* player);

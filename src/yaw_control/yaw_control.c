@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -29,6 +29,7 @@
 
 #include <skybrush/formats/binary.h>
 #include <skybrush/memory.h>
+#include <skybrush/refcount.h>
 #include <skybrush/utils.h>
 #include <skybrush/yaw_control.h>
 
@@ -41,64 +42,18 @@ void sb_yaw_player_dump_current_setpoint(const sb_yaw_player_t* player);
 
 static sb_error_t sb_i_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
+static void sb_i_yaw_control_destroy(sb_yaw_control_t* ctrl);
 
-/**
- * Parses a yaw or yaw change value from the memory block that defines the yaw control object,
- * keeping its raw (ddeg) unit.
- *
- * The offset is automatically advanced after reading the value.
- */
-static int16_t sb_i_yaw_control_parse_yaw(const sb_yaw_control_t* ctrl, size_t* offset);
-
-/**
- * Parses a duration from the memory block that defines the yaw control curve,
- * keeping its raw (msec) unit.
- *
- * The offset is automatically advanced after reading the duration.
- */
-static uint16_t sb_i_yaw_control_parse_duration(const sb_yaw_control_t* ctrl, size_t* offset);
-
-/**
- * Parses the header of the memory block that defines the yaw control curve.
- */
-static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl);
-
-/**
- * Builds the current yaw setpoint from the wrapped buffer, starting from
- * the given offset, assuming that the start time and yaw of the current
- * setpoint has to be at the given parameters.
- */
 static sb_error_t sb_i_yaw_player_build_current_setpoint(
     sb_yaw_player_t* player, size_t offset, uint32_t start_time_msec,
     int32_t start_yaw_ddeg);
-
-/**
- * Resets the internal state of the yaw player and rewinds it to time zero.
- */
+static uint16_t sb_i_yaw_control_parse_duration(const sb_yaw_control_t* ctrl, size_t* offset);
+static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl);
+static int16_t sb_i_yaw_control_parse_yaw(const sb_yaw_control_t* ctrl, size_t* offset);
 static sb_error_t sb_i_yaw_player_rewind(sb_yaw_player_t* player);
-
-/**
- * Finds the setpoint in the yaw setpoint list that contains the given time.
- * Returns the relative time into the setpoint such that rel_t = 0 is the
- * start of the segment and rel_t = 1 is the end of the segment. It is
- * guaranteed that the returned relative time is between 0 and 1, inclusive.
- */
 static sb_error_t sb_i_yaw_player_seek_to_time(sb_yaw_player_t* player, float t, float* rel_t);
 
 /*****************************************************************************/
-
-/**
- * Destroys a yaw control object and releases all memory that it owns.
- */
-void sb_yaw_control_destroy(sb_yaw_control_t* ctrl)
-{
-    sb_buffer_destroy(&ctrl->buffer);
-
-    ctrl->header_length = 0;
-    ctrl->num_deltas = 0;
-    ctrl->auto_yaw = 0;
-    ctrl->yaw_offset_ddeg = 0;
-}
 
 /**
  * Initializes a yaw control object from the contents of a Skybrush file in
@@ -159,6 +114,7 @@ static sb_error_t sb_i_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8
         sb_buffer_init_view(&ctrl->buffer, buf, nbytes);
     }
     ctrl->header_length = sb_i_yaw_control_parse_header(ctrl);
+    SB_REF_INIT(ctrl, sb_i_yaw_control_destroy);
     return SB_SUCCESS;
 }
 
@@ -181,6 +137,8 @@ static sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_b
     }
 
     /* ownership of 'buf' taken by the yaw control object if needed */
+
+    SB_REF_INIT(ctrl, sb_i_yaw_control_destroy);
 
     return SB_SUCCESS;
 }
@@ -230,6 +188,8 @@ sb_error_t sb_yaw_control_init_empty(sb_yaw_control_t* ctrl)
     ctrl->auto_yaw = 0;
     ctrl->yaw_offset_ddeg = 0;
 
+    SB_REF_INIT(ctrl, sb_i_yaw_control_destroy);
+
     return SB_SUCCESS;
 }
 
@@ -246,6 +206,22 @@ sb_bool_t sb_yaw_control_is_empty(const sb_yaw_control_t* ctrl)
 
 /* ************************************************************************** */
 
+/**
+ * Destroys a yaw control object and releases all memory that it owns.
+ */
+static void sb_i_yaw_control_destroy(sb_yaw_control_t* ctrl)
+{
+    sb_buffer_destroy(&ctrl->buffer);
+
+    ctrl->header_length = 0;
+    ctrl->num_deltas = 0;
+    ctrl->auto_yaw = 0;
+    ctrl->yaw_offset_ddeg = 0;
+}
+
+/**
+ * Parses the header of the memory block that defines the yaw control curve.
+ */
 static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl)
 {
     uint8_t* buf = SB_BUFFER(ctrl->buffer);
@@ -263,14 +239,26 @@ static size_t sb_i_yaw_control_parse_header(sb_yaw_control_t* ctrl)
     return offset; /* size of the header */
 }
 
-static int16_t sb_i_yaw_control_parse_yaw(const sb_yaw_control_t* ctrl, size_t* offset)
-{
-    return sb_parse_int16(SB_BUFFER(ctrl->buffer), offset);
-}
-
+/**
+ * Parses a duration from the memory block that defines the yaw control curve,
+ * keeping its raw (msec) unit.
+ *
+ * The offset is automatically advanced after reading the duration.
+ */
 static uint16_t sb_i_yaw_control_parse_duration(const sb_yaw_control_t* ctrl, size_t* offset)
 {
     return sb_parse_uint16(SB_BUFFER(ctrl->buffer), offset);
+}
+
+/**
+ * Parses a yaw or yaw change value from the memory block that defines the yaw control object,
+ * keeping its raw (ddeg) unit.
+ *
+ * The offset is automatically advanced after reading the value.
+ */
+static int16_t sb_i_yaw_control_parse_yaw(const sb_yaw_control_t* ctrl, size_t* offset)
+{
+    return sb_parse_int16(SB_BUFFER(ctrl->buffer), offset);
 }
 
 /* ************************************************************************** */
@@ -278,7 +266,7 @@ static uint16_t sb_i_yaw_control_parse_duration(const sb_yaw_control_t* ctrl, si
 /**
  * Initializes a yaw player that plays the given yaw control object.
  */
-sb_error_t sb_yaw_player_init(sb_yaw_player_t* player, const sb_yaw_control_t* ctrl)
+sb_error_t sb_yaw_player_init(sb_yaw_player_t* player, sb_yaw_control_t* ctrl)
 {
     if (ctrl == 0) {
         return SB_EINVAL;
@@ -287,6 +275,7 @@ sb_error_t sb_yaw_player_init(sb_yaw_player_t* player, const sb_yaw_control_t* c
     memset(player, 0, sizeof(sb_yaw_player_t));
 
     player->ctrl = ctrl;
+    SB_INCREF(ctrl);
 
     sb_i_yaw_player_rewind(player);
 
@@ -298,6 +287,7 @@ sb_error_t sb_yaw_player_init(sb_yaw_player_t* player, const sb_yaw_control_t* c
  */
 void sb_yaw_player_destroy(sb_yaw_player_t* player)
 {
+    SB_DECREF(player->ctrl);
     memset(player, 0, sizeof(sb_yaw_player_t));
 }
 
@@ -415,49 +405,11 @@ sb_bool_t sb_yaw_player_has_more_setpoints(const sb_yaw_player_t* player)
 
 /* ************************************************************************** */
 
-static sb_error_t sb_i_yaw_player_seek_to_time(sb_yaw_player_t* player, float t, float* rel_t)
-{
-    size_t offset;
-
-    if (t <= 0) {
-        t = 0;
-    }
-
-    while (1) {
-        sb_yaw_setpoint_t* setpoint = &player->current_setpoint.data;
-
-        if (setpoint->start_time_sec > t) {
-            /* time that the user asked for is before the current setpoint. We simply
-             * rewind and start from scratch */
-            SB_CHECK(sb_i_yaw_player_rewind(player));
-            assert(player->current_setpoint.data.start_time_msec == 0);
-        } else if (setpoint->end_time_sec < t) {
-            offset = player->current_setpoint.start;
-            SB_CHECK(sb_yaw_player_build_next_setpoint(player));
-            if (!sb_yaw_player_has_more_setpoints(player)) {
-                /* reached end of yaw control */
-            } else {
-                /* assert that we really moved forward in the buffer */
-                assert(player->current_setpoint.start > offset);
-                /* make production builds happy by referencing offset even if
-                 * asserts are disabled */
-                ((void)offset);
-            }
-        } else {
-            if (rel_t) {
-                if (!isfinite(t)) {
-                    *rel_t = 1;
-                } else if (fabsf(setpoint->duration_sec) > 1.0e-6f) {
-                    *rel_t = (t - setpoint->start_time_sec) / setpoint->duration_sec;
-                } else {
-                    *rel_t = 0.5;
-                }
-            }
-            return SB_SUCCESS;
-        }
-    }
-}
-
+/**
+ * Builds the current yaw setpoint from the wrapped buffer, starting from
+ * the given offset, assuming that the start time and yaw of the current
+ * setpoint has to be at the given parameters.
+ */
 static sb_error_t sb_i_yaw_player_build_current_setpoint(
     sb_yaw_player_t* player, size_t offset, uint32_t start_time_msec,
     int32_t start_yaw_ddeg)
@@ -508,8 +460,60 @@ static sb_error_t sb_i_yaw_player_build_current_setpoint(
     return SB_SUCCESS;
 }
 
+/**
+ * Resets the internal state of the yaw player and rewinds it to time zero.
+ */
 static sb_error_t sb_i_yaw_player_rewind(sb_yaw_player_t* player)
 {
     return sb_i_yaw_player_build_current_setpoint(
         player, player->ctrl->header_length, 0, player->ctrl->yaw_offset_ddeg);
+}
+
+/**
+ * Finds the setpoint in the yaw setpoint list that contains the given time.
+ * Returns the relative time into the setpoint such that rel_t = 0 is the
+ * start of the segment and rel_t = 1 is the end of the segment. It is
+ * guaranteed that the returned relative time is between 0 and 1, inclusive.
+ */
+static sb_error_t sb_i_yaw_player_seek_to_time(sb_yaw_player_t* player, float t, float* rel_t)
+{
+    size_t offset;
+
+    if (t <= 0) {
+        t = 0;
+    }
+
+    while (1) {
+        sb_yaw_setpoint_t* setpoint = &player->current_setpoint.data;
+
+        if (setpoint->start_time_sec > t) {
+            /* time that the user asked for is before the current setpoint. We simply
+             * rewind and start from scratch */
+            SB_CHECK(sb_i_yaw_player_rewind(player));
+            assert(player->current_setpoint.data.start_time_msec == 0);
+        } else if (setpoint->end_time_sec < t) {
+            offset = player->current_setpoint.start;
+            SB_CHECK(sb_yaw_player_build_next_setpoint(player));
+            if (!sb_yaw_player_has_more_setpoints(player)) {
+                /* reached end of yaw control */
+            } else {
+                /* assert that we really moved forward in the buffer */
+                assert(player->current_setpoint.start > offset);
+                /* make production builds happy by referencing offset even if
+                 * asserts are disabled */
+                ((void)offset);
+            }
+        } else {
+            if (rel_t) {
+                if (!isfinite(t)) {
+                    *rel_t = 1;
+                } else if (fabsf(setpoint->duration_sec) > 1.0e-6f) {
+                    *rel_t = (t - setpoint->start_time_sec) / setpoint->duration_sec;
+                } else {
+                    *rel_t = 0.5;
+                }
+            }
+            return SB_SUCCESS;
+        }
+    }
 }
