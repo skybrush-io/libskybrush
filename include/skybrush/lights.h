@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -27,6 +27,7 @@
 #include <skybrush/colors.h>
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
+#include <skybrush/refcount.h>
 
 __BEGIN_DECLS
 
@@ -39,6 +40,7 @@ __BEGIN_DECLS
  * Structure that represents a \c libskybrush light program.
  */
 typedef struct sb_light_program_s {
+    SB_REFCOUNTED;
     sb_buffer_t buffer; /**< Buffer holding the light program */
 } sb_light_program_t;
 
@@ -78,18 +80,13 @@ sb_error_t sb_light_program_init_from_buffer(
  * \return \c SB_SUCCESS if the object was initialized successfully,
  *         \c SB_ENOENT if the memory buffer did not contain a light program
  */
- sb_error_t sb_light_program_init_from_bytes(
+sb_error_t sb_light_program_init_from_bytes(
     sb_light_program_t* program, uint8_t* buf, size_t size);
 
- /**
+/**
  * Initializes an empty light program.
  */
 sb_error_t sb_light_program_init_empty(sb_light_program_t* program);
-
-/**
- * Destroys a light program object and releases all memory that it owns.
- */
-void sb_light_program_destroy(sb_light_program_t* program);
 
 /**
  * Clears the light program object.
@@ -105,7 +102,7 @@ typedef struct sb_light_player_s {
     /**
      * Pointer to the light program that the player plays.
      */
-    const sb_light_program_t* program;
+    sb_light_program_t* program;
 
     /**
      * Pointer to an ArrayBytecodeStore C++ template class that points to the
@@ -134,7 +131,7 @@ typedef struct sb_light_player_s {
  * \param  player   the player object
  * \param  program  the light program that the player will play
  */
-sb_error_t sb_light_player_init(sb_light_player_t* player, const sb_light_program_t* program);
+sb_error_t sb_light_player_init(sb_light_player_t* player, sb_light_program_t* program);
 
 /**
  * Destroys a \c sb_light_player_t structure.

@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -47,7 +47,7 @@ void setUp(void)
 
 void tearDown(void)
 {
-    sb_light_program_destroy(&program);
+    SB_DECREF_LOCAL(&program);
 }
 
 void test_light_program_is_really_empty(void)
@@ -75,7 +75,7 @@ void test_clear(void)
 
 void test_init_empty(void)
 {
-    sb_light_program_destroy(&program); /* was created in setUp() */
+    SB_DECREF_LOCAL(&program); /* was created in setUp() */
     sb_light_program_init_empty(&program);
     test_light_program_is_really_empty();
 }

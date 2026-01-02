@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2025 CollMot Robotics Ltd.
+ * Copyright 2025-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -23,6 +23,7 @@
 #include <skybrush/basic_types.h>
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
+#include <skybrush/refcount.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -94,13 +95,13 @@ typedef struct sb_event_s {
  * order of timestamps.
  */
 typedef struct sb_event_list_s {
+    SB_REFCOUNTED;
     sb_event_t* entries; /**< The list of events */
     size_t num_entries; /**< The current number of events in the list */
     size_t max_entries; /**< The maximum number of events that the list can hold */
 } sb_event_list_t;
 
 sb_error_t sb_event_list_init(sb_event_list_t* events, size_t max_events);
-void sb_event_list_destroy(sb_event_list_t* events);
 
 void sb_event_list_clear(sb_event_list_t* events);
 size_t sb_event_list_capacity(const sb_event_list_t* events);
@@ -132,11 +133,11 @@ void sb_event_list_adjust_timestamps_by_type(
  * list of events in a lookahead window.
  */
 typedef struct sb_event_list_player_s {
-    const sb_event_list_t* events; /**< The event list */
+    sb_event_list_t* events; /**< The event list */
     size_t current_index; /**< The index of the current event */
 } sb_event_list_player_t;
 
-sb_error_t sb_event_list_player_init(sb_event_list_player_t* player, const sb_event_list_t* events);
+sb_error_t sb_event_list_player_init(sb_event_list_player_t* player, sb_event_list_t* events);
 void sb_event_list_player_destroy(sb_event_list_player_t* player);
 const sb_event_t* sb_event_list_player_get_next_event(sb_event_list_player_t* player);
 const sb_event_t* sb_event_list_player_get_next_event_not_later_than(

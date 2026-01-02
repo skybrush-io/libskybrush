@@ -27,9 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   you should call `SB_DECREF()` on the trajectory object instead when you want to
   release it. Trajectories without active references are automatically freed.
 
+- `sb_light_program_t` is now reference-counted. `sb_light_program_destroy()` is removed;
+  you should call `SB_DECREF()` on the light program instead when you want to
+  release it. Light programs without active references are automatically freed.
+
 - `sb_yaw_control_t` is now reference-counted. `sb_yaw_control_destroy()` is removed;
   you should call `SB_DECREF()` on the yaw control object instead when you want to
   release it. Yaw control objects without active references are automatically freed.
+
+- `sb_event_list_t` is now reference-counted. `sb_event_list_destroy()` is removed;
+  you should call `SB_DECREF()` on the event list instead when you want to
+  release it. Event lists without active references are automatically freed.
 
 ## [4.3.0] - 2025-10-15
 

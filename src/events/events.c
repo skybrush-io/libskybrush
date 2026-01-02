@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2025 CollMot Robotics Ltd.
+ * Copyright 2025-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -29,9 +29,11 @@
 #include <string.h>
 
 #include "../parsing.h"
+#include "skybrush/refcount.h"
 
 static int sb_i_event_cmp_timestamps(const void* first, const void* second);
 
+static void sb_i_event_list_destroy(sb_event_list_t* events);
 static sb_error_t sb_i_event_list_extend_from_bytes(sb_event_list_t* events, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events, sb_binary_file_parser_t* parser);
 static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events);
@@ -60,6 +62,8 @@ sb_error_t sb_event_list_init(sb_event_list_t* events, size_t max_events)
     events->num_entries = 0;
     events->max_entries = max_events;
 
+    SB_REF_INIT(events, sb_i_event_list_destroy);
+
     return SB_SUCCESS;
 }
 
@@ -68,7 +72,7 @@ sb_error_t sb_event_list_init(sb_event_list_t* events, size_t max_events)
  *
  * \param events  the event list to destroy
  */
-void sb_event_list_destroy(sb_event_list_t* events)
+static void sb_i_event_list_destroy(sb_event_list_t* events)
 {
     if (events->entries != 0) {
         sb_free(events->entries);
@@ -558,17 +562,17 @@ static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events,
 
 /* ************************************************************************** */
 
-sb_error_t sb_event_list_player_init(sb_event_list_player_t* player,
-    const sb_event_list_t* events)
+sb_error_t sb_event_list_player_init(sb_event_list_player_t* player, sb_event_list_t* events)
 {
     player->events = events;
+    SB_INCREF(player->events);
     player->current_index = 0;
     return SB_SUCCESS;
 }
 
 void sb_event_list_player_destroy(sb_event_list_player_t* player)
 {
-    /* nop */
+    SB_DECREF(player->events);
 }
 
 const sb_event_t* sb_event_list_player_peek_next_event(const sb_event_list_player_t* player)

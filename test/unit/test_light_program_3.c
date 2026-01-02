@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -83,7 +83,7 @@ void test_light_program_with_wait_until_command(void)
     }
 
     sb_light_player_destroy(&player);
-    sb_light_program_destroy(&program);
+    SB_DECREF_LOCAL(&program);
 }
 
 int main(int argc, char* argv[])

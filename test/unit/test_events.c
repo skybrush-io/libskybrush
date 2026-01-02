@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2025 CollMot Robotics Ltd.
+ * Copyright 2025-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -113,7 +113,7 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
 void closeFixture(void)
 {
-    sb_event_list_destroy(&events);
+    SB_DECREF_LOCAL(&events);
     events_inited = 0;
 }
 

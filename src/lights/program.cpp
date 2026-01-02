@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -28,11 +28,12 @@
 
 #include "bytecode_array.hpp"
 #include "bytecode_player.h"
+#include "skybrush/refcount.h"
 
 static sb_error_t sb_i_light_program_init_from_bytes(sb_light_program_t* program, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_light_program_init_from_parser(sb_light_program_t* program, sb_binary_file_parser_t* parser);
 
-void sb_light_program_destroy(sb_light_program_t* program)
+static void sb_i_light_program_destroy(sb_light_program_t* program)
 {
     sb_buffer_destroy(&program->buffer);
 }
@@ -74,6 +75,7 @@ static sb_error_t sb_i_light_program_init_from_bytes(sb_light_program_t* program
     } else {
         sb_buffer_init_view(&program->buffer, buf, nbytes);
     }
+    SB_REF_INIT(program, sb_i_light_program_destroy);
     return SB_SUCCESS;
 }
 
@@ -95,6 +97,8 @@ static sb_error_t sb_i_light_program_init_from_parser(
         }
         return retval;
     }
+
+    SB_REF_INIT(program, sb_i_light_program_destroy);
 
     return SB_SUCCESS;
 }
@@ -133,6 +137,7 @@ sb_error_t sb_light_program_init_from_bytes(sb_light_program_t* program, uint8_t
 sb_error_t sb_light_program_init_empty(sb_light_program_t* program)
 {
     SB_CHECK(sb_buffer_init(&program->buffer, 0));
+    SB_REF_INIT(program, sb_i_light_program_destroy);
     return SB_SUCCESS;
 }
 
@@ -143,7 +148,7 @@ sb_error_t sb_light_program_init_empty(sb_light_program_t* program)
 
 static void sb_i_light_player_set_store(sb_light_player_t* player, BytecodeStore* store);
 
-sb_error_t sb_light_player_init(sb_light_player_t* player, const sb_light_program_t* program)
+sb_error_t sb_light_player_init(sb_light_player_t* player, sb_light_program_t* program)
 {
     BytecodePlayer* new_player;
     BytecodeStore* new_store;
@@ -166,6 +171,8 @@ sb_error_t sb_light_player_init(sb_light_player_t* player, const sb_light_progra
     }
 
     player->program = program;
+    SB_INCREF(player->program);
+
     player->player = new_player;
 
     sb_i_light_player_set_store(player, new_store);
@@ -181,6 +188,8 @@ void sb_light_player_destroy(sb_light_player_t* player)
         delete PLAYER;
         player->player = 0;
     }
+
+    SB_DECREF(player->program);
 
     memset(player, 0, sizeof(sb_light_player_t));
 }
