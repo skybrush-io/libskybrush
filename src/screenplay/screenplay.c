@@ -135,6 +135,44 @@ const sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr_const(
 }
 
 /**
+ * @brief Returns a pointer to the chapter that is active at the given time.
+ *
+ * The time is specified in milliseconds from the start of the screenplay.
+ * If no chapter is active at the given time, \c NULL is returned.
+ *
+ * @param screenplay  the screenplay to query
+ * @param time_msec   pointer to a variable specifying the time in milliseconds from the
+ *        start of the screenplay. It will be updated to contain the time offset
+ *        within the returned chapter. Its value will be zero upon returning when the
+ *        returned chapter is \c NULL.
+ * @return a pointer to the chapter that is active at the given time, or \c NULL
+ *         if no chapter is active at that time
+ */
+sb_screenplay_chapter_t* sb_screenplay_get_current_chapter_ptr(
+    sb_screenplay_t* screenplay, uint32_t* time_msec)
+{
+    for (size_t i = 0; i < screenplay->num_chapters; i++) {
+        sb_screenplay_chapter_t* chapter = &screenplay->chapters[i];
+        uint32_t chapter_duration_msec = sb_screenplay_chapter_get_duration_msec(chapter);
+
+        if (chapter_duration_msec == UINT32_MAX) {
+            /* Infinite duration chapter -> always active */
+            return chapter;
+        }
+
+        if (*time_msec < chapter_duration_msec) {
+            /* Current chapter found */
+            return chapter;
+        }
+
+        *time_msec -= chapter_duration_msec;
+    }
+
+    *time_msec = 0;
+    return NULL;
+}
+
+/**
  * @brief Appends a new chapter to the end of the screenplay.
  *
  * The new chapter is initialized with default values.
@@ -144,7 +182,7 @@ const sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr_const(
  * @return \c SB_SUCCESS if the chapter was appended successfully,
  *         \c SB_ENOMEM if a memory allocation failed
  */
-sb_error_t sb_screenplay_append_chapter(sb_screenplay_t* screenplay, sb_screenplay_chapter_t* out_chapter)
+sb_error_t sb_screenplay_append_chapter(sb_screenplay_t* screenplay, sb_screenplay_chapter_t** out_chapter)
 {
     sb_screenplay_chapter_t* chapter;
 
@@ -155,7 +193,7 @@ sb_error_t sb_screenplay_append_chapter(sb_screenplay_t* screenplay, sb_screenpl
     screenplay->num_chapters++;
 
     if (out_chapter != NULL) {
-        *out_chapter = *chapter;
+        *out_chapter = chapter;
     }
 
     return SB_SUCCESS;

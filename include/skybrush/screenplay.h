@@ -134,10 +134,11 @@ sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr(
     sb_screenplay_t* screenplay, size_t index);
 const sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr_const(
     const sb_screenplay_t* screenplay, size_t index);
-
+sb_screenplay_chapter_t* sb_screenplay_get_current_chapter_ptr(
+    sb_screenplay_t* screenplay, uint32_t* time_msec);
 void sb_screenplay_clear(sb_screenplay_t* screenplay);
 sb_error_t sb_screenplay_append_chapter(
-    sb_screenplay_t* screenplay, sb_screenplay_chapter_t* out_chapter);
+    sb_screenplay_t* screenplay, sb_screenplay_chapter_t** out_chapter);
 
 __END_DECLS
 

@@ -2,6 +2,7 @@ add_library(
     skybrush
 
     buffer.c
+    control.c
     crc32.c
     error.c
     parsing.c

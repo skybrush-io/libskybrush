@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -32,7 +32,10 @@
 #include <skybrush/events.h>
 #include <skybrush/lights.h>
 #include <skybrush/poly.h>
+#include <skybrush/refcount.h>
 #include <skybrush/rth_plan.h>
+#include <skybrush/screenplay.h>
+#include <skybrush/time_axis.h>
 #include <skybrush/trajectory.h>
 #include <skybrush/utils.h>
 #include <skybrush/version.h>

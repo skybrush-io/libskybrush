@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -59,6 +59,21 @@ typedef struct
     /** The Y coordinate of the vector */
     float y;
 } sb_vector2_t;
+
+/**
+ * A simple 3D vector.
+ */
+typedef struct
+{
+    /** The X coordinate of the vector */
+    float x;
+
+    /** The Y coordinate of the vector */
+    float y;
+
+    /** The Z coordinate of the vector */
+    float z;
+} sb_vector3_t;
 
 /**
  * A simple 3D vector with an extra yaw component.
