@@ -189,7 +189,7 @@ void sb_light_player_destroy(sb_light_player_t* player)
         player->player = 0;
     }
 
-    SB_DECREF(player->program);
+    SB_XDECREF(player->program);
 
     memset(player, 0, sizeof(sb_light_player_t));
 }

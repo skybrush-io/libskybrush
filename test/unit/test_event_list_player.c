@@ -63,7 +63,7 @@ void loadFixture(const char* fname)
 void closeFixture(void)
 {
     sb_event_list_player_destroy(&player);
-    SB_DECREF_LOCAL(&events);
+    SB_DECREF_STATIC(&events);
 }
 
 void test_iteration(void)

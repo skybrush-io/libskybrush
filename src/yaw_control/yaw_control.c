@@ -287,7 +287,7 @@ sb_error_t sb_yaw_player_init(sb_yaw_player_t* player, sb_yaw_control_t* ctrl)
  */
 void sb_yaw_player_destroy(sb_yaw_player_t* player)
 {
-    SB_DECREF(player->ctrl);
+    SB_XDECREF(player->ctrl);
     memset(player, 0, sizeof(sb_yaw_player_t));
 }
 

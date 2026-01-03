@@ -117,20 +117,31 @@ typedef struct {
     } while (0)
 
 /**
- * @def SB_DECREF_LOCAL(obj)
+ * @def SB_DECREF_STATIC(obj)
  *
- * Decrements the reference count of a reference-counted object on the stack. If the
- * reference count reaches zero, the associated destructor function is called to destroy
- * the object. No attempts are made to free the object, as it is assumed to be on the
- * stack.
+ * Decrements the reference count of a statically allocated reference-counted object.
+ * If the reference count reaches zero, the associated destructor function is called to
+ * destroy the object. No attempts are made to free the object.
  */
-#define SB_DECREF_LOCAL(obj)                                 \
+#define SB_DECREF_STATIC(obj)                                \
     do {                                                     \
         if (--(SB_REFCNT(obj)) == 0) {                       \
             if ((obj)->ref_counted.destructor) {             \
                 (obj)->ref_counted.destructor((void*)(obj)); \
             }                                                \
         }                                                    \
+    } while (0)
+
+/**
+ * @def SB_XINCREF(obj)
+ *
+ * Increments the reference count of a reference-counted object, with null checking.
+ */
+#define SB_XINCREF(obj)     \
+    do {                    \
+        if ((obj) != 0) {   \
+            SB_INCREF(obj); \
+        }                   \
     } while (0)
 
 /**

@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -82,7 +82,6 @@ void sb_buffer_destroy(sb_buffer_t* buf)
 {
     if (buf->owned && buf->stor_begin != 0) {
         sb_free(buf->stor_begin);
-        buf->stor_begin = 0;
     }
 
     buf->stor_end = 0;

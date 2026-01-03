@@ -113,7 +113,7 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
 void closeFixture(void)
 {
-    SB_DECREF_LOCAL(&events);
+    SB_DECREF_STATIC(&events);
     events_inited = 0;
 }
 

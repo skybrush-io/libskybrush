@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
         "get total trajectory duration, 10000x",
         REPEAT(sb_trajectory_get_total_duration_msec(&trajectory), 10000));
 
-    SB_DECREF_LOCAL(&trajectory);
+    SB_DECREF_STATIC(&trajectory);
 
     return 0;
 }

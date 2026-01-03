@@ -203,7 +203,6 @@ void sb_time_axis_destroy(sb_time_axis_t* axis)
 {
     if (axis->stor_begin != 0) {
         sb_free(axis->stor_begin);
-        axis->stor_begin = 0;
     }
 
     axis->stor_end = 0;

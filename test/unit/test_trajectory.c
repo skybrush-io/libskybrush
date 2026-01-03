@@ -106,7 +106,7 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
 void closeFixture(void)
 {
-    SB_DECREF_LOCAL(&trajectory);
+    SB_DECREF_STATIC(&trajectory);
     trajectory_loaded = 0;
 
     if (buf) {

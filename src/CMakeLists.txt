@@ -21,6 +21,8 @@ add_library(
 
     rth_plan/rth_plan.c
 
+    screenplay/chapter.c
+    screenplay/screenplay.c
     screenplay/time_axis.c
 
     trajectory/builder.c

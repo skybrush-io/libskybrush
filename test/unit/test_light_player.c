@@ -50,7 +50,7 @@ void setUp(void)
 void tearDown(void)
 {
     sb_light_player_destroy(&player);
-    SB_DECREF_LOCAL(&program);
+    SB_DECREF_STATIC(&program);
 }
 
 void test_get_color_at(void)

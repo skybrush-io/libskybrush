@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
         "iterating trajectory at 100 fps, 100x",
         REPEAT(iterate(&trajectory, duration_msec, 10), 100));
 
-    SB_DECREF_LOCAL(&trajectory);
+    SB_DECREF_STATIC(&trajectory);
 
     return 0;
 }

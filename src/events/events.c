@@ -76,7 +76,6 @@ static void sb_i_event_list_destroy(sb_event_list_t* events)
 {
     if (events->entries != 0) {
         sb_free(events->entries);
-        events->entries = 0;
     }
 
     events->num_entries = 0;
@@ -572,7 +571,7 @@ sb_error_t sb_event_list_player_init(sb_event_list_player_t* player, sb_event_li
 
 void sb_event_list_player_destroy(sb_event_list_player_t* player)
 {
-    SB_DECREF(player->events);
+    SB_XDECREF(player->events);
 }
 
 const sb_event_t* sb_event_list_player_peek_next_event(const sb_event_list_player_t* player)

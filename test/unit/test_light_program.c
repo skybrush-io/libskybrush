@@ -47,7 +47,7 @@ void setUp(void)
 
 void tearDown(void)
 {
-    SB_DECREF_LOCAL(&program);
+    SB_DECREF_STATIC(&program);
 }
 
 void test_light_program_is_really_empty(void)
@@ -75,7 +75,7 @@ void test_clear(void)
 
 void test_init_empty(void)
 {
-    SB_DECREF_LOCAL(&program); /* was created in setUp() */
+    SB_DECREF_STATIC(&program); /* was created in setUp() */
     sb_light_program_init_empty(&program);
     test_light_program_is_really_empty();
 }

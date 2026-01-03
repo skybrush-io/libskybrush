@@ -83,7 +83,7 @@ void test_light_program_with_wait_until_command(void)
     }
 
     sb_light_player_destroy(&player);
-    SB_DECREF_LOCAL(&program);
+    SB_DECREF_STATIC(&program);
 }
 
 int main(int argc, char* argv[])

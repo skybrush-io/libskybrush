@@ -62,7 +62,7 @@ void loadFixture(const char* fname)
 void closeFixture(void)
 {
     sb_trajectory_player_destroy(&player);
-    SB_DECREF_LOCAL(&trajectory);
+    SB_DECREF_STATIC(&trajectory);
 }
 
 void test_position_at(void)

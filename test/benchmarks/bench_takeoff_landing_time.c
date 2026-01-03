@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
         "get proposed landing time, 10000x",
         REPEAT(sb_trajectory_propose_landing_time_sec(&trajectory, 2500, 50), 10000));
 
-    SB_DECREF_LOCAL(&trajectory);
+    SB_DECREF_STATIC(&trajectory);
 
     return 0;
 }

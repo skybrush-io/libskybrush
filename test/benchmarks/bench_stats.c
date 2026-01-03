@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
         REPEAT(sb_trajectory_stats_calculator_run(&calc, &trajectory, &stats), 10000));
 
     sb_trajectory_stats_calculator_destroy(&calc);
-    SB_DECREF_LOCAL(&trajectory);
+    SB_DECREF_STATIC(&trajectory);
 
     return 0;
 }

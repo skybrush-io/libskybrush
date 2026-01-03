@@ -463,7 +463,7 @@ void test_conversion_to_trajectory(void)
     TEST_ASSERT_EQUAL(270, vec.yaw);
 
     sb_trajectory_player_destroy(&player);
-    SB_DECREF_LOCAL(&trajectory);
+    SB_DECREF_STATIC(&trajectory);
 }
 
 int main(int argc, char* argv[])

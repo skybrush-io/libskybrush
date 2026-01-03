@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        SB_DECREF_LOCAL(&trajectory);
+        SB_DECREF_STATIC(&trajectory);
 
         if (first) {
             printf(

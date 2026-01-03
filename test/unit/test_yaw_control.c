@@ -106,7 +106,7 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
 void closeFixture(void)
 {
-    SB_DECREF_LOCAL(&ctrl);
+    SB_DECREF_STATIC(&ctrl);
     yaw_control_loaded = 0;
 }
 

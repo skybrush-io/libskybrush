@@ -73,7 +73,7 @@ sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, sb_trajecto
  */
 void sb_trajectory_player_destroy(sb_trajectory_player_t* player)
 {
-    SB_DECREF(player->trajectory);
+    SB_XDECREF(player->trajectory);
     memset(player, 0, sizeof(sb_trajectory_player_t));
 }
 

@@ -60,7 +60,7 @@ void loadFixture(const char* fname)
 
 void closeFixture(void)
 {
-    SB_DECREF_LOCAL(&trajectory);
+    SB_DECREF_STATIC(&trajectory);
 }
 
 void check_stats(const sb_trajectory_stats_t* stats)

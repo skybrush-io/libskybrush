@@ -62,7 +62,7 @@ void loadFixture(const char* fname)
 void closeFixture(void)
 {
     sb_yaw_player_destroy(&player);
-    SB_DECREF_LOCAL(&ctrl);
+    SB_DECREF_STATIC(&ctrl);
 }
 
 void test_yaw_at(void)

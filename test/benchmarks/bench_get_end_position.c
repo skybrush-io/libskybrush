@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
         "get end position of trajectory, 10000x",
         REPEAT(sb_trajectory_get_end_position(&trajectory, &pos), 10000));
 
-    SB_DECREF_LOCAL(&trajectory);
+    SB_DECREF_STATIC(&trajectory);
 
     return 0;
 }
