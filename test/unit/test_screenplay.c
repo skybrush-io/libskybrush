@@ -178,6 +178,41 @@ void test_sb_screenplay_get_current_chapter_ptr_with_infinite_later_chapter(void
     sb_screenplay_destroy(&screenplay);
 }
 
+/* New tests for removing the last chapter, including empty-case behavior */
+void test_sb_screenplay_remove_last_chapter(void)
+{
+    sb_screenplay_t screenplay;
+    sb_screenplay_chapter_t* ptr;
+    sb_error_t err;
+
+    err = sb_screenplay_init(&screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    /* Removing from an empty screenplay should return SB_EEMPTY and leave size 0 */
+    TEST_ASSERT_EQUAL(SB_EEMPTY, sb_screenplay_remove_last_chapter(&screenplay));
+    TEST_ASSERT_EQUAL(0u, sb_screenplay_size(&screenplay));
+
+    /* Append two chapters */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
+    TEST_ASSERT_EQUAL(1u, sb_screenplay_size(&screenplay));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
+    TEST_ASSERT_EQUAL(2u, sb_screenplay_size(&screenplay));
+
+    /* Remove last chapter -> success and size decrements */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_remove_last_chapter(&screenplay));
+    TEST_ASSERT_EQUAL(1u, sb_screenplay_size(&screenplay));
+
+    /* Remove last chapter again -> success and size becomes zero */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_remove_last_chapter(&screenplay));
+    TEST_ASSERT_EQUAL(0u, sb_screenplay_size(&screenplay));
+
+    /* Removing now should return SB_EEMPTY again */
+    TEST_ASSERT_EQUAL(SB_EEMPTY, sb_screenplay_remove_last_chapter(&screenplay));
+    TEST_ASSERT_EQUAL(0u, sb_screenplay_size(&screenplay));
+
+    sb_screenplay_destroy(&screenplay);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -187,6 +222,7 @@ int main(void)
     RUN_TEST(test_sb_screenplay_get_current_chapter_ptr_infinite_first);
     RUN_TEST(test_sb_screenplay_get_current_chapter_ptr_finite_offsets_and_overflow);
     RUN_TEST(test_sb_screenplay_get_current_chapter_ptr_with_infinite_later_chapter);
+    RUN_TEST(test_sb_screenplay_remove_last_chapter);
 
     return UNITY_END();
 }

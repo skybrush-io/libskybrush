@@ -17,7 +17,8 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "skybrush/refcount.h"
+#include <assert.h>
+#include <skybrush/refcount.h>
 #include <skybrush/screenplay.h>
 
 static sb_error_t sb_i_screenplay_ensure_has_free_space(sb_screenplay_t* screenplay);
@@ -84,19 +85,26 @@ size_t sb_screenplay_size(const sb_screenplay_t* screenplay)
 }
 
 /**
+ * @brief Checks whether the screenplay is empty (has no chapters).
+ *
+ * @param screenplay  the screenplay to query
+ * @return \c true if the screenplay is empty, \c false otherwise
+ */
+sb_bool_t sb_screenplay_is_empty(const sb_screenplay_t* screenplay)
+{
+    return screenplay->num_chapters == 0;
+}
+
+/**
  * @brief Removes all chapters from the screenplay.
  *
  * @param screenplay  the screenplay to clear
  */
 void sb_screenplay_clear(sb_screenplay_t* screenplay)
 {
-    sb_screenplay_chapter_t* end = screenplay->chapters + screenplay->num_chapters;
-    sb_screenplay_chapter_t* chapter;
-    for (chapter = screenplay->chapters; chapter < end; chapter++) {
-        SB_DECREF_STATIC(chapter);
+    while (!sb_screenplay_is_empty(screenplay)) {
+        sb_screenplay_remove_last_chapter(screenplay); /* will succeed */
     }
-
-    screenplay->num_chapters = 0;
 }
 
 /**
@@ -111,24 +119,6 @@ void sb_screenplay_clear(sb_screenplay_t* screenplay)
  */
 sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr(
     sb_screenplay_t* screenplay, size_t index)
-{
-    return (index < screenplay->num_chapters)
-        ? &screenplay->chapters[index]
-        : NULL;
-}
-
-/**
- * @brief Returns a pointer to the chapter at the given index in the screenplay (const variant).
- *
- * The chapter returned by the provided pointer should not be modified.
- *
- * @param screenplay  the screenplay to query
- * @param index   the index of the chapter to return
- * @return a pointer to the chapter at the given index, or \c NULL if the index
- *         is out of bounds
- */
-const sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr_const(
-    const sb_screenplay_t* screenplay, size_t index)
 {
     return (index < screenplay->num_chapters)
         ? &screenplay->chapters[index]
@@ -197,6 +187,25 @@ sb_error_t sb_screenplay_append_new_chapter(sb_screenplay_t* screenplay, sb_scre
     if (out_chapter != NULL) {
         *out_chapter = chapter;
     }
+
+    return SB_SUCCESS;
+}
+
+/**
+ * @brief Removes the last chapter from the screenplay.
+ *
+ * @param screenplay  the screenplay to remove the chapter from
+ * @return \c SB_SUCCESS if the chapter was removed successfully,
+ *         \c SB_EEMPTY if there are no chapters to remove
+ */
+sb_error_t sb_screenplay_remove_last_chapter(sb_screenplay_t* screenplay)
+{
+    if (screenplay->num_chapters == 0) {
+        return SB_EEMPTY;
+    }
+
+    screenplay->num_chapters--;
+    SB_DECREF_STATIC(&screenplay->chapters[screenplay->num_chapters]);
 
     return SB_SUCCESS;
 }
