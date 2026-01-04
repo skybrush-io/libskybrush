@@ -336,6 +336,27 @@ sb_error_t sb_time_axis_remove_segment_at(sb_time_axis_t* axis, size_t index)
  */
 float sb_time_axis_map(const sb_time_axis_t* axis, float wall_clock_time_sec)
 {
+    return sb_time_axis_map_ex(axis, wall_clock_time_sec, NULL);
+}
+
+/**
+ * @brief Maps some time instant in wall clock time to the corresponding warped time (with extra information).
+ *
+ * @param axis Pointer to the time axis structure.
+ * @param wall_clock_time_sec Wall clock time in seconds.
+ * @param out_rate When not NULL, the rate (i.e. the measure of how "fast" time goes by
+ *        relative to wall clock time) at the given wall clock time is stored here.
+ *        A rate of 1.0 means that time flows in real-time, a rate of 2.0 means that
+ *        time flows twice as fast as real-time, a rate of 0.5 means that time flows
+ *        half as fast as real-time, and a rate of 0.0 means that time is frozen.
+ *        Segments are closed from the left and open from the right, i.e. the rate at the
+ *        start of a segment is the initial rate of that segment, and the rate at the
+ *        end of a segment is the initial rate of the next segment (or the final rate
+ *        of the last segment, if we are at the end of the time axis).
+ * @return Corresponding warped time in seconds.
+ */
+float sb_time_axis_map_ex(const sb_time_axis_t* axis, float wall_clock_time_sec, float* out_rate)
+{
     float accumulated_warped_time_sec = 0.0f;
     float warped_time_in_segment;
     const sb_time_segment_t* seg;
@@ -347,11 +368,21 @@ float sb_time_axis_map(const sb_time_axis_t* axis, float wall_clock_time_sec)
      * Otherwise the time axis is simply real-time.
      */
     if (wall_clock_time_sec < 0 || num_segments == 0) {
+        if (out_rate) {
+            *out_rate = 1.0f;
+        }
         return wall_clock_time_sec;
     }
 
-    /* Infinity is mapped to infinity */
+    /* Infinity is mapped to infinity. The assumed rate is the final rate of the last
+     * segment.
+     */
     if (!isfinite(wall_clock_time_sec)) {
+        if (out_rate) {
+            assert(num_segments > 0);
+            seg = sb_time_axis_get_segment(axis, num_segments - 1);
+            *out_rate = seg ? seg->final_rate : 1.0f;
+        }
         return wall_clock_time_sec;
     }
 
@@ -359,18 +390,31 @@ float sb_time_axis_map(const sb_time_axis_t* axis, float wall_clock_time_sec)
         seg = sb_time_axis_get_segment(axis, i);
         float seg_wall_clock_duration_sec = sb_time_segment_get_duration_in_wall_clock_time_sec(seg);
 
-        if (seg_wall_clock_duration_sec >= wall_clock_time_sec) {
+        if (seg_wall_clock_duration_sec > wall_clock_time_sec) {
             /* The target time is within this segment */
             if (seg->initial_rate == seg->final_rate) {
                 /* Constant rate segment */
                 warped_time_in_segment = wall_clock_time_sec * seg->initial_rate;
+                if (out_rate) {
+                    *out_rate = seg->initial_rate;
+                }
             } else if (seg_wall_clock_duration_sec > 0) {
                 /* Linearly changing rate segment */
-                warped_time_in_segment = seg->initial_rate * wall_clock_time_sec + ((seg->final_rate - seg->initial_rate) / (2.0f * seg_wall_clock_duration_sec)) * wall_clock_time_sec * wall_clock_time_sec;
+                float delta_rate = seg->final_rate - seg->initial_rate;
+                float relative_t = wall_clock_time_sec / seg_wall_clock_duration_sec;
+                warped_time_in_segment = (seg->initial_rate + delta_rate / 2.0f * relative_t) * wall_clock_time_sec;
+                if (out_rate) {
+                    *out_rate = seg->initial_rate + delta_rate * relative_t;
+                }
             } else {
                 /* Zero-duration segment, prevent division by zero.
                  * Hard to cover with unit tests, but theoretically possible. */
-                warped_time_in_segment = 0.0f; /* LCOV_EXCL_LINE */
+                /* LCOV_EXCL_START */
+                warped_time_in_segment = 0.0f;
+                if (out_rate) {
+                    *out_rate = (seg->initial_rate + seg->final_rate) / 2.0f;
+                }
+                /* LCOV_EXCL_STOP */
             }
 
             return accumulated_warped_time_sec + warped_time_in_segment;
@@ -388,6 +432,9 @@ float sb_time_axis_map(const sb_time_axis_t* axis, float wall_clock_time_sec)
     assert(num_segments > 0);
     seg = sb_time_axis_get_segment(axis, num_segments - 1);
     warped_time_in_segment = wall_clock_time_sec * seg->final_rate;
+    if (out_rate) {
+        *out_rate = seg->final_rate;
+    }
     return accumulated_warped_time_sec + warped_time_in_segment;
 }
 

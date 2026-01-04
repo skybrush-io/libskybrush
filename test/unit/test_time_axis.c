@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -276,6 +276,129 @@ void test_time_axis_map_linear_changing_rate(void)
     TEST_ASSERT_FLOAT_WITHIN(EPS, expected, observed);
 }
 
+/* Tests for sb_time_axis_map_ex() derivative (rate) behavior */
+
+/* Single constant-rate segment: mapping is linear with the rate */
+void test_time_axis_map_ex_single_constant_segment(void)
+{
+    float rate = 0.0f;
+    sb_time_segment_t s = sb_time_segment_make_constant_rate(5.0f, 2.0f);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
+
+    /* inside segment */
+    float observed = sb_time_axis_map_ex(&axis, 1.5f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, observed);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
+
+    /* at segment boundary */
+    rate = 0.0f;
+    observed = sb_time_axis_map_ex(&axis, 5.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 10.0f, observed);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
+
+    /* beyond segment -- continues with final rate */
+    rate = 0.0f;
+    observed = sb_time_axis_map_ex(&axis, 7.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 14.0f, observed);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
+}
+
+/* Mapping across multiple segments (different constant rates) */
+void test_time_axis_map_ex_across_segments(void)
+{
+    float rate = 0.0f;
+
+    /* first segment: duration 2s, rate 1 => warped 2s */
+    sb_time_segment_t a = sb_time_segment_make_constant_rate(2.0f, 1.0f);
+    /* second: duration 3s, rate 2 => warped 6s */
+    sb_time_segment_t b = sb_time_segment_make_constant_rate(3.0f, 2.0f);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, a));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, b));
+
+    /* time 2.5s -> 0.5s into second segment => warped = 2.0 + 0.5*2.0 = 3.0 */
+    float observed = sb_time_axis_map_ex(&axis, 2.5f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, observed);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
+
+    /* time 4.0s -> 2.0s into second segment => warped = 2.0 + 2.0*2.0 = 6.0 */
+    observed = sb_time_axis_map_ex(&axis, 4.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 6.0f, observed);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
+}
+
+/* Derivative for a linearly changing-rate segment should be:
+ * rate(t) = initial_rate + (final_rate - initial_rate) * (t / duration)
+ */
+void test_time_axis_map_ex_linear_changing_rate(void)
+{
+    sb_time_segment_t s = sb_time_segment_make(2.0f, 1.0f, 3.0f);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
+
+    float rate = -1.0f;
+    sb_time_axis_map_ex(&axis, 1.0f, &rate);
+
+    /* expected rate: 1 + (3-1) * (1/2) = 2.0 */
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
+
+    /* boundary checks */
+    sb_time_axis_map_ex(&axis, 0.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
+
+    sb_time_axis_map_ex(&axis, 2.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, rate);
+
+    /* ensure the map result still matches the non-_ex variant when out_rate is NULL */
+    rate = sb_time_axis_map_ex(&axis, 1.5f, NULL);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.625f, rate);
+}
+
+/* Test derivative behavior across a multi-segment scenario (three segments) */
+void test_time_axis_map_ex_three_segment_scenario(void)
+{
+    /* Segments:
+     * 1) realtime for 5s (rate = 1)
+     * 2) slowdown from realtime to 0 over 5s (initial=1, final=0)
+     * 3) realtime for 5s (rate = 1)
+     */
+    sb_time_segment_t s1 = sb_time_segment_make_realtime(5.0f);
+    sb_time_segment_t s2 = sb_time_segment_make_slowdown_from_realtime(5.0f);
+    sb_time_segment_t s3 = sb_time_segment_make_realtime(5.0f);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s1));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s2));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s3));
+
+    float rate = -1.0f;
+
+    /* t = 2 (inside first segment) -> rate should be 1.0 */
+    sb_time_axis_map_ex(&axis, 2.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
+
+    /* t = 7 (2s into seg2). seg2 duration = 5, relative_t = 2/5 = 0.4
+     * seg2 initial=1 final=0 -> rate = 1 + (0-1)*0.4 = 0.6
+     */
+    sb_time_axis_map_ex(&axis, 7.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 0.6f, rate);
+
+    /* t = 10 (end of seg2, start of seg3, segments are open from the right) ->
+     * rate should be 1.0 (rate of seg3) */
+    sb_time_axis_map_ex(&axis, 10.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
+
+    /* t = 12 (inside seg3) -> rate should be 1.0 */
+    sb_time_axis_map_ex(&axis, 12.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
+
+    /* Infinity: out_rate should be final rate of the last segment (1.0) */
+    sb_time_axis_map_ex(&axis, INFINITY, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
+
+    /* Negative time: maps unchanged and out_rate should be 1.0 per implementation */
+    sb_time_axis_map_ex(&axis, -1.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
+}
+
 /* Special cases: negative time and infinity */
 void test_time_axis_map_special_cases(void)
 {
@@ -287,6 +410,24 @@ void test_time_axis_map_special_cases(void)
 
     /* infinity is returned unchanged */
     TEST_ASSERT_TRUE(isinf(sb_time_axis_map(&axis, INFINITY)));
+}
+
+/* Special cases for sb_time_axis_map_ex: negative time and infinity, and returned rate */
+void test_time_axis_map_ex_special_cases(void)
+{
+    sb_time_segment_t s = sb_time_segment_make_constant_rate(1.0f, 2.0f);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
+
+    float rate = -123.0f;
+    /* negative time is returned unchanged and rate should be 1.0 per implementation */
+    float observed = sb_time_axis_map_ex(&axis, -1.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, -1.0f, observed);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
+
+    /* infinity is returned unchanged and rate should be final_rate of last segment */
+    observed = sb_time_axis_map_ex(&axis, INFINITY, &rate);
+    TEST_ASSERT_TRUE(isinf(observed));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, s.final_rate, rate);
 }
 
 /* Additional mapping scenario test:
@@ -463,6 +604,13 @@ int main(int argc, char* argv[])
     RUN_TEST(test_time_axis_map_linear_changing_rate);
     RUN_TEST(test_time_axis_map_special_cases);
     RUN_TEST(test_time_axis_map_three_segment_scenario);
+
+    /* sb_time_axis_map_ex tests */
+    RUN_TEST(test_time_axis_map_ex_single_constant_segment);
+    RUN_TEST(test_time_axis_map_ex_across_segments);
+    RUN_TEST(test_time_axis_map_ex_linear_changing_rate);
+    RUN_TEST(test_time_axis_map_ex_special_cases);
+    RUN_TEST(test_time_axis_map_ex_three_segment_scenario);
 
     return UNITY_END();
 }

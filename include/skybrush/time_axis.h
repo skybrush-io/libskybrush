@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -116,6 +116,7 @@ sb_error_t sb_time_axis_remove_segment_at(
     sb_time_axis_t* axis, size_t index);
 
 float sb_time_axis_map(const sb_time_axis_t* axis, float wall_clock_time_sec);
+float sb_time_axis_map_ex(const sb_time_axis_t* axis, float wall_clock_time_sec, float* out_rate);
 
 __END_DECLS
 
