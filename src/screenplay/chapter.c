@@ -23,6 +23,8 @@
 #include <skybrush/screenplay.h>
 #include <skybrush/time_axis.h>
 
+static void sb_i_screenplay_chapter_destroy(sb_screenplay_chapter_t* chapter);
+
 /**
  * @brief Initializes a screenplay chapter with default values.
  *
@@ -41,6 +43,8 @@ sb_error_t sb_screenplay_chapter_init(sb_screenplay_chapter_t* chapter)
     chapter->yaw_control = NULL;
     chapter->events = NULL;
 
+    SB_REF_INIT(chapter, sb_i_screenplay_chapter_destroy);
+
     return SB_SUCCESS;
 }
 
@@ -49,7 +53,7 @@ sb_error_t sb_screenplay_chapter_init(sb_screenplay_chapter_t* chapter)
  *
  * @param chapter  the screenplay chapter to destroy
  */
-void sb_screenplay_chapter_destroy(sb_screenplay_chapter_t* chapter)
+static void sb_i_screenplay_chapter_destroy(sb_screenplay_chapter_t* chapter)
 {
     SB_XDECREF(chapter->trajectory);
     SB_XDECREF(chapter->light_program);

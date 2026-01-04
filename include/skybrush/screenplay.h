@@ -30,6 +30,7 @@
 #include <skybrush/decls.h>
 #include <skybrush/events.h>
 #include <skybrush/lights.h>
+#include <skybrush/refcount.h>
 #include <skybrush/time_axis.h>
 #include <skybrush/trajectory.h>
 #include <skybrush/yaw_control.h>
@@ -47,6 +48,8 @@ __BEGIN_DECLS
  * in _wall clock time_ is specified).
  */
 typedef struct {
+    SB_REFCOUNTED;
+
     /** The duration of the chapter, in milliseconds. \c UINT32_MAX means infinite. */
     uint32_t duration_msec;
 
@@ -79,7 +82,6 @@ typedef struct {
 } sb_screenplay_chapter_t;
 
 sb_error_t sb_screenplay_chapter_init(sb_screenplay_chapter_t* chapter);
-void sb_screenplay_chapter_destroy(sb_screenplay_chapter_t* chapter);
 
 uint32_t sb_screenplay_chapter_get_duration_msec(
     const sb_screenplay_chapter_t* chapter);
@@ -117,6 +119,9 @@ void sb_screenplay_chapter_set_event_list(
  * Each chapter may refer to a trajectory, a light program, a yaw control track,
  * and an event track. Furthermore, each chapter has its own time axis that defines
  * how time flows during the chapter in relation to wall clock time.
+ *
+ * A screenplay can be evaluated by a show controller (\ref sb_show_controller_t)
+ * to obtain the control outputs at any given point in time.
  */
 typedef struct {
     sb_screenplay_chapter_t* chapters; /**< The list of chapters */
@@ -132,12 +137,11 @@ size_t sb_screenplay_size(const sb_screenplay_t* screenplay);
 
 sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr(
     sb_screenplay_t* screenplay, size_t index);
-const sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr_const(
-    const sb_screenplay_t* screenplay, size_t index);
 sb_screenplay_chapter_t* sb_screenplay_get_current_chapter_ptr(
     sb_screenplay_t* screenplay, uint32_t* time_msec);
+
 void sb_screenplay_clear(sb_screenplay_t* screenplay);
-sb_error_t sb_screenplay_append_chapter(
+sb_error_t sb_screenplay_append_new_chapter(
     sb_screenplay_t* screenplay, sb_screenplay_chapter_t** out_chapter);
 
 __END_DECLS

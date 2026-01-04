@@ -49,7 +49,6 @@ void test_screenplay_init_sets_defaults_and_allocates(void)
 
     /* getting chapter pointer must return NULL for empty screenplay */
     TEST_ASSERT_NULL(sb_screenplay_get_chapter_ptr(&screenplay, 0));
-    TEST_ASSERT_NULL(sb_screenplay_get_chapter_ptr_const(&screenplay, 0));
 
     /* Clean up */
     sb_screenplay_destroy(&screenplay);
@@ -91,11 +90,11 @@ void test_sb_screenplay_get_current_chapter_ptr_infinite_first(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
     /* Append a single chapter (default is infinite duration) */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_chapter(&screenplay, NULL));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, NULL));
     /* Call with arbitrary time -> must return first chapter and leave time unchanged */
     ptr = sb_screenplay_get_current_chapter_ptr(&screenplay, &time_msec);
     TEST_ASSERT_NOT_NULL(ptr);
-    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_chapter_ptr_const(&screenplay, 0), ptr);
+    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_chapter_ptr(&screenplay, 0), ptr);
     TEST_ASSERT_EQUAL_UINT32(5000u, time_msec);
 
     sb_screenplay_destroy(&screenplay);
@@ -112,11 +111,11 @@ void test_sb_screenplay_get_current_chapter_ptr_finite_offsets_and_overflow(void
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
     /* Append three chapters and set durations: 1000, 2000, 3000 (all finite) */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_chapter(&screenplay, &ptr));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
     sb_screenplay_chapter_set_duration_msec(ptr, 1000u);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_chapter(&screenplay, &ptr));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
     sb_screenplay_chapter_set_duration_msec(ptr, 2000u);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_chapter(&screenplay, &ptr));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
     sb_screenplay_chapter_set_duration_msec(ptr, 3000u);
 
     /* time within first chapter */
@@ -163,11 +162,11 @@ void test_sb_screenplay_get_current_chapter_ptr_with_infinite_later_chapter(void
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
     /* Append three chapters and set durations: 1000, 2000, infinite */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_chapter(&screenplay, &ptr));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
     sb_screenplay_chapter_set_duration_msec(ptr, 1000u);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_chapter(&screenplay, &ptr));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
     sb_screenplay_chapter_set_duration_msec(ptr, 2000u);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_chapter(&screenplay, &ptr));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
     /* chapter 2 (index 2) remains infinite by default */
 
     /* time that falls into the infinite third chapter: 1000+2000+500 -> should return third with offset 500 */

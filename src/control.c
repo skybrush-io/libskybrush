@@ -17,8 +17,16 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "skybrush/basic_types.h"
+#include "skybrush/colors.h"
+#include "skybrush/error.h"
+#include "skybrush/events.h"
+#include "skybrush/screenplay.h"
+#include "skybrush/trajectory.h"
 #include <skybrush/control.h>
+#include <skybrush/memory.h>
 #include <stddef.h>
+#include <string.h>
 
 /**
  * @brief Clears the control output structure.
@@ -230,4 +238,198 @@ void sb_control_output_set_yaw_rate(sb_control_output_t* output, float yaw_rate)
 {
     output->velocity.yaw = yaw_rate;
     output->mask |= SB_CONTROL_OUTPUT_YAW_RATE;
+}
+
+/* ************************************************************************* */
+
+static sb_error_t sb_i_show_controller_set_current_chapter(
+    sb_show_controller_t* ctrl, sb_screenplay_chapter_t* chapter);
+
+/**
+ * @brief Initializes a show controller with the given screenplay.
+ *
+ * The default control output of the show controller is set to zero velocity and
+ * zero yaw rate.
+ *
+ * @param ctrl        pointer to the show controller to initialize
+ * @param screenplay  pointer to the screenplay to use
+ */
+sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* screenplay)
+{
+    sb_vector3_t zero = { 0.0f, 0.0f, 0.0f };
+
+    memset(ctrl, 0, sizeof(sb_show_controller_t));
+
+    ctrl->screenplay = screenplay;
+
+    sb_control_output_clear(&ctrl->default_output);
+    sb_control_output_set_velocity(&ctrl->default_output, zero);
+    sb_control_output_set_yaw_rate(&ctrl->default_output, 0.0f);
+
+    ctrl->output = ctrl->default_output;
+
+    return SB_SUCCESS;
+}
+
+/**
+ * @brief Destroys a show controller and releases all associated resources.
+ *
+ * @param ctrl  pointer to the show controller to destroy
+ */
+void sb_show_controller_destroy(sb_show_controller_t* ctrl)
+{
+    sb_i_show_controller_set_current_chapter(ctrl, NULL);
+    sb_control_output_clear(&ctrl->output);
+    memset(ctrl, 0, sizeof(sb_show_controller_t));
+}
+
+/**
+ * @brief Returns the current control output of the show controller.
+ *
+ * @param controller  pointer to the show controller to query
+ * @return pointer to the current control output
+ */
+const sb_control_output_t* sb_show_controller_get_current_output(const sb_show_controller_t* ctrl)
+{
+    return &ctrl->output;
+}
+
+/**
+ * @brief Updates the control output to the desired output at a specific time in the screenplay.
+ *
+ * When the specified time is out of bounds, we return a control output that commands
+ * zero velocity and zero yaw rate, with no position, yaw, or light commands.
+ *
+ * @param screenplay        the screenplay to query
+ * @param time_msec         the time in milliseconds from the start of the screenplay
+ * @param out_control_output  pointer to a variable that will be set to the control output
+ *                            at the specified time
+ * @return \c SB_SUCCESS if the control output was retrieved successfully,
+ *         \c SB_EINVAL if the time is out of bounds
+ */
+sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint32_t time_msec)
+{
+    sb_vector3_with_yaw_t vec_with_yaw;
+    sb_vector3_t vec;
+    sb_rgb_color_t color;
+    sb_screenplay_chapter_t* chapter;
+    sb_control_output_t* out = &ctrl->output;
+    float warped_time_sec;
+    float yaw;
+
+    sb_control_output_clear(out);
+
+    chapter = ctrl->screenplay ? sb_screenplay_get_current_chapter_ptr(ctrl->screenplay, &time_msec) : NULL;
+    sb_i_show_controller_set_current_chapter(ctrl, chapter);
+
+    /* time_msec is now the wall clock time within the current chapter */
+
+    if (chapter == NULL) {
+        /* Time is out of bounds */
+        *out = ctrl->default_output;
+    } else {
+        /* Update control output from trajectory if available */
+        warped_time_sec = sb_time_axis_map(&chapter->time_axis, time_msec / 1000.0f);
+
+        sb_control_output_clear(out);
+
+        if (ctrl->trajectory_player) {
+            SB_CHECK(sb_trajectory_player_get_position_at(
+                ctrl->trajectory_player, warped_time_sec, &vec_with_yaw));
+            vec.x = vec_with_yaw.x;
+            vec.y = vec_with_yaw.y;
+            vec.z = vec_with_yaw.z;
+            sb_control_output_set_position(out, vec);
+
+            SB_CHECK(sb_trajectory_player_get_velocity_at(
+                ctrl->trajectory_player, warped_time_sec, &vec_with_yaw));
+            vec.x = vec_with_yaw.x;
+            vec.y = vec_with_yaw.y;
+            vec.z = vec_with_yaw.z;
+            sb_control_output_set_velocity(out, vec);
+        }
+
+        if (ctrl->light_player) {
+            color = sb_light_player_get_color_at(ctrl->light_player, warped_time_sec * 1000.0f);
+            sb_control_output_set_color(out, color);
+        }
+
+        if (ctrl->yaw_player) {
+            SB_CHECK(sb_yaw_player_get_yaw_at(
+                ctrl->yaw_player, warped_time_sec, &yaw));
+            sb_control_output_set_yaw(out, yaw);
+
+            SB_CHECK(sb_yaw_player_get_yaw_rate_at(
+                ctrl->yaw_player, warped_time_sec, &yaw));
+            sb_control_output_set_yaw_rate(out, yaw);
+        }
+    }
+
+    return SB_SUCCESS;
+}
+
+static sb_error_t sb_i_show_controller_set_current_chapter(
+    sb_show_controller_t* ctrl, sb_screenplay_chapter_t* chapter)
+{
+    if (chapter == ctrl->current_chapter) {
+        return SB_SUCCESS;
+    }
+
+    if (ctrl->trajectory_player) {
+        sb_trajectory_player_destroy(ctrl->trajectory_player);
+        sb_free(ctrl->trajectory_player);
+    }
+
+    if (ctrl->light_player) {
+        sb_light_player_destroy(ctrl->light_player);
+        sb_free(ctrl->light_player);
+    }
+
+    if (ctrl->yaw_player) {
+        sb_yaw_player_destroy(ctrl->yaw_player);
+        sb_free(ctrl->yaw_player);
+    }
+
+    if (ctrl->event_list_player) {
+        sb_event_list_player_destroy(ctrl->event_list_player);
+        sb_free(ctrl->event_list_player);
+    }
+
+    ctrl->current_chapter = chapter;
+
+    if (chapter) {
+        if (chapter->trajectory) {
+            ctrl->trajectory_player = sb_calloc(sb_trajectory_player_t, 1);
+            if (ctrl->trajectory_player == NULL) {
+                return SB_ENOMEM; /* LCOV_EXCL_LINE */
+            }
+            SB_CHECK(sb_trajectory_player_init(ctrl->trajectory_player, chapter->trajectory));
+        }
+
+        if (chapter->light_program) {
+            ctrl->light_player = sb_calloc(sb_light_player_t, 1);
+            if (ctrl->light_player == NULL) {
+                return SB_ENOMEM; /* LCOV_EXCL_LINE */
+            }
+            SB_CHECK(sb_light_player_init(ctrl->light_player, chapter->light_program));
+        }
+
+        if (chapter->yaw_control) {
+            ctrl->yaw_player = sb_calloc(sb_yaw_player_t, 1);
+            if (ctrl->yaw_player == NULL) {
+                return SB_ENOMEM; /* LCOV_EXCL_LINE */
+            }
+            SB_CHECK(sb_yaw_player_init(ctrl->yaw_player, chapter->yaw_control));
+        }
+
+        if (chapter->events) {
+            ctrl->event_list_player = sb_calloc(sb_event_list_player_t, 1);
+            if (ctrl->event_list_player == NULL) {
+                return SB_ENOMEM; /* LCOV_EXCL_LINE */
+            }
+            SB_CHECK(sb_event_list_player_init(ctrl->event_list_player, chapter->events));
+        }
+    }
+
+    return SB_SUCCESS;
 }

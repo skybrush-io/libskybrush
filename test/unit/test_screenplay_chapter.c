@@ -17,6 +17,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "skybrush/refcount.h"
 #include "unity.h"
 #include <math.h>
 #include <stdint.h>
@@ -57,7 +58,7 @@ void test_screenplay_chapter_init_sets_defaults(void)
     TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(sb_screenplay_chapter_get_time_axis(&chapter)));
 
     /* Clean up */
-    sb_screenplay_chapter_destroy(&chapter);
+    SB_DECREF_STATIC(&chapter);
 }
 
 void test_screenplay_chapter_getters_and_setters(void)
@@ -126,7 +127,7 @@ void test_screenplay_chapter_getters_and_setters(void)
     TEST_ASSERT_EQUAL(1, SB_REFCNT(&events));
 
     /* cleanup: destroy chapter and then release static objects */
-    sb_screenplay_chapter_destroy(&chapter);
+    SB_DECREF_STATIC(&chapter);
 
     /* objects still have refcount 1 (their own) -> release them */
     SB_DECREF_STATIC(&traj);
@@ -151,7 +152,7 @@ void test_screenplay_chapter_set_duration_sec_finite_rounding(void)
     TEST_ASSERT_EQUAL_UINT32(1235u, sb_screenplay_chapter_get_duration_msec(&chapter));
     TEST_ASSERT_EQUAL_FLOAT(1235.0f / 1000.0f, sb_screenplay_chapter_get_duration_sec(&chapter));
 
-    sb_screenplay_chapter_destroy(&chapter);
+    SB_DECREF_STATIC(&chapter);
 }
 
 void test_screenplay_chapter_set_duration_sec_infinite(void)
@@ -169,7 +170,7 @@ void test_screenplay_chapter_set_duration_sec_infinite(void)
     TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_chapter_get_duration_msec(&chapter));
     TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_screenplay_chapter_get_duration_sec(&chapter));
 
-    sb_screenplay_chapter_destroy(&chapter);
+    SB_DECREF_STATIC(&chapter);
 }
 
 void test_screenplay_chapter_set_duration_sec_negative_is_invalid_and_preserves_old(void)
@@ -190,7 +191,7 @@ void test_screenplay_chapter_set_duration_sec_negative_is_invalid_and_preserves_
     TEST_ASSERT_EQUAL(SB_EINVAL, err);
     TEST_ASSERT_EQUAL_UINT32(2000u, sb_screenplay_chapter_get_duration_msec(&chapter));
 
-    sb_screenplay_chapter_destroy(&chapter);
+    SB_DECREF_STATIC(&chapter);
 }
 
 void test_screenplay_chapter_set_duration_sec_nan_is_invalid_and_preserves_old(void)
@@ -211,7 +212,7 @@ void test_screenplay_chapter_set_duration_sec_nan_is_invalid_and_preserves_old(v
     TEST_ASSERT_EQUAL(SB_EINVAL, err);
     TEST_ASSERT_EQUAL_UINT32(3000u, sb_screenplay_chapter_get_duration_msec(&chapter));
 
-    sb_screenplay_chapter_destroy(&chapter);
+    SB_DECREF_STATIC(&chapter);
 }
 
 void test_screenplay_chapter_set_duration_sec_too_large_is_invalid_and_preserves_old(void)
@@ -234,7 +235,7 @@ void test_screenplay_chapter_set_duration_sec_too_large_is_invalid_and_preserves
     TEST_ASSERT_EQUAL(SB_EINVAL, err);
     TEST_ASSERT_EQUAL_UINT32(4000u, sb_screenplay_chapter_get_duration_msec(&chapter));
 
-    sb_screenplay_chapter_destroy(&chapter);
+    SB_DECREF_STATIC(&chapter);
 }
 
 void test_screenplay_chapter_set_duration_sec_rounds_to_uint32_max_is_invalid_and_preserves_old(void)
@@ -264,7 +265,7 @@ void test_screenplay_chapter_set_duration_sec_rounds_to_uint32_max_is_invalid_an
     TEST_ASSERT_EQUAL(SB_EINVAL, err);
     TEST_ASSERT_EQUAL_UINT32(5000u, sb_screenplay_chapter_get_duration_msec(&chapter));
 
-    sb_screenplay_chapter_destroy(&chapter);
+    SB_DECREF_STATIC(&chapter);
 }
 
 int main(void)

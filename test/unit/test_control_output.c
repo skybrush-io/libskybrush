@@ -17,12 +17,6 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*
- * This file is part of libskybrush.
- *
- * Unit tests for sb_control_* functions.
- */
-
 #include "unity.h"
 #include <stdint.h>
 #include <string.h>

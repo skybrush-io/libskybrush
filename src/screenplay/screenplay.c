@@ -17,6 +17,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "skybrush/refcount.h"
 #include <skybrush/screenplay.h>
 
 static sb_error_t sb_i_screenplay_ensure_has_free_space(sb_screenplay_t* screenplay);
@@ -92,7 +93,7 @@ void sb_screenplay_clear(sb_screenplay_t* screenplay)
     sb_screenplay_chapter_t* end = screenplay->chapters + screenplay->num_chapters;
     sb_screenplay_chapter_t* chapter;
     for (chapter = screenplay->chapters; chapter < end; chapter++) {
-        sb_screenplay_chapter_destroy(chapter);
+        SB_DECREF_STATIC(chapter);
     }
 
     screenplay->num_chapters = 0;
@@ -178,11 +179,12 @@ sb_screenplay_chapter_t* sb_screenplay_get_current_chapter_ptr(
  * The new chapter is initialized with default values.
  *
  * @param screenplay  the screenplay to append the chapter to
- * @param out_chapter  if not \c NULL, will be set to point to the newly added chapter
+ * @param out_chapter  if not \c NULL, will be set to point to the newly added chapter.
+ *        The returned value is a borrowed reference.
  * @return \c SB_SUCCESS if the chapter was appended successfully,
  *         \c SB_ENOMEM if a memory allocation failed
  */
-sb_error_t sb_screenplay_append_chapter(sb_screenplay_t* screenplay, sb_screenplay_chapter_t** out_chapter)
+sb_error_t sb_screenplay_append_new_chapter(sb_screenplay_t* screenplay, sb_screenplay_chapter_t** out_chapter)
 {
     sb_screenplay_chapter_t* chapter;
 
