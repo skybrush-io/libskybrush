@@ -570,6 +570,73 @@ void test_remove_segment_invalid_index(void)
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_time_axis_remove_segment_at(&axis, 0));
 }
 
+/* Tests that exercise non-zero origin handling.
+ *
+ * The origin shifts the mapping such that warped time zero corresponds to
+ * wall-clock time = origin. Times before the origin are treated as real-time
+ * and are returned unchanged (with rate==1.0 in the _ex variant).
+ */
+void test_time_axis_map_origin_shift_constant_segment(void)
+{
+    /* single constant-rate segment at 2.0x */
+    sb_time_segment_t s = sb_time_segment_make_constant_rate(5.0f, 2.0f);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
+
+    /* set origin to 10.0s (warped t = 0 corresponds to wall-clock 10s) */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_set_origin_sec(&axis, 10.0f));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 10.0f, sb_time_axis_get_origin_sec(&axis));
+
+    /* Query before origin: wall=9.0 -> relative = -1.0 -> should map unchanged and rate=1.0 */
+    float rate = -123.0f;
+    float observed = sb_time_axis_map_ex(&axis, 9.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, -1.0f, observed);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
+
+    /* Query inside segment: wall=11.5 -> relative 1.5 -> warped = 1.5 * 2.0 = 3.0 */
+    observed = sb_time_axis_map(&axis, 11.5f);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, observed);
+
+    /* At boundary: wall=15.0 -> relative 5.0 (end of segment) -> warped = 10.0 */
+    rate = 0.0f;
+    observed = sb_time_axis_map_ex(&axis, 15.0f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 10.0f, observed);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
+
+    /* After the segment end: wall=17.0 -> relative 7.0 -> warped = 5*2 + (7-5)*final_rate(=2) = 14.0 */
+    observed = sb_time_axis_map(&axis, 17.0f);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 14.0f, observed);
+}
+
+void test_time_axis_map_origin_shift_across_segments(void)
+{
+    /* first segment: duration 2s, rate 1 => warped 2s
+     * second: duration 3s, rate 2 => warped 6s
+     */
+    sb_time_segment_t a = sb_time_segment_make_constant_rate(2.0f, 1.0f);
+    sb_time_segment_t b = sb_time_segment_make_constant_rate(3.0f, 2.0f);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, a));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, b));
+
+    /* shift origin so that wall-clock origin is 1.0s */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_set_origin_sec(&axis, 1.0f));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, sb_time_axis_get_origin_sec(&axis));
+
+    /* wall 3.5 -> relative = 2.5 -> 0.5s into second segment -> warped = 2.0 + 0.5*2.0 = 3.0 */
+    float observed = sb_time_axis_map(&axis, 3.5f);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, observed);
+
+    /* wall 1.5 -> relative 0.5 -> inside first segment -> warped = 0.5*1.0 = 0.5 */
+    observed = sb_time_axis_map(&axis, 1.5f);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 0.5f, observed);
+
+    /* wall 0.5 -> before origin -> returned unchanged (relative = -0.5) */
+    float rate = 0.0f;
+    observed = sb_time_axis_map_ex(&axis, 0.5f, &rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, -0.5f, observed);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -611,6 +678,10 @@ int main(int argc, char* argv[])
     RUN_TEST(test_time_axis_map_ex_linear_changing_rate);
     RUN_TEST(test_time_axis_map_ex_special_cases);
     RUN_TEST(test_time_axis_map_ex_three_segment_scenario);
+
+    /* origin-shift tests */
+    RUN_TEST(test_time_axis_map_origin_shift_constant_segment);
+    RUN_TEST(test_time_axis_map_origin_shift_across_segments);
 
     return UNITY_END();
 }

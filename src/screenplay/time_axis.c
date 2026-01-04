@@ -183,6 +183,8 @@ sb_error_t sb_time_axis_init(sb_time_axis_t* axis)
     const size_t initial_size = 0;
     const size_t alloc_size = initial_size > 4 ? initial_size : 4;
 
+    axis->origin = 0.0f;
+
     axis->stor_begin = sb_calloc(sb_time_segment_t, alloc_size);
     if (axis->stor_begin == 0) {
         return SB_ENOMEM; /* LCOV_EXCL_LINE */
@@ -250,6 +252,37 @@ const sb_time_segment_t* sb_time_axis_get_segment(const sb_time_axis_t* axis, si
     ASSERT_PRECONDITIONS();
     size_t num_segments = sb_time_axis_num_segments(axis);
     return index >= num_segments ? NULL : &axis->stor_begin[index];
+}
+
+/**
+ * @brief Returns the origin of the time axis, in seconds.
+ *
+ * The origin of the time axis is the wall clock time corresponding to warped time zero.
+ *
+ * @param axis Pointer to the time axis structure.
+ * @return Origin of the time axis, in seconds.
+ */
+float sb_time_axis_get_origin_sec(const sb_time_axis_t* axis)
+{
+    return axis->origin;
+}
+
+/**
+ * @brief Sets the origin of the time axis, in seconds.
+ *
+ * The origin of the time axis is the wall clock time corresponding to warped time zero.
+ *
+ * @param axis Pointer to the time axis structure.
+ * @param origin_sec Origin of the time axis, in seconds.
+ */
+sb_error_t sb_time_axis_set_origin_sec(sb_time_axis_t* axis, float origin_sec)
+{
+    if (!isfinite(origin_sec)) {
+        return SB_EINVAL;
+    }
+
+    axis->origin = origin_sec;
+    return SB_SUCCESS;
 }
 
 /**
@@ -364,10 +397,20 @@ float sb_time_axis_map_ex(const sb_time_axis_t* axis, float wall_clock_time_sec,
 
     ASSERT_PRECONDITIONS();
 
-    /* We assume that the time axis starts at T=0 and we have at least one segment.
-     * Otherwise the time axis is simply real-time.
+    wall_clock_time_sec -= axis->origin;
+
+    /* We assume that the time axis is simply real-time before the origin or we have
+     * no segments at all.
      */
     if (wall_clock_time_sec < 0 || num_segments == 0) {
+        if (out_rate) {
+            *out_rate = 1.0f;
+        }
+        return wall_clock_time_sec;
+    }
+
+    /* NaN is mapped to NaN with a rate of 1.0f */
+    if (isnan(wall_clock_time_sec)) {
         if (out_rate) {
             *out_rate = 1.0f;
         }
