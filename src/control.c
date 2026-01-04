@@ -315,6 +315,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     sb_screenplay_chapter_t* chapter;
     sb_control_output_t* out = &ctrl->output;
     float warped_time_sec;
+    float warped_rate;
     float yaw;
 
     sb_control_output_clear(out);
@@ -329,7 +330,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
         *out = ctrl->default_output;
     } else {
         /* Update control output from trajectory if available */
-        warped_time_sec = sb_time_axis_map(&chapter->time_axis, time_msec / 1000.0f);
+        warped_time_sec = sb_time_axis_map_ex(&chapter->time_axis, time_msec / 1000.0f, &warped_rate);
 
         sb_control_output_clear(out);
 
@@ -343,9 +344,9 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
 
             SB_CHECK(sb_trajectory_player_get_velocity_at(
                 ctrl->trajectory_player, warped_time_sec, &vec_with_yaw));
-            vec.x = vec_with_yaw.x;
-            vec.y = vec_with_yaw.y;
-            vec.z = vec_with_yaw.z;
+            vec.x = vec_with_yaw.x * warped_rate;
+            vec.y = vec_with_yaw.y * warped_rate;
+            vec.z = vec_with_yaw.z * warped_rate;
             sb_control_output_set_velocity(out, vec);
         }
 
@@ -361,7 +362,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
 
             SB_CHECK(sb_yaw_player_get_yaw_rate_at(
                 ctrl->yaw_player, warped_time_sec, &yaw));
-            sb_control_output_set_yaw_rate(out, yaw);
+            sb_control_output_set_yaw_rate(out, yaw * warped_rate);
         }
     }
 

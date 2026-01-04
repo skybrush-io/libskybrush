@@ -291,6 +291,96 @@ void test_show_controller_play_fixture_single_chapter(void)
     SB_DECREF_STATIC(&prog);
 }
 
+void test_show_controller_play_fixture_time_axis_2x(void)
+{
+    sb_screenplay_t screenplay;
+    sb_screenplay_chapter_t* ch = NULL;
+    sb_trajectory_t traj;
+    sb_light_program_t prog;
+    sb_show_controller_t ctrl;
+    sb_vector3_t pos;
+    sb_vector3_t vel;
+    sb_rgb_color_t color;
+    const sb_control_output_t* cur;
+    sb_error_t err;
+    FILE* fp;
+
+    /* Initialize screenplay and single chapter */
+    err = sb_screenplay_init(&screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch));
+    TEST_ASSERT_NOT_NULL(ch);
+
+    /* Load trajectory and light program from fixture */
+    fp = fopen("fixtures/test.skyb", "rb");
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_binary_file(&traj, fileno(fp)));
+    fclose(fp);
+
+    fp = fopen("fixtures/test.skyb", "rb");
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init_from_binary_file(&prog, fileno(fp)));
+    fclose(fp);
+
+    sb_screenplay_chapter_set_trajectory(ch, &traj);
+    sb_screenplay_chapter_set_light_program(ch, &prog);
+
+    /* Alter the chapter time axis to run at 2x real-time for the duration of the
+     * fixture so warped_time = 2 * wall_clock_time.
+     */
+    sb_time_axis_t* axis = sb_screenplay_chapter_get_time_axis(ch);
+    sb_time_segment_t seg = sb_time_segment_make_constant_rate(60.0f, 2.0f);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, seg));
+
+    /* Initialize controller */
+    err = sb_show_controller_init(&ctrl, &screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    /* Query at t=0 ms -> warped_time 0s -> expect position {0,0,0}, velocity doubled */
+    err = sb_show_controller_update_time_msec(&ctrl, 0u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    cur = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 0.0f, pos);
+    TEST_ASSERT_TRUE(sb_control_output_get_velocity_if_set(cur, &vel));
+    /* base trajectory velocity at t=0 is {0,0,1000} -> with 2x rate becomes {0,0,2000} */
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 2000.0f, vel);
+    TEST_ASSERT_TRUE(sb_control_output_get_color_if_set(cur, &color));
+    TEST_ASSERT_EQUAL_COLOR_RGB(255, 255, 255, color);
+
+    /* Query at t=2500 ms (2.5s wall clock) -> warped_time = 5s -> expect position {0,0,5000},
+     * base velocity {0,0,1000} but multiplied by 2 => {0,0,2000}, color at 5s.
+     */
+    err = sb_show_controller_update_time_msec(&ctrl, 2500u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    cur = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 5000.0f, pos);
+    TEST_ASSERT_TRUE(sb_control_output_get_velocity_if_set(cur, &vel));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 2000.0f, vel);
+    TEST_ASSERT_TRUE(sb_control_output_get_color_if_set(cur, &color));
+    TEST_ASSERT_EQUAL_COLOR_RGB(255, 127, 127, color);
+
+    /* Query at t=7500 ms (7.5s wall clock) -> warped_time = 15s -> expect position {5000,0,10000},
+     * base velocity at 15s {1000,0,0} -> doubled {2000,0,0}, color at 15s.
+     */
+    err = sb_show_controller_update_time_msec(&ctrl, 7500u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    cur = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ(5000.0f, 0.0f, 10000.0f, pos);
+    TEST_ASSERT_TRUE(sb_control_output_get_velocity_if_set(cur, &vel));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ(2000.0f, 0.0f, 0.0f, vel);
+    TEST_ASSERT_TRUE(sb_control_output_get_color_if_set(cur, &color));
+    TEST_ASSERT_EQUAL_COLOR_RGB(255, 0, 0, color);
+
+    /* Cleanup */
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
+    SB_DECREF_STATIC(&traj);
+    SB_DECREF_STATIC(&prog);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -300,6 +390,7 @@ int main(void)
     RUN_TEST(test_show_controller_update_time_with_empty_screenplay_produces_no_components);
     RUN_TEST(test_show_controller_chapter_transition_switches_players);
     RUN_TEST(test_show_controller_play_fixture_single_chapter);
+    RUN_TEST(test_show_controller_play_fixture_time_axis_2x);
 
     return UNITY_END();
 }
