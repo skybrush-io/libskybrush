@@ -348,7 +348,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     TEST_ASSERT_TRUE(sb_control_output_get_color_if_set(cur, &color));
     TEST_ASSERT_EQUAL_COLOR_RGB(255, 255, 255, color);
 
-    /* Query at t=2500 ms (2.5s wall clock) -> warped_time = 5s -> expect position {0,0,5000},
+    /* Query at t=2500 ms (2.5s wall clock) -> warped=5s -> expect position {0,0,5000},
      * base velocity {0,0,1000} but multiplied by 2 => {0,0,2000}, color at 5s.
      */
     err = sb_show_controller_update_time_msec(&ctrl, 2500u);
@@ -361,7 +361,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     TEST_ASSERT_TRUE(sb_control_output_get_color_if_set(cur, &color));
     TEST_ASSERT_EQUAL_COLOR_RGB(255, 127, 127, color);
 
-    /* Query at t=7500 ms (7.5s wall clock) -> warped_time = 15s -> expect position {5000,0,10000},
+    /* Query at t=7500 ms (7.5s wall clock) -> warped=15s -> expect position {5000,0,10000},
      * base velocity at 15s {1000,0,0} -> doubled {2000,0,0}, color at 15s.
      */
     err = sb_show_controller_update_time_msec(&ctrl, 7500u);
@@ -381,6 +381,103 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     SB_DECREF_STATIC(&prog);
 }
 
+/* New test: forward_left_back fixture played with a time axis that runs at real-time
+ * for 25 seconds and then slows down linearly to a standstill over the next 5 seconds.
+ *
+ * We verify positions and velocities at representative wall-clock times before and
+ * during the slowdown so we ensure the controller multiplies velocities by the
+ * instantaneous warped rate.
+ */
+void test_show_controller_forward_left_back_slowdown(void)
+{
+    sb_screenplay_t screenplay;
+    sb_screenplay_chapter_t* ch = NULL;
+    sb_trajectory_t traj;
+    sb_light_program_t prog;
+    sb_show_controller_t ctrl;
+    sb_vector3_t pos;
+    sb_vector3_t vel;
+    const sb_control_output_t* cur;
+    sb_error_t err;
+    FILE* fp;
+
+    /* Initialize screenplay and chapter */
+    err = sb_screenplay_init(&screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch));
+    TEST_ASSERT_NOT_NULL(ch);
+
+    /* Load the forward_left_back fixture (trajectory + light program) */
+    fp = fopen("fixtures/forward_left_back.skyb", "rb");
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_binary_file(&traj, fileno(fp)));
+    fclose(fp);
+
+    fp = fopen("fixtures/forward_left_back.skyb", "rb");
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init_from_binary_file(&prog, fileno(fp)));
+    fclose(fp);
+
+    sb_screenplay_chapter_set_trajectory(ch, &traj);
+    sb_screenplay_chapter_set_light_program(ch, &prog);
+
+    /* Set time axis: 25s at rate=1.0 (normal), then slowdown from realtime to 0 over 5s */
+    sb_time_axis_t* axis = sb_screenplay_chapter_get_time_axis(ch);
+    TEST_ASSERT_NOT_NULL(axis);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_constant_rate(25.0f, 1.0f)));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_slowdown_from_realtime(5.0f)));
+
+    /* Initialize controller */
+    err = sb_show_controller_init(&ctrl, &screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    /* 1) Wall = 25s -> warped = 25s (normal section) -> halfway through left move:
+     *    expected position {10000, 5000, 10000} and base lateral velocity approx 1125.7 mm/s
+     */
+    err = sb_show_controller_update_time_msec(&ctrl, 25000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    cur = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
+    TEST_ASSERT_TRUE(sb_control_output_get_velocity_if_set(cur, &vel));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS(10000.0f, 5000.0f, 10000.0f, pos, 1e-1);
+    /* Expect lateral velocity (y) approx 1125.7 mm/s (from trajectory tests), x and z near 0 */
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS(0.0f, 1125.7f, 0.0f, vel, 1e-1);
+
+    /* 2) Wall = 27.5s (mid slowdown): wall into slowdown = 2.5s (relative_t = 0.5)
+     *    warped increment inside slowdown = 1.875s -> warped total = 26.875s
+     *    This is still within the left move, expected y ~ 7111 mm.
+     *    (This is because 1.875s * 1125.7 mm/s = 2111.8 mm + 5000 mm start of left move)
+     *    The instantaneous warped rate is 0.5 so velocity should be half the base value.
+     */
+    err = sb_show_controller_update_time_msec(&ctrl, 27500u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    cur = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
+    TEST_ASSERT_TRUE(sb_control_output_get_velocity_if_set(cur, &vel));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS(10000.0f, 7110.8f, 10000.0f, pos, 1e-1);
+    /* velocity should be ~1125.7 * 0.5 = 562.85 mm/s in Y */
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS(0.0f, 562.85f, 0.0f, vel, 1e-1);
+
+    /* 3) Wall = 30s (end of slowdown): warped total = 27.5s (still inside left move),
+     *    expected y = 7814 mm. The instantaneous rate at this boundary is 0.0,
+     *    so controller should report zero velocity.
+     */
+    err = sb_show_controller_update_time_msec(&ctrl, 30000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    cur = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
+    /* velocity component may be set but should be zero due to final rate zero */
+    TEST_ASSERT_TRUE(sb_control_output_get_velocity_if_set(cur, &vel));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS(10000.0f, 7814.4f, 10000.0f, pos, 1e-1);
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS(0.0f, 0.0f, 0.0f, vel, 1e-1);
+
+    /* Cleanup */
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
+    SB_DECREF_STATIC(&traj);
+    SB_DECREF_STATIC(&prog);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -391,6 +488,7 @@ int main(void)
     RUN_TEST(test_show_controller_chapter_transition_switches_players);
     RUN_TEST(test_show_controller_play_fixture_single_chapter);
     RUN_TEST(test_show_controller_play_fixture_time_axis_2x);
+    RUN_TEST(test_show_controller_forward_left_back_slowdown);
 
     return UNITY_END();
 }

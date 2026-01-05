@@ -36,24 +36,42 @@
         TEST_ASSERT_EQUAL_COLOR(expected, (actual));                            \
     } while (0)
 
+/* Vector equality: compare components with a specified tolerance suitable for tests.
+ * Use a do/while block so the macro behaves like a statement.
+ */
+#define TEST_ASSERT_EQUAL_VECTOR3_EPS(expected, actual, eps)     \
+    do {                                                         \
+        TEST_ASSERT_FLOAT_WITHIN(eps, (expected).x, (actual).x); \
+        TEST_ASSERT_FLOAT_WITHIN(eps, (expected).y, (actual).y); \
+        TEST_ASSERT_FLOAT_WITHIN(eps, (expected).z, (actual).z); \
+    } while (0)
+
 /* Vector equality: compare components with a small tolerance suitable for tests.
  * Use a do/while block so the macro behaves like a statement.
  */
-#define TEST_ASSERT_EQUAL_VECTOR3(expected, actual)                \
-    do {                                                           \
-        TEST_ASSERT_FLOAT_WITHIN(1e-6f, (expected).x, (actual).x); \
-        TEST_ASSERT_FLOAT_WITHIN(1e-6f, (expected).y, (actual).y); \
-        TEST_ASSERT_FLOAT_WITHIN(1e-6f, (expected).z, (actual).z); \
+#define TEST_ASSERT_EQUAL_VECTOR3(expected, actual)               \
+    do {                                                          \
+        TEST_ASSERT_EQUAL_VECTOR3_EPS((expected), (actual), eps); \
     } while (0)
 
 /* Convenience macro: specify expected vector components directly (x, y, z) and the actual vector variable.
  * Usage: TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 5000.0f, actual_vec);
- * This constructs a local sb_vector3_t expected and delegates to TEST_ASSERT_EQUAL_VECTOR3.
+ * Delegates to TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS.
  */
-#define TEST_ASSERT_EQUAL_VECTOR3_XYZ(x, y, z, actual) \
-    do {                                               \
-        sb_vector3_t expected = { (x), (y), (z) };     \
-        TEST_ASSERT_EQUAL_VECTOR3(expected, (actual)); \
+#define TEST_ASSERT_EQUAL_VECTOR3_XYZ(x, y, z, actual)                    \
+    do {                                                                  \
+        TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS((x), (y), (z), (actual), 1e-6); \
+    } while (0)
+
+/* Convenience macro: specify expected vector components directly (x, y, z) and the actual vector variable,
+ * plus a tolerance.
+ * Usage: TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 5000.0f, actual_vec, 1e-1);
+ * This constructs a local sb_vector3_t expected and delegates to TEST_ASSERT_EQUAL_VECTOR3_EPS.
+ */
+#define TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS(x, y, z, actual, eps)   \
+    do {                                                          \
+        sb_vector3_t expected = { (x), (y), (z) };                \
+        TEST_ASSERT_EQUAL_VECTOR3_EPS(expected, (actual), (eps)); \
     } while (0)
 
 #endif
