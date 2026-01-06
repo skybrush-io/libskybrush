@@ -329,7 +329,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
      * fixture so warped_time = 2 * wall_clock_time.
      */
     sb_time_axis_t* axis = sb_screenplay_chapter_get_time_axis(ch);
-    sb_time_segment_t seg = sb_time_segment_make_constant_rate(60.0f, 2.0f);
+    sb_time_segment_t seg = sb_time_segment_make_constant_rate(60000, 2.0f);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, seg));
 
     /* Initialize controller */
@@ -424,8 +424,8 @@ void test_show_controller_forward_left_back_slowdown(void)
     /* Set time axis: 25s at rate=1.0 (normal), then slowdown from realtime to 0 over 5s */
     sb_time_axis_t* axis = sb_screenplay_chapter_get_time_axis(ch);
     TEST_ASSERT_NOT_NULL(axis);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_constant_rate(25.0f, 1.0f)));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_slowdown_from_realtime(5.0f)));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_constant_rate(25000, 1.0f)));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_slowdown_from_realtime(5000)));
 
     /* Initialize controller */
     err = sb_show_controller_init(&ctrl, &screenplay);

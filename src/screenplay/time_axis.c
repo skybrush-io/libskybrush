@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <skybrush/basic_types.h>
 #include <skybrush/memory.h>
 #include <skybrush/time_axis.h>
 #include <string.h>
@@ -38,14 +39,14 @@ static sb_error_t sb_i_time_axis_grow_if_needed(sb_time_axis_t* axis);
  * @brief Creates a new time segment with a specific duration and initial and
  * final rate.
  *
- * @param duration_sec The duration of the segment
+ * @param duration_msec The duration of the segment, in milliseconds
  * @param initial_rate The initial rate of the segment
  * @param final_rate The final rate of the segment
  */
-sb_time_segment_t sb_time_segment_make(float duration_sec, float initial_rate, float final_rate)
+sb_time_segment_t sb_time_segment_make(uint32_t duration_msec, float initial_rate, float final_rate)
 {
     sb_time_segment_t seg;
-    seg.duration_sec = duration_sec;
+    seg.duration_msec = duration_msec;
     seg.initial_rate = initial_rate;
     seg.final_rate = final_rate;
     return seg;
@@ -54,23 +55,23 @@ sb_time_segment_t sb_time_segment_make(float duration_sec, float initial_rate, f
 /**
  * @brief Creaates a new time segment with a specific duration running in real-time.
  *
- * @param duration_sec The duration of the segment
+ * @param duration_msec The duration of the segment, in milliseconds
  */
-sb_time_segment_t sb_time_segment_make_realtime(float duration_sec)
+sb_time_segment_t sb_time_segment_make_realtime(uint32_t duration_msec)
 {
-    return sb_time_segment_make(duration_sec, 1.0f, 1.0f);
+    return sb_time_segment_make(duration_msec, 1.0f, 1.0f);
 }
 
 /**
  * @brief Creates a new time segment with a specific duration running at a given
  * constant rate.
  *
- * @param duration_sec The duration of the segment
+ * @param duration_msec The duration of the segment, in milliseconds
  * @param rate the constant rate of the segment
  */
-sb_time_segment_t sb_time_segment_make_constant_rate(float duration_sec, float rate)
+sb_time_segment_t sb_time_segment_make_constant_rate(uint32_t duration_msec, float rate)
 {
-    return sb_time_segment_make(duration_sec, rate, rate);
+    return sb_time_segment_make(duration_msec, rate, rate);
 }
 
 /**
@@ -79,9 +80,9 @@ sb_time_segment_t sb_time_segment_make_constant_rate(float duration_sec, float r
  *
  * @param initial_rate the starting rate of the segment
  */
-sb_time_segment_t sb_time_segment_make_slowdown_from(float duration_sec, float initial_rate)
+sb_time_segment_t sb_time_segment_make_slowdown_from(uint32_t duration_msec, float initial_rate)
 {
-    return sb_time_segment_make(duration_sec, initial_rate, 0.0f);
+    return sb_time_segment_make(duration_msec, initial_rate, 0.0f);
 }
 
 /**
@@ -90,27 +91,27 @@ sb_time_segment_t sb_time_segment_make_slowdown_from(float duration_sec, float i
  *
  * @param final_rate the final rate of the segment
  */
-sb_time_segment_t sb_time_segment_make_spinup_to(float duration_sec, float final_rate)
+sb_time_segment_t sb_time_segment_make_spinup_to(uint32_t duration_msec, float final_rate)
 {
-    return sb_time_segment_make(duration_sec, 0.0f, final_rate);
+    return sb_time_segment_make(duration_msec, 0.0f, final_rate);
 }
 
 /**
  * @brief Creates a new time segment with a specific duration starting real-time
  * (rate = 1.0) and slowing down to a standstill.
  */
-sb_time_segment_t sb_time_segment_make_slowdown_from_realtime(float duration_sec)
+sb_time_segment_t sb_time_segment_make_slowdown_from_realtime(uint32_t duration_msec)
 {
-    return sb_time_segment_make_slowdown_from(duration_sec, 1.0f);
+    return sb_time_segment_make_slowdown_from(duration_msec, 1.0f);
 }
 
 /**
  * @brief Creates a new time segment with a specific duration starting from a standstill,
  * speeding up to real-time.
  */
-sb_time_segment_t sb_time_segment_make_spinup_to_realtime(float duration_sec)
+sb_time_segment_t sb_time_segment_make_spinup_to_realtime(uint32_t duration_msec)
 {
-    return sb_time_segment_make_spinup_to(duration_sec, 1.0f);
+    return sb_time_segment_make_spinup_to(duration_msec, 1.0f);
 }
 
 /**
@@ -127,6 +128,17 @@ sb_error_t sb_time_axis_append_segment(
 }
 
 /**
+ * @brief Returns the duration of the time segment in wall clock time, in milliseconds.
+ *
+ * @param segment Pointer to the time segment.
+ * @return Duration of the segment in wall clock time, in seconds.
+ */
+uint32_t sb_time_segment_get_duration_in_wall_clock_time_msec(const sb_time_segment_t* segment)
+{
+    return segment->duration_msec;
+}
+
+/**
  * @brief Returns the duration of the time segment in wall clock time, in seconds.
  *
  * @param segment Pointer to the time segment.
@@ -134,7 +146,7 @@ sb_error_t sb_time_axis_append_segment(
  */
 float sb_time_segment_get_duration_in_wall_clock_time_sec(const sb_time_segment_t* segment)
 {
-    return segment->duration_sec;
+    return segment->duration_msec == UINT32_MAX ? INFINITY : segment->duration_msec / 1000.0f;
 }
 
 /**
@@ -145,7 +157,7 @@ float sb_time_segment_get_duration_in_wall_clock_time_sec(const sb_time_segment_
  */
 float sb_time_segment_get_duration_in_warped_time_sec(const sb_time_segment_t* segment)
 {
-    float avg_rate = (segment->initial_rate + segment->final_rate) * 0.5f;
+    float avg_rate = (segment->initial_rate + segment->final_rate) / 2.0f;
     return sb_time_segment_get_duration_in_wall_clock_time_sec(segment) * avg_rate;
 }
 
@@ -158,12 +170,12 @@ static sb_error_t sb_i_time_segment_validate(const sb_time_segment_t* seg)
     }
 
     /* Reject NaN values */
-    if (isnan(seg->duration_sec) || isnan(seg->initial_rate) || isnan(seg->final_rate)) {
+    if (isnan(seg->duration_msec) || isnan(seg->initial_rate) || isnan(seg->final_rate)) {
         return SB_EINVAL;
     }
 
     /* Duration may be infinite, but must not be negative. Rates must be non-negative. */
-    if (seg->duration_sec < 0.0f || seg->initial_rate < 0.0f || seg->final_rate < 0.0f) {
+    if (seg->duration_msec < 0.0f || seg->initial_rate < 0.0f || seg->final_rate < 0.0f) {
         return SB_EINVAL;
     }
 
@@ -183,7 +195,7 @@ sb_error_t sb_time_axis_init(sb_time_axis_t* axis)
     const size_t initial_size = 0;
     const size_t alloc_size = initial_size > 4 ? initial_size : 4;
 
-    axis->origin = 0.0f;
+    axis->origin_msec = 0;
 
     axis->stor_begin = sb_calloc(sb_time_segment_t, alloc_size);
     if (axis->stor_begin == 0) {
@@ -255,6 +267,19 @@ const sb_time_segment_t* sb_time_axis_get_segment(const sb_time_axis_t* axis, si
 }
 
 /**
+ * @brief Returns the origin of the time axis, in milliseconds.
+ *
+ * The origin of the time axis is the wall clock time corresponding to warped time zero.
+ *
+ * @param axis Pointer to the time axis structure.
+ * @return Origin of the time axis, in milliseconds.
+ */
+uint32_t sb_time_axis_get_origin_msec(const sb_time_axis_t* axis)
+{
+    return axis->origin_msec;
+}
+
+/**
  * @brief Returns the origin of the time axis, in seconds.
  *
  * The origin of the time axis is the wall clock time corresponding to warped time zero.
@@ -264,7 +289,20 @@ const sb_time_segment_t* sb_time_axis_get_segment(const sb_time_axis_t* axis, si
  */
 float sb_time_axis_get_origin_sec(const sb_time_axis_t* axis)
 {
-    return axis->origin;
+    return axis->origin_msec / 1000.0f;
+}
+
+/**
+ * @brief Sets the origin of the time axis, in milliseconds.
+ *
+ * The origin of the time axis is the wall clock time corresponding to warped time zero.
+ *
+ * @param axis Pointer to the time axis structure.
+ * @param origin_sec Origin of the time axis, in milliseconds.
+ */
+void sb_time_axis_set_origin_msec(sb_time_axis_t* axis, uint32_t origin_msec)
+{
+    axis->origin_msec = origin_msec;
 }
 
 /**
@@ -277,11 +315,11 @@ float sb_time_axis_get_origin_sec(const sb_time_axis_t* axis)
  */
 sb_error_t sb_time_axis_set_origin_sec(sb_time_axis_t* axis, float origin_sec)
 {
-    if (!isfinite(origin_sec)) {
+    if (!isfinite(origin_sec) || origin_sec < 0 || origin_sec > UINT32_MAX / 1000.0f) {
         return SB_EINVAL;
     }
 
-    axis->origin = origin_sec;
+    axis->origin_msec = origin_sec * 1000;
     return SB_SUCCESS;
 }
 
@@ -364,19 +402,19 @@ sb_error_t sb_time_axis_remove_segment_at(sb_time_axis_t* axis, size_t index)
  * @brief Maps some time instant in wall clock time to the corresponding warped time.
  *
  * @param axis Pointer to the time axis structure.
- * @param wall_clock_time_sec Wall clock time in seconds.
+ * @param wall_clock_time_msec Wall clock time in milliseconds.
  * @return Corresponding warped time in seconds.
  */
-float sb_time_axis_map(const sb_time_axis_t* axis, float wall_clock_time_sec)
+float sb_time_axis_map(const sb_time_axis_t* axis, uint32_t wall_clock_time_msec)
 {
-    return sb_time_axis_map_ex(axis, wall_clock_time_sec, NULL);
+    return sb_time_axis_map_ex(axis, wall_clock_time_msec, NULL);
 }
 
 /**
  * @brief Maps some time instant in wall clock time to the corresponding warped time (with extra information).
  *
  * @param axis Pointer to the time axis structure.
- * @param wall_clock_time_sec Wall clock time in seconds.
+ * @param wall_clock_time_msec Wall clock time in milliseconds.
  * @param out_rate When not NULL, the rate (i.e. the measure of how "fast" time goes by
  *        relative to wall clock time) at the given wall clock time is stored here.
  *        A rate of 1.0 means that time flows in real-time, a rate of 2.0 means that
@@ -388,64 +426,50 @@ float sb_time_axis_map(const sb_time_axis_t* axis, float wall_clock_time_sec)
  *        of the last segment, if we are at the end of the time axis).
  * @return Corresponding warped time in seconds.
  */
-float sb_time_axis_map_ex(const sb_time_axis_t* axis, float wall_clock_time_sec, float* out_rate)
+float sb_time_axis_map_ex(const sb_time_axis_t* axis, uint32_t wall_clock_time_msec, float* out_rate)
 {
     float accumulated_warped_time_sec = 0.0f;
-    float warped_time_in_segment;
+    float warped_time_in_segment_sec;
     const sb_time_segment_t* seg;
     size_t num_segments = sb_time_axis_num_segments(axis);
 
     ASSERT_PRECONDITIONS();
 
-    wall_clock_time_sec -= axis->origin;
-
-    /* We assume that the time axis is simply real-time before the origin or we have
-     * no segments at all.
-     */
-    if (wall_clock_time_sec < 0 || num_segments == 0) {
+    if (num_segments == 0) {
         if (out_rate) {
             *out_rate = 1.0f;
         }
-        return wall_clock_time_sec;
+        return wall_clock_time_msec / 1000.0f;
     }
 
-    /* NaN is mapped to NaN with a rate of 1.0f */
-    if (isnan(wall_clock_time_sec)) {
+    /* We assume that the time axis is simply real-time before the origin */
+    if (wall_clock_time_msec < axis->origin_msec) {
         if (out_rate) {
             *out_rate = 1.0f;
         }
-        return wall_clock_time_sec;
+        return (axis->origin_msec - wall_clock_time_msec) / -1000.0f;
     }
 
-    /* Infinity is mapped to infinity. The assumed rate is the final rate of the last
-     * segment.
-     */
-    if (!isfinite(wall_clock_time_sec)) {
-        if (out_rate) {
-            assert(num_segments > 0);
-            seg = sb_time_axis_get_segment(axis, num_segments - 1);
-            *out_rate = seg ? seg->final_rate : 1.0f;
-        }
-        return wall_clock_time_sec;
-    }
+    wall_clock_time_msec -= axis->origin_msec;
 
     for (size_t i = 0; i < num_segments; ++i) {
         seg = sb_time_axis_get_segment(axis, i);
-        float seg_wall_clock_duration_sec = sb_time_segment_get_duration_in_wall_clock_time_sec(seg);
+        uint32_t seg_wall_clock_duration_msec = sb_time_segment_get_duration_in_wall_clock_time_msec(seg);
+        sb_bool_t is_infinite = (seg_wall_clock_duration_msec == UINT32_MAX);
 
-        if (seg_wall_clock_duration_sec > wall_clock_time_sec) {
+        if (is_infinite || seg_wall_clock_duration_msec > wall_clock_time_msec) {
             /* The target time is within this segment */
-            if (seg->initial_rate == seg->final_rate) {
-                /* Constant rate segment */
-                warped_time_in_segment = wall_clock_time_sec * seg->initial_rate;
+            if (is_infinite || seg->initial_rate == seg->final_rate) {
+                /* Constant rate segment or infinite segment */
+                warped_time_in_segment_sec = wall_clock_time_msec / 1000.0f * seg->initial_rate;
                 if (out_rate) {
                     *out_rate = seg->initial_rate;
                 }
-            } else if (seg_wall_clock_duration_sec > 0) {
+            } else if (seg_wall_clock_duration_msec > 0) {
                 /* Linearly changing rate segment */
                 float delta_rate = seg->final_rate - seg->initial_rate;
-                float relative_t = wall_clock_time_sec / seg_wall_clock_duration_sec;
-                warped_time_in_segment = (seg->initial_rate + delta_rate / 2.0f * relative_t) * wall_clock_time_sec;
+                float relative_t = wall_clock_time_msec / ((float)seg_wall_clock_duration_msec);
+                warped_time_in_segment_sec = (seg->initial_rate + delta_rate / 2.0f * relative_t) * wall_clock_time_msec / 1000.0f;
                 if (out_rate) {
                     *out_rate = seg->initial_rate + delta_rate * relative_t;
                 }
@@ -453,19 +477,19 @@ float sb_time_axis_map_ex(const sb_time_axis_t* axis, float wall_clock_time_sec,
                 /* Zero-duration segment, prevent division by zero.
                  * Hard to cover with unit tests, but theoretically possible. */
                 /* LCOV_EXCL_START */
-                warped_time_in_segment = 0.0f;
+                warped_time_in_segment_sec = 0.0f;
                 if (out_rate) {
                     *out_rate = (seg->initial_rate + seg->final_rate) / 2.0f;
                 }
                 /* LCOV_EXCL_STOP */
             }
 
-            return accumulated_warped_time_sec + warped_time_in_segment;
+            return accumulated_warped_time_sec + warped_time_in_segment_sec;
         } else {
             /* Move to the next segment */
-            wall_clock_time_sec -= seg_wall_clock_duration_sec;
-            float seg_warped_duration = sb_time_segment_get_duration_in_warped_time_sec(seg);
-            accumulated_warped_time_sec += seg_warped_duration;
+            wall_clock_time_msec -= seg_wall_clock_duration_msec;
+            float seg_warped_duration_sec = sb_time_segment_get_duration_in_warped_time_sec(seg);
+            accumulated_warped_time_sec += seg_warped_duration_sec;
         }
     }
 
@@ -474,11 +498,11 @@ float sb_time_axis_map_ex(const sb_time_axis_t* axis, float wall_clock_time_sec,
      */
     assert(num_segments > 0);
     seg = sb_time_axis_get_segment(axis, num_segments - 1);
-    warped_time_in_segment = wall_clock_time_sec * seg->final_rate;
+    warped_time_in_segment_sec = wall_clock_time_msec / 1000.0f * seg->final_rate;
     if (out_rate) {
         *out_rate = seg->final_rate;
     }
-    return accumulated_warped_time_sec + warped_time_in_segment;
+    return accumulated_warped_time_sec + warped_time_in_segment_sec;
 }
 
 /* ********************************************************************************** */

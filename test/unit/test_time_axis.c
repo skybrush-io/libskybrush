@@ -49,14 +49,14 @@ void test_initial_capacity(void)
 
 void test_append_one_segment(void)
 {
-    sb_time_segment_t seg = sb_time_segment_make_realtime(1.5f);
+    sb_time_segment_t seg = sb_time_segment_make_realtime(1500);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, seg));
     TEST_ASSERT_EQUAL(1, sb_time_axis_num_segments(&axis));
 
     /* verify stored values */
     sb_time_segment_t stored = axis.stor_begin[0];
-    TEST_ASSERT_FLOAT_WITHIN(EPS, seg.duration_sec, stored.duration_sec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, seg.duration_msec, stored.duration_msec);
     TEST_ASSERT_FLOAT_WITHIN(EPS, seg.initial_rate, stored.initial_rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, seg.final_rate, stored.final_rate);
 }
@@ -74,32 +74,9 @@ void test_append_grows_capacity(void)
     TEST_ASSERT_TRUE(sb_time_axis_capacity(&axis) >= N);
 }
 
-void test_append_invalid_negative_values(void)
-{
-    sb_time_segment_t bad;
-    bad.duration_sec = -1.0f; /* invalid */
-    bad.initial_rate = 1.0f;
-    bad.final_rate = 1.0f;
-
-    /* append should fail and not increase the number of segments */
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_time_axis_append_segment(&axis, bad));
-    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(&axis));
-}
-
-void test_append_invalid_nan_values(void)
-{
-    sb_time_segment_t bad;
-    bad.duration_sec = NAN; /* invalid */
-    bad.initial_rate = 1.0f;
-    bad.final_rate = 1.0f;
-
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_time_axis_append_segment(&axis, bad));
-    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(&axis));
-}
-
 void test_clear_removes_all_entries(void)
 {
-    sb_time_segment_t seg = sb_time_segment_make_realtime(0.2f);
+    sb_time_segment_t seg = sb_time_segment_make_realtime(200);
 
     /* Append some entries */
     for (int i = 0; i < 5; ++i) {
@@ -116,9 +93,9 @@ void test_clear_removes_all_entries(void)
 void test_get_segment_returns_ptr_and_values(void)
 {
     /* Append a few different types of segments */
-    sb_time_segment_t s0 = sb_time_segment_make_realtime(0.5f);
-    sb_time_segment_t s1 = sb_time_segment_make_constant_rate(1.0f, 2.0f);
-    sb_time_segment_t s2 = sb_time_segment_make_slowdown_from(0.25f, 2.0f);
+    sb_time_segment_t s0 = sb_time_segment_make_realtime(500);
+    sb_time_segment_t s1 = sb_time_segment_make_constant_rate(1000, 2.0f);
+    sb_time_segment_t s2 = sb_time_segment_make_slowdown_from(250, 2.0f);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s0));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s1));
@@ -137,7 +114,7 @@ void test_get_segment_returns_ptr_and_values(void)
     TEST_ASSERT_EQUAL_PTR(&axis.stor_begin[1], p1);
     TEST_ASSERT_EQUAL_PTR(&axis.stor_begin[2], p2);
 
-    TEST_ASSERT_FLOAT_WITHIN(EPS, s0.duration_sec, p0->duration_sec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, s0.duration_msec, p0->duration_msec);
     TEST_ASSERT_FLOAT_WITHIN(EPS, s1.initial_rate, p1->initial_rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, s2.final_rate, p2->final_rate);
 }
@@ -148,7 +125,7 @@ void test_get_segment_out_of_bounds_returns_null(void)
     TEST_ASSERT_NULL(sb_time_axis_get_segment(&axis, 0));
 
     /* append one and check out-of-bounds */
-    sb_time_segment_t s = sb_time_segment_make_realtime(0.1f);
+    sb_time_segment_t s = sb_time_segment_make_realtime(100);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
 
     TEST_ASSERT_NULL(sb_time_axis_get_segment(&axis, 1));
@@ -159,7 +136,7 @@ void test_get_segment_out_of_bounds_returns_null(void)
 
 void test_time_segment_warped_duration_constant(void)
 {
-    sb_time_segment_t s = sb_time_segment_make_constant_rate(2.0f, 3.0f);
+    sb_time_segment_t s = sb_time_segment_make_constant_rate(2000, 3.0f);
     float observed;
 
     observed = sb_time_segment_get_duration_in_warped_time_sec(&s);
@@ -175,7 +152,7 @@ void test_time_segment_warped_duration_spinup_and_slowdown(void)
     float observed;
 
     /* spin up from 0 to 2 over 1 second => avg rate = 1.0 => warped = 1.0 */
-    s = sb_time_segment_make_spinup_to(1.0f, 2.0f);
+    s = sb_time_segment_make_spinup_to(1000, 2.0f);
     observed = sb_time_segment_get_duration_in_warped_time_sec(&s);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, observed);
 
@@ -183,7 +160,7 @@ void test_time_segment_warped_duration_spinup_and_slowdown(void)
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, observed);
 
     /* slow down from 1 to 0 over 1.5 seconds => avg rate = 0.5 => warped = 0.75 */
-    s = sb_time_segment_make_slowdown_from(1.5f, 1.0f);
+    s = sb_time_segment_make_slowdown_from(1500, 1.0f);
     observed = sb_time_segment_get_duration_in_warped_time_sec(&s);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 0.75f, observed);
 
@@ -197,7 +174,7 @@ void test_time_segment_warped_duration_realtime_cases(void)
     float observed;
 
     /* real-time to zero: avg rate = 0.5 => warped = duration * 0.5 */
-    s = sb_time_segment_make_slowdown_from_realtime(4.0f);
+    s = sb_time_segment_make_slowdown_from_realtime(4000);
     observed = sb_time_segment_get_duration_in_warped_time_sec(&s);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, observed);
 
@@ -205,7 +182,7 @@ void test_time_segment_warped_duration_realtime_cases(void)
     TEST_ASSERT_FLOAT_WITHIN(EPS, 4.0f, observed);
 
     /* zero to real-time: avg rate = 0.5 => warped = duration * 0.5 */
-    s = sb_time_segment_make_spinup_to_realtime(4.0f);
+    s = sb_time_segment_make_spinup_to_realtime(4000);
     observed = sb_time_segment_get_duration_in_warped_time_sec(&s);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, observed);
 
@@ -218,19 +195,19 @@ void test_time_segment_warped_duration_realtime_cases(void)
 /* Single constant-rate segment: mapping is linear with the rate */
 void test_time_axis_map_single_constant_segment(void)
 {
-    sb_time_segment_t s = sb_time_segment_make_constant_rate(5.0f, 2.0f);
+    sb_time_segment_t s = sb_time_segment_make_constant_rate(5000, 2.0f);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
 
     /* inside segment */
-    float observed = sb_time_axis_map(&axis, 1.5f);
+    float observed = sb_time_axis_map(&axis, 1500);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, observed);
 
     /* at segment boundary */
-    observed = sb_time_axis_map(&axis, 5.0f);
+    observed = sb_time_axis_map(&axis, 5000);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 10.0f, observed);
 
     /* beyond segment -- continues with final rate */
-    observed = sb_time_axis_map(&axis, 7.0f);
+    observed = sb_time_axis_map(&axis, 7000);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 14.0f, observed);
 }
 
@@ -238,20 +215,20 @@ void test_time_axis_map_single_constant_segment(void)
 void test_time_axis_map_across_segments(void)
 {
     /* first segment: duration 2s, rate 1 => warped 2s */
-    sb_time_segment_t a = sb_time_segment_make_constant_rate(2.0f, 1.0f);
+    sb_time_segment_t a = sb_time_segment_make_constant_rate(2000, 1.0f);
     /* second: duration 3s, rate 2 => warped 6s */
-    sb_time_segment_t b = sb_time_segment_make_constant_rate(3.0f, 2.0f);
+    sb_time_segment_t b = sb_time_segment_make_constant_rate(3000, 2.0f);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, a));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, b));
 
     /* time 2.5s -> 0.5s into second segment => warped = 2.0 + 0.5*2.0 = 3.0 */
-    float observed = sb_time_axis_map(&axis, 2.5f);
+    float observed = sb_time_axis_map(&axis, 2500);
     float expected = 2.0f + 0.5f * 2.0f;
     TEST_ASSERT_FLOAT_WITHIN(EPS, expected, observed);
 
     /* time 4.0s -> 2.0s into second segment => warped = 2.0 + 2.0*2.0 = 6.0 */
-    observed = sb_time_axis_map(&axis, 4.0f);
+    observed = sb_time_axis_map(&axis, 4000);
     expected = 2.0f + 2.0f * 2.0f;
     TEST_ASSERT_FLOAT_WITHIN(EPS, expected, observed);
 }
@@ -262,16 +239,18 @@ void test_time_axis_map_linear_changing_rate(void)
     /* segment: duration 2s, initial rate 1, final rate 3
      * For t within [0,2], warped = initial*t + ((final-initial)/(2*d))*t^2
      */
-    sb_time_segment_t s = sb_time_segment_make(2.0f, 1.0f, 3.0f);
+    sb_time_segment_t s = sb_time_segment_make(2000, 1.0f, 3.0f);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
 
-    float t = 1.0f;
-    float observed = sb_time_axis_map(&axis, t);
+    uint32_t t_msec = 1000;
+    float t = t_msec / 1000.0f;
+    float observed = sb_time_axis_map(&axis, t_msec);
     float expected = 1.0f * t + 0.5f * t * t; /* = 1 + 0.5 = 1.5 */
     TEST_ASSERT_FLOAT_WITHIN(EPS, expected, observed);
 
-    t = 1.5f;
-    observed = sb_time_axis_map(&axis, t);
+    t_msec = 1500;
+    t = t_msec / 1000.0f;
+    observed = sb_time_axis_map(&axis, t_msec);
     expected = 1.0f * t + 0.5f * t * t; /* = 1 + 9/8 = 2.125 */
     TEST_ASSERT_FLOAT_WITHIN(EPS, expected, observed);
 }
@@ -282,23 +261,23 @@ void test_time_axis_map_linear_changing_rate(void)
 void test_time_axis_map_ex_single_constant_segment(void)
 {
     float rate = 0.0f;
-    sb_time_segment_t s = sb_time_segment_make_constant_rate(5.0f, 2.0f);
+    sb_time_segment_t s = sb_time_segment_make_constant_rate(5000, 2.0f);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
 
     /* inside segment */
-    float observed = sb_time_axis_map_ex(&axis, 1.5f, &rate);
+    float observed = sb_time_axis_map_ex(&axis, 1500, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, observed);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
 
     /* at segment boundary */
     rate = 0.0f;
-    observed = sb_time_axis_map_ex(&axis, 5.0f, &rate);
+    observed = sb_time_axis_map_ex(&axis, 5000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 10.0f, observed);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
 
     /* beyond segment -- continues with final rate */
     rate = 0.0f;
-    observed = sb_time_axis_map_ex(&axis, 7.0f, &rate);
+    observed = sb_time_axis_map_ex(&axis, 7000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 14.0f, observed);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
 }
@@ -309,20 +288,20 @@ void test_time_axis_map_ex_across_segments(void)
     float rate = 0.0f;
 
     /* first segment: duration 2s, rate 1 => warped 2s */
-    sb_time_segment_t a = sb_time_segment_make_constant_rate(2.0f, 1.0f);
+    sb_time_segment_t a = sb_time_segment_make_constant_rate(2000, 1.0f);
     /* second: duration 3s, rate 2 => warped 6s */
-    sb_time_segment_t b = sb_time_segment_make_constant_rate(3.0f, 2.0f);
+    sb_time_segment_t b = sb_time_segment_make_constant_rate(3000, 2.0f);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, a));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, b));
 
     /* time 2.5s -> 0.5s into second segment => warped = 2.0 + 0.5*2.0 = 3.0 */
-    float observed = sb_time_axis_map_ex(&axis, 2.5f, &rate);
+    float observed = sb_time_axis_map_ex(&axis, 2500, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, observed);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
 
     /* time 4.0s -> 2.0s into second segment => warped = 2.0 + 2.0*2.0 = 6.0 */
-    observed = sb_time_axis_map_ex(&axis, 4.0f, &rate);
+    observed = sb_time_axis_map_ex(&axis, 4000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 6.0f, observed);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
 }
@@ -332,11 +311,11 @@ void test_time_axis_map_ex_across_segments(void)
  */
 void test_time_axis_map_ex_linear_changing_rate(void)
 {
-    sb_time_segment_t s = sb_time_segment_make(2.0f, 1.0f, 3.0f);
+    sb_time_segment_t s = sb_time_segment_make(2000, 1.0f, 3.0f);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
 
     float rate = -1.0f;
-    sb_time_axis_map_ex(&axis, 1.0f, &rate);
+    sb_time_axis_map_ex(&axis, 1000, &rate);
 
     /* expected rate: 1 + (3-1) * (1/2) = 2.0 */
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
@@ -345,11 +324,11 @@ void test_time_axis_map_ex_linear_changing_rate(void)
     sb_time_axis_map_ex(&axis, 0.0f, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
 
-    sb_time_axis_map_ex(&axis, 2.0f, &rate);
+    sb_time_axis_map_ex(&axis, 2000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, rate);
 
     /* ensure the map result still matches the non-_ex variant when out_rate is NULL */
-    rate = sb_time_axis_map_ex(&axis, 1.5f, NULL);
+    rate = sb_time_axis_map_ex(&axis, 1500, NULL);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.625f, rate);
 }
 
@@ -361,9 +340,9 @@ void test_time_axis_map_ex_three_segment_scenario(void)
      * 2) slowdown from realtime to 0 over 5s (initial=1, final=0)
      * 3) realtime for 5s (rate = 1)
      */
-    sb_time_segment_t s1 = sb_time_segment_make_realtime(5.0f);
-    sb_time_segment_t s2 = sb_time_segment_make_slowdown_from_realtime(5.0f);
-    sb_time_segment_t s3 = sb_time_segment_make_realtime(5.0f);
+    sb_time_segment_t s1 = sb_time_segment_make_realtime(5000);
+    sb_time_segment_t s2 = sb_time_segment_make_slowdown_from_realtime(5000);
+    sb_time_segment_t s3 = sb_time_segment_make_realtime(5000);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s1));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s2));
@@ -372,62 +351,27 @@ void test_time_axis_map_ex_three_segment_scenario(void)
     float rate = -1.0f;
 
     /* t = 2 (inside first segment) -> rate should be 1.0 */
-    sb_time_axis_map_ex(&axis, 2.0f, &rate);
+    sb_time_axis_map_ex(&axis, 2000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
 
     /* t = 7 (2s into seg2). seg2 duration = 5, relative_t = 2/5 = 0.4
      * seg2 initial=1 final=0 -> rate = 1 + (0-1)*0.4 = 0.6
      */
-    sb_time_axis_map_ex(&axis, 7.0f, &rate);
+    sb_time_axis_map_ex(&axis, 7000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 0.6f, rate);
 
     /* t = 10 (end of seg2, start of seg3, segments are open from the right) ->
      * rate should be 1.0 (rate of seg3) */
-    sb_time_axis_map_ex(&axis, 10.0f, &rate);
+    sb_time_axis_map_ex(&axis, 10000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
 
     /* t = 12 (inside seg3) -> rate should be 1.0 */
-    sb_time_axis_map_ex(&axis, 12.0f, &rate);
+    sb_time_axis_map_ex(&axis, 12000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
 
     /* Infinity: out_rate should be final rate of the last segment (1.0) */
-    sb_time_axis_map_ex(&axis, INFINITY, &rate);
+    sb_time_axis_map_ex(&axis, UINT32_MAX, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
-
-    /* Negative time: maps unchanged and out_rate should be 1.0 per implementation */
-    sb_time_axis_map_ex(&axis, -1.0f, &rate);
-    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
-}
-
-/* Special cases: negative time and infinity */
-void test_time_axis_map_special_cases(void)
-{
-    sb_time_segment_t s = sb_time_segment_make_constant_rate(1.0f, 2.0f);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
-
-    /* negative time is returned unchanged */
-    TEST_ASSERT_FLOAT_WITHIN(EPS, -1.0f, sb_time_axis_map(&axis, -1.0f));
-
-    /* infinity is returned unchanged */
-    TEST_ASSERT_TRUE(isinf(sb_time_axis_map(&axis, INFINITY)));
-}
-
-/* Special cases for sb_time_axis_map_ex: negative time and infinity, and returned rate */
-void test_time_axis_map_ex_special_cases(void)
-{
-    sb_time_segment_t s = sb_time_segment_make_constant_rate(1.0f, 2.0f);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
-
-    float rate = -123.0f;
-    /* negative time is returned unchanged and rate should be 1.0 per implementation */
-    float observed = sb_time_axis_map_ex(&axis, -1.0f, &rate);
-    TEST_ASSERT_FLOAT_WITHIN(EPS, -1.0f, observed);
-    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
-
-    /* infinity is returned unchanged and rate should be final_rate of last segment */
-    observed = sb_time_axis_map_ex(&axis, INFINITY, &rate);
-    TEST_ASSERT_TRUE(isinf(observed));
-    TEST_ASSERT_FLOAT_WITHIN(EPS, s.final_rate, rate);
 }
 
 /* Additional mapping scenario test:
@@ -445,9 +389,9 @@ void test_time_axis_map_three_segment_scenario(void)
      * 2) slowdown from realtime to 0 over 5s (initial=1, final=0)
      * 3) realtime for 5s (rate = 1)
      */
-    sb_time_segment_t s1 = sb_time_segment_make_realtime(5.0f);
-    sb_time_segment_t s2 = sb_time_segment_make_slowdown_from_realtime(5.0f);
-    sb_time_segment_t s3 = sb_time_segment_make_realtime(5.0f);
+    sb_time_segment_t s1 = sb_time_segment_make_realtime(5000);
+    sb_time_segment_t s2 = sb_time_segment_make_slowdown_from_realtime(5000);
+    sb_time_segment_t s3 = sb_time_segment_make_realtime(5000);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s1));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s2));
@@ -459,13 +403,13 @@ void test_time_axis_map_three_segment_scenario(void)
     float warped_s3 = sb_time_segment_get_duration_in_warped_time_sec(&s3); /* 5 * 1 = 5 */
 
     /* t = 0 (start) */
-    TEST_ASSERT_FLOAT_WITHIN(EPS, 0.0f, sb_time_axis_map(&axis, 0.0f));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 0.0f, sb_time_axis_map(&axis, 0));
 
     /* t = 2 (within first realtime segment) => warped = 2 */
-    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, sb_time_axis_map(&axis, 2.0f));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, sb_time_axis_map(&axis, 2000));
 
     /* t = 5 (boundary between seg1 and seg2) => warped = warped_s1 = 5 */
-    TEST_ASSERT_FLOAT_WITHIN(EPS, warped_s1, sb_time_axis_map(&axis, 5.0f));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, warped_s1, sb_time_axis_map(&axis, 5000));
 
     /* t = 7 (2s into seg2). For seg2: initial=1 final=0, d=5
      * warped_in_seg = initial*t_in + ((final-initial)/(2*d)) * t_in^2
@@ -475,25 +419,25 @@ void test_time_axis_map_three_segment_scenario(void)
     float t_in_seg2 = 2.0f;
     float warped_in_seg2 = t_in_seg2 - 0.1f * t_in_seg2 * t_in_seg2; /* 2 - 0.4 */
     float expected7 = warped_s1 + warped_in_seg2;
-    TEST_ASSERT_FLOAT_WITHIN(EPS, expected7, sb_time_axis_map(&axis, 7.0f));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, expected7, sb_time_axis_map(&axis, 7000));
 
     /* t = 10 (end of seg2) => warped = warped_s1 + warped_s2 = 7.5 */
-    TEST_ASSERT_FLOAT_WITHIN(EPS, warped_s1 + warped_s2, sb_time_axis_map(&axis, 10.0f));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, warped_s1 + warped_s2, sb_time_axis_map(&axis, 10000));
 
     /* t = 12 (2s into seg3) => warped = warped_s1 + warped_s2 + 2*1 = 7.5 + 2 = 9.5 */
-    TEST_ASSERT_FLOAT_WITHIN(EPS, warped_s1 + warped_s2 + 2.0f, sb_time_axis_map(&axis, 12.0f));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, warped_s1 + warped_s2 + 2.0f, sb_time_axis_map(&axis, 12000));
 
     /* t = 15 (end of seg3) => warped = sum = 5 + 2.5 + 5 = 12.5 */
-    TEST_ASSERT_FLOAT_WITHIN(EPS, warped_s1 + warped_s2 + warped_s3, sb_time_axis_map(&axis, 15.0f));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, warped_s1 + warped_s2 + warped_s3, sb_time_axis_map(&axis, 15000));
 }
 
 /* Tests for insert/remove segment functions */
 
 void test_insert_segment_at_positions(void)
 {
-    sb_time_segment_t a = sb_time_segment_make_spinup_to_realtime(0.1f);
-    sb_time_segment_t b = sb_time_segment_make_constant_rate(0.2f, 2.0f);
-    sb_time_segment_t c = sb_time_segment_make_constant_rate(0.3f, 3.0f);
+    sb_time_segment_t a = sb_time_segment_make_spinup_to_realtime(100);
+    sb_time_segment_t b = sb_time_segment_make_constant_rate(200, 2.0f);
+    sb_time_segment_t c = sb_time_segment_make_constant_rate(300, 3.0f);
 
     /* append a and c */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, a));
@@ -513,35 +457,35 @@ void test_insert_segment_at_positions(void)
     TEST_ASSERT_NOT_NULL(p1);
     TEST_ASSERT_NOT_NULL(p2);
 
-    TEST_ASSERT_FLOAT_WITHIN(EPS, a.duration_sec, p0->duration_sec);
-    TEST_ASSERT_FLOAT_WITHIN(EPS, b.duration_sec, p1->duration_sec);
-    TEST_ASSERT_FLOAT_WITHIN(EPS, c.duration_sec, p2->duration_sec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, a.duration_msec, p0->duration_msec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, b.duration_msec, p1->duration_msec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, c.duration_msec, p2->duration_msec);
 
     /* insert at beginning */
-    sb_time_segment_t d = sb_time_segment_make_realtime(0.4f);
+    sb_time_segment_t d = sb_time_segment_make_realtime(400);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_insert_segment_at(&axis, 0, d));
     TEST_ASSERT_EQUAL(4, sb_time_axis_num_segments(&axis));
-    TEST_ASSERT_FLOAT_WITHIN(EPS, d.duration_sec, sb_time_axis_get_segment(&axis, 0)->duration_sec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, d.duration_msec, sb_time_axis_get_segment(&axis, 0)->duration_msec);
 
     /* insert at end (equivalent to append) */
-    sb_time_segment_t e = sb_time_segment_make_realtime(0.5f);
+    sb_time_segment_t e = sb_time_segment_make_realtime(500);
     size_t idx_end = sb_time_axis_num_segments(&axis);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_insert_segment_at(&axis, idx_end, e));
-    TEST_ASSERT_FLOAT_WITHIN(EPS, e.duration_sec, sb_time_axis_get_segment(&axis, idx_end)->duration_sec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, e.duration_msec, sb_time_axis_get_segment(&axis, idx_end)->duration_msec);
 }
 
 void test_insert_segment_invalid_index(void)
 {
-    sb_time_segment_t s = sb_time_segment_make_realtime(0.1f);
+    sb_time_segment_t s = sb_time_segment_make_realtime(100);
     /* empty axis, valid index 0 only */
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_time_axis_insert_segment_at(&axis, 1, s));
 }
 
 void test_remove_segment_at_positions(void)
 {
-    sb_time_segment_t a = sb_time_segment_make_realtime(1.0f);
-    sb_time_segment_t b = sb_time_segment_make_slowdown_from_realtime(2.0f);
-    sb_time_segment_t c = sb_time_segment_make_constant_rate(3.0f, 3.0f);
+    sb_time_segment_t a = sb_time_segment_make_realtime(1000);
+    sb_time_segment_t b = sb_time_segment_make_slowdown_from_realtime(2000);
+    sb_time_segment_t c = sb_time_segment_make_constant_rate(3000, 3.0f);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, a));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, b));
@@ -551,13 +495,13 @@ void test_remove_segment_at_positions(void)
     /* remove middle (index 1) */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_remove_segment_at(&axis, 1));
     TEST_ASSERT_EQUAL(2, sb_time_axis_num_segments(&axis));
-    TEST_ASSERT_FLOAT_WITHIN(EPS, a.duration_sec, sb_time_axis_get_segment(&axis, 0)->duration_sec);
-    TEST_ASSERT_FLOAT_WITHIN(EPS, c.duration_sec, sb_time_axis_get_segment(&axis, 1)->duration_sec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, a.duration_msec, sb_time_axis_get_segment(&axis, 0)->duration_msec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, c.duration_msec, sb_time_axis_get_segment(&axis, 1)->duration_msec);
 
     /* remove first */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_remove_segment_at(&axis, 0));
     TEST_ASSERT_EQUAL(1, sb_time_axis_num_segments(&axis));
-    TEST_ASSERT_FLOAT_WITHIN(EPS, c.duration_sec, sb_time_axis_get_segment(&axis, 0)->duration_sec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, c.duration_msec, sb_time_axis_get_segment(&axis, 0)->duration_msec);
 
     /* remove last */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_remove_segment_at(&axis, 0));
@@ -579,7 +523,7 @@ void test_remove_segment_invalid_index(void)
 void test_time_axis_map_origin_shift_constant_segment(void)
 {
     /* single constant-rate segment at 2.0x */
-    sb_time_segment_t s = sb_time_segment_make_constant_rate(5.0f, 2.0f);
+    sb_time_segment_t s = sb_time_segment_make_constant_rate(5000, 2.0f);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
 
     /* set origin to 10.0s (warped t = 0 corresponds to wall-clock 10s) */
@@ -588,22 +532,22 @@ void test_time_axis_map_origin_shift_constant_segment(void)
 
     /* Query before origin: wall=9.0 -> relative = -1.0 -> should map unchanged and rate=1.0 */
     float rate = -123.0f;
-    float observed = sb_time_axis_map_ex(&axis, 9.0f, &rate);
+    float observed = sb_time_axis_map_ex(&axis, 9000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, -1.0f, observed);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
 
     /* Query inside segment: wall=11.5 -> relative 1.5 -> warped = 1.5 * 2.0 = 3.0 */
-    observed = sb_time_axis_map(&axis, 11.5f);
+    observed = sb_time_axis_map(&axis, 11500);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, observed);
 
     /* At boundary: wall=15.0 -> relative 5.0 (end of segment) -> warped = 10.0 */
     rate = 0.0f;
-    observed = sb_time_axis_map_ex(&axis, 15.0f, &rate);
+    observed = sb_time_axis_map_ex(&axis, 15000, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 10.0f, observed);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 2.0f, rate);
 
     /* After the segment end: wall=17.0 -> relative 7.0 -> warped = 5*2 + (7-5)*final_rate(=2) = 14.0 */
-    observed = sb_time_axis_map(&axis, 17.0f);
+    observed = sb_time_axis_map(&axis, 17000);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 14.0f, observed);
 }
 
@@ -612,8 +556,8 @@ void test_time_axis_map_origin_shift_across_segments(void)
     /* first segment: duration 2s, rate 1 => warped 2s
      * second: duration 3s, rate 2 => warped 6s
      */
-    sb_time_segment_t a = sb_time_segment_make_constant_rate(2.0f, 1.0f);
-    sb_time_segment_t b = sb_time_segment_make_constant_rate(3.0f, 2.0f);
+    sb_time_segment_t a = sb_time_segment_make_constant_rate(2000, 1.0f);
+    sb_time_segment_t b = sb_time_segment_make_constant_rate(3000, 2.0f);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, a));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, b));
@@ -623,16 +567,16 @@ void test_time_axis_map_origin_shift_across_segments(void)
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, sb_time_axis_get_origin_sec(&axis));
 
     /* wall 3.5 -> relative = 2.5 -> 0.5s into second segment -> warped = 2.0 + 0.5*2.0 = 3.0 */
-    float observed = sb_time_axis_map(&axis, 3.5f);
+    float observed = sb_time_axis_map(&axis, 3500);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, observed);
 
     /* wall 1.5 -> relative 0.5 -> inside first segment -> warped = 0.5*1.0 = 0.5 */
-    observed = sb_time_axis_map(&axis, 1.5f);
+    observed = sb_time_axis_map(&axis, 1500);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 0.5f, observed);
 
     /* wall 0.5 -> before origin -> returned unchanged (relative = -0.5) */
     float rate = 0.0f;
-    observed = sb_time_axis_map_ex(&axis, 0.5f, &rate);
+    observed = sb_time_axis_map_ex(&axis, 500, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, -0.5f, observed);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
 }
@@ -649,8 +593,6 @@ int main(int argc, char* argv[])
     RUN_TEST(test_clear_removes_all_entries);
     RUN_TEST(test_append_one_segment);
     RUN_TEST(test_append_grows_capacity);
-    RUN_TEST(test_append_invalid_negative_values);
-    RUN_TEST(test_append_invalid_nan_values);
     RUN_TEST(test_insert_segment_at_positions);
     RUN_TEST(test_insert_segment_invalid_index);
     RUN_TEST(test_remove_segment_at_positions);
@@ -669,14 +611,12 @@ int main(int argc, char* argv[])
     RUN_TEST(test_time_axis_map_single_constant_segment);
     RUN_TEST(test_time_axis_map_across_segments);
     RUN_TEST(test_time_axis_map_linear_changing_rate);
-    RUN_TEST(test_time_axis_map_special_cases);
     RUN_TEST(test_time_axis_map_three_segment_scenario);
 
     /* sb_time_axis_map_ex tests */
     RUN_TEST(test_time_axis_map_ex_single_constant_segment);
     RUN_TEST(test_time_axis_map_ex_across_segments);
     RUN_TEST(test_time_axis_map_ex_linear_changing_rate);
-    RUN_TEST(test_time_axis_map_ex_special_cases);
     RUN_TEST(test_time_axis_map_ex_three_segment_scenario);
 
     /* origin-shift tests */

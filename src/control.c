@@ -330,7 +330,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
         *out = ctrl->default_output;
     } else {
         /* Update control output from trajectory if available */
-        warped_time_sec = sb_time_axis_map_ex(&chapter->time_axis, time_msec / 1000.0f, &warped_rate);
+        warped_time_sec = sb_time_axis_map_ex(&chapter->time_axis, time_msec, &warped_rate);
 
         sb_control_output_clear(out);
 

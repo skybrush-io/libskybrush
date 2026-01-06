@@ -29,6 +29,7 @@
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
 #include <stddef.h>
+#include <stdint.h>
 
 __BEGIN_DECLS
 
@@ -44,10 +45,10 @@ __BEGIN_DECLS
  */
 typedef struct sb_time_segment_s {
     /**
-     * Duration of this segment, in seconds, in wall clock time. Must be non-negative;
-     * can be infinite.
+     * Duration of this segment, in milliseconds, in wall clock time.
+     * \c UINT32_MAX means infinite duration.
      */
-    float duration_sec;
+    uint32_t duration_msec;
 
     /**
      * Initial time scaling factor for this entry, in seconds/seconds.
@@ -76,14 +77,15 @@ typedef struct sb_time_segment_s {
 
 /* Constructors for common time-segment patterns */
 
-sb_time_segment_t sb_time_segment_make(float duration_sec, float initial_rate, float final_rate);
-sb_time_segment_t sb_time_segment_make_realtime(float duration_sec);
-sb_time_segment_t sb_time_segment_make_constant_rate(float duration_sec, float rate);
-sb_time_segment_t sb_time_segment_make_slowdown_from(float duration_sec, float initial_rate);
-sb_time_segment_t sb_time_segment_make_slowdown_from_realtime(float duration_sec);
-sb_time_segment_t sb_time_segment_make_spinup_to(float duration_sec, float final_rate);
-sb_time_segment_t sb_time_segment_make_spinup_to_realtime(float duration_sec);
+sb_time_segment_t sb_time_segment_make(uint32_t duration_msec, float initial_rate, float final_rate);
+sb_time_segment_t sb_time_segment_make_realtime(uint32_t duration_msec);
+sb_time_segment_t sb_time_segment_make_constant_rate(uint32_t duration_msec, float rate);
+sb_time_segment_t sb_time_segment_make_slowdown_from(uint32_t duration_msec, float initial_rate);
+sb_time_segment_t sb_time_segment_make_slowdown_from_realtime(uint32_t duration_msec);
+sb_time_segment_t sb_time_segment_make_spinup_to(uint32_t duration_msec, float final_rate);
+sb_time_segment_t sb_time_segment_make_spinup_to_realtime(uint32_t duration_msec);
 
+uint32_t sb_time_segment_get_duration_in_wall_clock_time_msec(const sb_time_segment_t* segment);
 float sb_time_segment_get_duration_in_wall_clock_time_sec(const sb_time_segment_t* segment);
 float sb_time_segment_get_duration_in_warped_time_sec(const sb_time_segment_t* segment);
 
@@ -91,14 +93,26 @@ float sb_time_segment_get_duration_in_warped_time_sec(const sb_time_segment_t* s
  * @brief Structure representing a time axis where time can flow at different
  * rates in relation to wall clock time.
  *
- * A time axis consists of a sequence of multiple (possibly warped) time segments.
+ * A time axis consists of a sequence of multiple time segments where each segment has
+ * a duration, an initial and a final time scaling factor. The combination of these
+ * parameters allows to create sections where time flows at constant speed, accelerates
+ * (with constant acceleration) or decelerates (with constant deceleration).
+ *
+ * The time axis also has an origin, which is the wall clock time corresponding to
+ * warped time zero.
+ *
+ * Wall clock time is measured in millseconds from some arbitrary epoch (e.g. system
+ * start time), while warped time is measured in seconds from the origin. The choice
+ * for the wall clock time being in milliseconds was chosen pragmatically to make the
+ * integration easier with systems like ArduPilot where time is naturally measured in
+ * milliseconds.
  */
 typedef struct sb_time_axis_s {
     /**
-     * Origin of the time axis, in seconds. This is the wall clock time
+     * Origin of the time axis, in milliseconds. This is the wall clock time
      * corresponding to warped time zero.
      */
-    float origin;
+    uint32_t origin_msec;
 
     sb_time_segment_t* stor_begin; /**< Pointer to the first time segment */
     sb_time_segment_t* end; /**< Pointer to one past the last used time segment */
@@ -113,7 +127,9 @@ const sb_time_segment_t* sb_time_axis_get_segment(
     const sb_time_axis_t* axis, size_t index);
 size_t sb_time_axis_num_segments(const sb_time_axis_t* axis);
 
+uint32_t sb_time_axis_get_origin_msec(const sb_time_axis_t* axis);
 float sb_time_axis_get_origin_sec(const sb_time_axis_t* axis);
+void sb_time_axis_set_origin_msec(sb_time_axis_t* axis, uint32_t origin_msec);
 sb_error_t sb_time_axis_set_origin_sec(sb_time_axis_t* axis, float origin_sec);
 
 void sb_time_axis_clear(sb_time_axis_t* axis);
@@ -124,8 +140,8 @@ sb_error_t sb_time_axis_insert_segment_at(
 sb_error_t sb_time_axis_remove_segment_at(
     sb_time_axis_t* axis, size_t index);
 
-float sb_time_axis_map(const sb_time_axis_t* axis, float wall_clock_time_sec);
-float sb_time_axis_map_ex(const sb_time_axis_t* axis, float wall_clock_time_sec, float* out_rate);
+float sb_time_axis_map(const sb_time_axis_t* axis, uint32_t wall_clock_time_msec);
+float sb_time_axis_map_ex(const sb_time_axis_t* axis, uint32_t wall_clock_time_msec, float* out_rate);
 
 __END_DECLS
 
