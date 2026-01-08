@@ -170,7 +170,7 @@ static sb_error_t sb_i_time_segment_validate(const sb_time_segment_t* seg)
     }
 
     /* Reject NaN values */
-    if (isnan(seg->duration_msec) || isnan(seg->initial_rate) || isnan(seg->final_rate)) {
+    if (isnan(seg->initial_rate) || isnan(seg->final_rate)) {
         return SB_EINVAL;
     }
 
