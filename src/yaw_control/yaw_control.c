@@ -352,7 +352,7 @@ sb_error_t sb_yaw_player_get_yaw_at(sb_yaw_player_t* player, float t, float* res
 }
 
 /**
- * Returns the yaw rate associated to the player at the given time instant.
+ * Returns the yaw rate associated to the player at the given time instant, in degrees per second.
  */
 sb_error_t sb_yaw_player_get_yaw_rate_at(sb_yaw_player_t* player, float t, float* result)
 {
