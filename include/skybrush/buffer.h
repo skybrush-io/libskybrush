@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -55,9 +55,11 @@ void sb_buffer_init_view(sb_buffer_t* buf, void* bytes, size_t num_bytes);
 void sb_buffer_destroy(sb_buffer_t* buf);
 
 size_t sb_buffer_capacity(const sb_buffer_t* buf);
-sb_error_t sb_buffer_ensure_owned(sb_buffer_t* buf);
-sb_bool_t sb_buffer_is_view(const sb_buffer_t* buf);
 size_t sb_buffer_size(const sb_buffer_t* buf);
+
+sb_error_t sb_buffer_ensure_owned(sb_buffer_t* buf);
+uint8_t* sb_buffer_ensure_view(sb_buffer_t* buf);
+sb_bool_t sb_buffer_is_view(const sb_buffer_t* buf);
 
 sb_error_t sb_buffer_clear(sb_buffer_t* buf);
 sb_error_t sb_buffer_reserve(sb_buffer_t* buf, size_t new_capacity);

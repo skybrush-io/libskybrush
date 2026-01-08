@@ -136,6 +136,11 @@ size_t sb_buffer_capacity(const sb_buffer_t* buf)
 /**
  * @brief Ensures that the buffer owns the memory area it is backed with, i.e. it is not a view.
  *
+ * When the buffer is a view, a new memory area will be allocated and the contents
+ * of the view will be copied into it. The buffer will then own the new memory area.
+ *
+ * When the buffer already owns its memory area, this function is a no-op.
+ *
  * @param buf the buffer
  * @return error code
  */
@@ -158,6 +163,31 @@ sb_error_t sb_buffer_ensure_owned(sb_buffer_t* buf)
     }
 
     return SB_SUCCESS;
+}
+
+/**
+ * @brief Ensures that the buffer _does not_ own the memory area it is backed with, i.e. it is a view.
+ *
+ * When the buffer is not a view yet, the pointer to the underlying storage is released
+ * and the buffer is turned into a view. The caller is responsible for freeing the
+ * memory area later. The view will be compacted such that its capacity becomes equal to
+ * the used size of the buffer.
+ *
+ * When the buffer is already a view, this function is a no-op.
+ *
+ * @param buf the buffer
+ * @return pointer to the memory area that the buffer used to own, or NULL when the
+ *         buffer was already a view
+ */
+uint8_t* sb_buffer_ensure_view(sb_buffer_t* buf)
+{
+    if (sb_buffer_is_view(buf)) {
+        return NULL;
+    } else {
+        buf->stor_end = buf->end;
+        buf->owned = 0;
+        return buf->stor_begin;
+    }
 }
 
 /**

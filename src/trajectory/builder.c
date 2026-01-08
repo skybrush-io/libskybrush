@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -17,6 +17,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <math.h>
 #include <string.h>
 
@@ -25,6 +26,7 @@
 
 #include "../parsing.h"
 #include "./builder.h"
+#include "skybrush/buffer.h"
 
 #define HEADER_LENGTH 9
 #define MAX_DURATION_MSEC 60000
@@ -304,16 +306,27 @@ sb_error_t sb_trajectory_builder_hold_position_for(
 sb_error_t sb_trajectory_init_from_builder(
     sb_trajectory_t* trajectory, sb_trajectory_builder_t* builder)
 {
-    uint8_t* buf = SB_BUFFER(builder->buffer);
-    uint8_t header = buf[0];
+    uint8_t* data;
+    uint8_t header;
 
-    SB_CHECK(sb_trajectory_init_from_bytes(trajectory, buf, sb_buffer_size(&builder->buffer)));
+    assert(!sb_buffer_is_view(&builder->buffer));
 
-    /* ownership of the memory buffer now belongs to the trajectory so we can
-     * re-initialize the builder */
+    /* ask the buffer to release the ownership of its underlying allocated memory block
+     * and convert itself into a view */
+    data = sb_buffer_ensure_view(&builder->buffer);
+    header = data[0];
+
+    /* pass on the ownership of 'data' to the trajectory */
+    SB_CHECK(sb_trajectory_init_from_bytes(trajectory, data, sb_buffer_size(&builder->buffer)));
+
+    /* ownership of 'data' now belongs to the trajectory so we can
+     * re-initialize the buffer of the builder */
+    sb_buffer_destroy(&builder->buffer);
     SB_CHECK(sb_buffer_init(&builder->buffer, HEADER_LENGTH));
-    buf = SB_BUFFER(builder->buffer);
-    buf[0] = header;
+
+    /* preserve the header byte of the builder buffer */
+    SB_BUFFER(builder->buffer)
+    [0] = header;
 
     return SB_SUCCESS;
 }

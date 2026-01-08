@@ -72,7 +72,6 @@ sb_error_t loadFixture(const char* fname)
 sb_error_t loadFixtureInMemory(const char* fname)
 {
     FILE* fp;
-    uint8_t* buf;
     ssize_t num_bytes;
     sb_error_t retval;
 
@@ -97,9 +96,9 @@ sb_error_t loadFixtureInMemory(const char* fname)
     fclose(fp);
 
     retval = sb_trajectory_init_from_binary_file_in_memory(&trajectory, buf, num_bytes);
-    trajectory_loaded = retval == SB_SUCCESS;
 
-    /* sb_trajectory_init_from_binary_file_in_memory() created a view */
+    trajectory_loaded = retval == SB_SUCCESS;
+    /* sb_trajectory_init_from_binary_file_in_memory() created a view so we need to kep buf around */
 
     return retval;
 }
