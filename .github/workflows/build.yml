@@ -16,6 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: apt install gcovr
+
       - name: Configure CMake
         run: >
           cmake -B ${{github.workspace}}/build
