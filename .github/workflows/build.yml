@@ -25,7 +25,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           -DBUILD_TESTING=ON
           -DLIBSKYBRUSH_ENABLE_CODE_COVERAGE=ON
-          -DUSE_SANITIZER=Address;Undefined
+          -DUSE_SANITIZER=Address\;Undefined
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
