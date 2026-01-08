@@ -320,6 +320,8 @@ void assert_trajectory_is_constant(sb_trajectory_t* trajectory, float start, flo
         TEST_ASSERT_EQUAL(0.0f, observed_vec.y);
         TEST_ASSERT_EQUAL(0.0f, observed_vec.z);
     }
+
+    sb_trajectory_player_destroy(&player);
 }
 
 void test_convert_to_trajectory(void)
