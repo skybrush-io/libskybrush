@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -32,10 +32,10 @@ void tearDown(void)
 
 void test_get_cubic_bezier_from_velocity_constraints(void)
 {
-    sb_vector3_with_yaw_t start = {0, 0, 0, 0};
-    sb_vector3_with_yaw_t start_vel = {1000, 0, 0, 0};
-    sb_vector3_with_yaw_t end = {10000, 10000, 0, 0};
-    sb_vector3_with_yaw_t end_vel = {1000, 0, 0, 0};
+    sb_vector3_with_yaw_t start = { 0, 0, 0, 0 };
+    sb_vector3_with_yaw_t start_vel = { 1000, 0, 0, 0 };
+    sb_vector3_with_yaw_t end = { 10000, 10000, 0, 0 };
+    sb_vector3_with_yaw_t end_vel = { 1000, 0, 0, 0 };
     float duration = 10;
     uint32_t duration_msec;
     sb_vector3_with_yaw_t control1, control2, result;
@@ -43,12 +43,9 @@ void test_get_cubic_bezier_from_velocity_constraints(void)
     sb_trajectory_t trajectory;
     sb_trajectory_player_t player;
 
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_get_cubic_bezier_from_velocity_constraints(
-        start, start_vel, end, end_vel, -1, &control1, &control2));
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_get_cubic_bezier_from_velocity_constraints(
-        start, start_vel, end, end_vel, duration, NULL, NULL));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_get_cubic_bezier_from_velocity_constraints(
-        start, start_vel, end, end_vel, duration, &control1, &control2));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel, -1, &control1, &control2));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel, duration, NULL, NULL));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel, duration, &control1, &control2));
 
     TEST_ASSERT_FLOAT_WITHIN(1, 10000 / 3.0, control1.x);
     TEST_ASSERT_FLOAT_WITHIN(1, 0, control1.y);
@@ -96,6 +93,8 @@ void test_get_cubic_bezier_from_velocity_constraints(void)
     TEST_ASSERT_FLOAT_WITHIN(1, (start.y + end.y) / 2, result.y);
     TEST_ASSERT_FLOAT_WITHIN(1, (start.z + end.z) / 2, result.z);
     TEST_ASSERT_FLOAT_WITHIN(1, (start.yaw + end.yaw) / 2, result.yaw);
+
+    sb_trajectory_builder_destroy(&builder);
 }
 
 void test_get_travel_time(void)
@@ -178,7 +177,7 @@ void test_scale_update(void)
 void test_bezier_cut_at(void)
 {
     float dst[8];
-    float src[8] = {0};
+    float src[8] = { 0 };
 
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_bezier_cut_at(dst, src, -1, 0.5));
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_bezier_cut_at(dst, src, 9, 0.5));
@@ -235,7 +234,10 @@ void test_bezier_cut_at(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.5, dst[1]);
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 1.5, dst[2]);
 
-    src[0] = 0; src[1] = 50; src[2] = -50; src[3] = 0;
+    src[0] = 0;
+    src[1] = 50;
+    src[2] = -50;
+    src[3] = 0;
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, src, 4, 0));
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[1]);

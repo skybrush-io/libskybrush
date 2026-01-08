@@ -20,6 +20,8 @@
 #include <skybrush/formats/binary.h>
 #include <skybrush/yaw_control.h>
 
+#include "skybrush/error.h"
+#include "skybrush/refcount.h"
 #include "unity.h"
 
 sb_yaw_control_t ctrl;
@@ -135,7 +137,7 @@ void test_yaw_control_is_really_empty(void)
 void test_init_empty(void)
 {
     closeFixture(); /* was created in setUp() */
-    sb_yaw_control_init_empty(&ctrl);
+    yaw_control_loaded = sb_yaw_control_init_empty(&ctrl) == SB_SUCCESS;
     test_yaw_control_is_really_empty();
 }
 
