@@ -55,10 +55,7 @@ sb_error_t sb_screenplay_chapter_init(sb_screenplay_chapter_t* chapter)
  */
 static void sb_i_screenplay_chapter_destroy(sb_screenplay_chapter_t* chapter)
 {
-    SB_XDECREF(chapter->trajectory);
-    SB_XDECREF(chapter->light_program);
-    SB_XDECREF(chapter->yaw_control);
-    SB_XDECREF(chapter->events);
+    sb_screenplay_chapter_reset(chapter);
     sb_time_axis_destroy(&chapter->time_axis);
 }
 
@@ -233,7 +230,11 @@ sb_error_t sb_screenplay_chapter_set_duration_sec(
         return SB_EINVAL;
     } else {
         float duration_msec_f = duration_sec * 1000.0f;
-        if (duration_msec_f > UINT32_MAX - 1) {
+
+        // Largest uint32_t that can be represented exactly in a 32-bit
+        // float is 4294967040 (2^32 - 2^8). Any value larger than this
+        // should fail.
+        if (duration_msec_f > 4294967040) {
             return SB_EINVAL;
         }
 
@@ -245,4 +246,23 @@ sb_error_t sb_screenplay_chapter_set_duration_sec(
         chapter->duration_msec = duration_msec_u;
     }
     return SB_SUCCESS;
+}
+
+/**
+ * @brief Resets the screenplay chapter to its default state.
+ *
+ * All associated objects of the screenplay chapter will be cleared. The time axis
+ * will be reset to its initial state with no segments and origin at 0 ms. The duration
+ * will be set to infinite.
+ *
+ * @param chapter  the screenplay chapter to reset
+ */
+void sb_screenplay_chapter_reset(sb_screenplay_chapter_t* chapter)
+{
+    sb_screenplay_chapter_set_trajectory(chapter, NULL);
+    sb_screenplay_chapter_set_light_program(chapter, NULL);
+    sb_screenplay_chapter_set_yaw_control(chapter, NULL);
+    sb_screenplay_chapter_set_event_list(chapter, NULL);
+    sb_screenplay_chapter_set_duration_msec(chapter, UINT32_MAX);
+    sb_time_axis_clear(&chapter->time_axis);
 }

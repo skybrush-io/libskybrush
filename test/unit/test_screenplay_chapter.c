@@ -268,6 +268,81 @@ void test_screenplay_chapter_set_duration_sec_rounds_to_uint32_max_is_invalid_an
     SB_DECREF_STATIC(&chapter);
 }
 
+void test_screenplay_chapter_reset(void)
+{
+    sb_screenplay_chapter_t chapter;
+    sb_trajectory_t traj;
+    sb_light_program_t prog;
+    sb_yaw_control_t yaw;
+    sb_event_list_t events;
+    sb_error_t err;
+
+    /* initialize chapter and objects */
+    err = sb_screenplay_chapter_init(&chapter);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_empty(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init_empty(&prog));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init_empty(&yaw));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_init(&events, 0));
+
+    /* initial refcounts */
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&traj));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&prog));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&yaw));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&events));
+
+    /* attach everything to chapter */
+    sb_screenplay_chapter_set_trajectory(&chapter, &traj);
+    sb_screenplay_chapter_set_light_program(&chapter, &prog);
+    sb_screenplay_chapter_set_yaw_control(&chapter, &yaw);
+    sb_screenplay_chapter_set_event_list(&chapter, &events);
+
+    /* ensure refcounts increased to 2 */
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&traj));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&prog));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&yaw));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&events));
+
+    /* set finite duration and add a time axis segment so clearing is visible */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_set_duration_msec(&chapter, 1234u));
+    sb_time_axis_t* axis = sb_screenplay_chapter_get_time_axis(&chapter);
+    TEST_ASSERT_NOT_NULL(axis);
+    /* append a constant-rate segment (duration 1000 ms) */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_constant_rate(1000u, 1.0f)));
+    TEST_ASSERT_EQUAL(1, sb_time_axis_num_segments(axis));
+    TEST_ASSERT_EQUAL_UINT32(1234u, sb_screenplay_chapter_get_duration_msec(&chapter));
+
+    /* perform reset */
+    sb_screenplay_chapter_reset(&chapter);
+
+    /* after reset, attached pointers must be NULL and refcounts back to 1 */
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_trajectory(&chapter));
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_light_program(&chapter));
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_yaw_control(&chapter));
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_events(&chapter));
+
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&traj));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&prog));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&yaw));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&events));
+
+    /* duration must be reset to infinite */
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_chapter_get_duration_msec(&chapter));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_screenplay_chapter_get_duration_sec(&chapter));
+
+    /* time axis must be cleared */
+    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(axis));
+
+    /* cleanup */
+    SB_DECREF_STATIC(&chapter);
+
+    SB_DECREF_STATIC(&traj);
+    SB_DECREF_STATIC(&prog);
+    SB_DECREF_STATIC(&yaw);
+    SB_DECREF_STATIC(&events);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -280,6 +355,7 @@ int main(void)
     RUN_TEST(test_screenplay_chapter_set_duration_sec_nan_is_invalid_and_preserves_old);
     RUN_TEST(test_screenplay_chapter_set_duration_sec_too_large_is_invalid_and_preserves_old);
     RUN_TEST(test_screenplay_chapter_set_duration_sec_rounds_to_uint32_max_is_invalid_and_preserves_old);
+    RUN_TEST(test_screenplay_chapter_reset);
 
     return UNITY_END();
 }

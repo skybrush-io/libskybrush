@@ -110,6 +110,8 @@ void sb_screenplay_chapter_set_yaw_control(
 void sb_screenplay_chapter_set_event_list(
     sb_screenplay_chapter_t* chapter, sb_event_list_t* events);
 
+void sb_screenplay_chapter_reset(sb_screenplay_chapter_t* chapter);
+
 /* ************************************************************************* */
 
 /**
