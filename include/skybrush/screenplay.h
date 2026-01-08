@@ -47,7 +47,7 @@ __BEGIN_DECLS
  * The duration of a chapter is either infinite (by default) or finite (if a duration
  * in _wall clock time_ is specified).
  */
-typedef struct {
+typedef struct sb_screenplay_chapter_s {
     SB_REFCOUNTED;
 
     /** The duration of the chapter, in milliseconds. \c UINT32_MAX means infinite. */
@@ -125,7 +125,7 @@ void sb_screenplay_chapter_reset(sb_screenplay_chapter_t* chapter);
  * A screenplay can be evaluated by a show controller (\ref sb_show_controller_t)
  * to obtain the control outputs at any given point in time.
  */
-typedef struct {
+typedef struct sb_screenplay_s {
     sb_screenplay_chapter_t* chapters; /**< The list of chapters */
     size_t num_chapters; /**< The current number of chapters in the list */
     size_t max_chapters; /**< The maximum number of chapters that the list can hold */

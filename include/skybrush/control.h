@@ -49,7 +49,7 @@ typedef uint8_t sb_control_component_mask_t;
 /**
  * Structure containing the control output for a single time step.
  */
-typedef struct {
+typedef struct sb_control_output_s {
     /** Specifies which components to consider from this struct */
     sb_control_component_mask_t mask;
 
@@ -98,7 +98,7 @@ void sb_control_output_set_yaw_rate(sb_control_output_t* output, float yaw_rate)
  * screenplay. The players are updated automatically when the current chapter in
  * the screenplay changes.
  */
-typedef struct {
+typedef struct sb_show_controller_s {
     /** The screenplay being played */
     sb_screenplay_t* screenplay;
 
