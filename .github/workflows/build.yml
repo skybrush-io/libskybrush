@@ -32,4 +32,6 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build
+        env:
+          CTEST_OUTPUT_ON_FAILURE: 1
         run: ctest -C ${{env.BUILD_TYPE}}
