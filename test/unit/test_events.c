@@ -146,15 +146,21 @@ void test_event_list_is_empty(void)
 void test_init_empty(void)
 {
     closeFixture(); /* was created in setUp() */
+
     sb_event_list_init(&events, 8);
+    events_inited = 1;
+
     test_event_list_is_empty();
 }
 
 void test_init_with_zero_length(void)
 {
     closeFixture(); /* was created in setUp() */
+
     sb_event_list_init(&events, 0);
     test_event_list_is_empty();
+    events_inited = 1;
+
     TEST_ASSERT_EQUAL(1, sb_event_list_capacity(&events));
 }
 

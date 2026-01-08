@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -175,6 +175,8 @@ void test_resize_too_large(void)
     sb_buffer_clear(&buf);
     sb_buffer_prune(&buf);
     TEST_ASSERT_EQUAL(SB_ENOMEM, sb_buffer_append_bytes(&buf, s, SIZE_MAX));
+
+    sb_buffer_destroy(&buf);
 }
 
 void test_reserve_same_or_larger(void)
@@ -342,6 +344,8 @@ void test_extend_with_zeros(void)
     for (i = strlen(str); i < sb_buffer_size(&buf); i++) {
         TEST_ASSERT_EQUAL(0, SB_BUFFER(buf)[i]);
     }
+
+    sb_buffer_destroy(&buf);
 }
 
 void test_init_view(void)

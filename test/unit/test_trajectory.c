@@ -175,7 +175,10 @@ void test_clear_view(void)
 void test_init_empty(void)
 {
     closeFixture(); /* was created in setUp() */
+
     sb_trajectory_init_empty(&trajectory);
+    trajectory_loaded = 1;
+
     test_trajectory_is_really_empty();
 }
 
@@ -228,7 +231,7 @@ void test_get_axis_aligned_bounding_box_from_trajectory_in_memory(void)
     sb_bounding_box_t box;
 
     closeFixture();
-    loadFixtureInMemory("fixtures/test.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixtureInMemory("fixtures/test.skyb"));
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(&trajectory, &box));
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.x.min);
