@@ -325,8 +325,8 @@ sb_error_t sb_trajectory_init_from_builder(
     SB_CHECK(sb_buffer_init(&builder->buffer, HEADER_LENGTH));
 
     /* preserve the header byte of the builder buffer */
-    SB_BUFFER(builder->buffer)
-    [0] = header;
+    data = SB_BUFFER(builder->buffer);
+    data[0] = header;
 
     return SB_SUCCESS;
 }
