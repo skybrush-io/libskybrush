@@ -478,6 +478,92 @@ void test_show_controller_forward_left_back_slowdown(void)
     SB_DECREF_STATIC(&prog);
 }
 
+/*
+ * Integration test: verify that when a chapter has a yaw control object the
+ * show controller exposes yaw and yaw rate components and produces values
+ * matching the yaw player (fixture: fixtures/test.skyb).
+ *
+ * The numerical expectations are taken from the yaw player unit tests that
+ * use the same fixture.
+ */
+void test_show_controller_play_fixture_with_yaw_control(void)
+{
+    sb_screenplay_t screenplay;
+    sb_screenplay_chapter_t* ch = NULL;
+    sb_yaw_control_t yaw;
+    sb_show_controller_t ctrl;
+    const sb_control_output_t* out;
+    sb_error_t err;
+    FILE* fp;
+    float yaw_val;
+    float yaw_rate;
+
+    /* Initialize screenplay and single chapter */
+    err = sb_screenplay_init(&screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch));
+    TEST_ASSERT_NOT_NULL(ch);
+
+    /* Load yaw control from fixture */
+    fp = fopen("fixtures/test.skyb", "rb");
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init_from_binary_file(&yaw, fileno(fp)));
+    fclose(fp);
+
+    /* Attach yaw control to chapter (no trajectory / lights needed for this test) */
+    sb_screenplay_chapter_set_yaw_control(ch, &yaw);
+
+    /* Initialize controller with this screenplay */
+    err = sb_show_controller_init(&ctrl, &screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    /* --- t = 0 ms --- */
+    err = sb_show_controller_update_time_msec(&ctrl, 0u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    out = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_NOT_NULL(out);
+
+    /* Expect only yaw + yaw_rate components present */
+    TEST_ASSERT_EQUAL_UINT8(SB_CONTROL_OUTPUT_YAW | SB_CONTROL_OUTPUT_YAW_RATE, out->mask);
+
+    /* Yaw at t=0 should match fixture (4.0 deg) */
+    TEST_ASSERT_TRUE(sb_control_output_get_yaw_if_set(out, &yaw_val));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 4.0f, yaw_val);
+
+    /* Yaw rate at t=0 should match fixture (~200 deg/s) */
+    TEST_ASSERT_TRUE(sb_control_output_get_yaw_rate_if_set(out, &yaw_rate));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 200.0f, yaw_rate);
+
+    /* --- t = 1 ms --- */
+    err = sb_show_controller_update_time_msec(&ctrl, 1u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    out = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_NOT_NULL(out);
+
+    TEST_ASSERT_TRUE(sb_control_output_get_yaw_if_set(out, &yaw_val));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 4.2f, yaw_val);
+
+    TEST_ASSERT_TRUE(sb_control_output_get_yaw_rate_if_set(out, &yaw_rate));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 200.0f, yaw_rate);
+
+    /* --- t = 4 ms --- */
+    err = sb_show_controller_update_time_msec(&ctrl, 4u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    out = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_NOT_NULL(out);
+
+    TEST_ASSERT_TRUE(sb_control_output_get_yaw_if_set(out, &yaw_val));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6, 4.6f, yaw_val);
+
+    TEST_ASSERT_TRUE(sb_control_output_get_yaw_rate_if_set(out, &yaw_rate));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 400.0f / 3, yaw_rate);
+
+    /* Cleanup */
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
+    SB_DECREF_STATIC(&yaw);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -489,6 +575,7 @@ int main(void)
     RUN_TEST(test_show_controller_play_fixture_single_chapter);
     RUN_TEST(test_show_controller_play_fixture_time_axis_2x);
     RUN_TEST(test_show_controller_forward_left_back_slowdown);
+    RUN_TEST(test_show_controller_play_fixture_with_yaw_control);
 
     return UNITY_END();
 }
