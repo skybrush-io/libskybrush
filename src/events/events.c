@@ -41,31 +41,22 @@ static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events)
 /**
  * \brief Allocates a new event list on the heap and initializes it.
  *
- * \param events  pointer to the location where the pointer to the new event list
- *        will be stored
  * \param max_events  the maximum number of events that can be stored in the
  *        list. Use \ref sb_event_list_resize() to change the capacity of the list
  *        later.
- * \return \c SB_SUCCESS if the list was created and initialized successfully,
- *         \c SB_ENOMEM if memory allocation failed
+ * \return the newly allocated event list object, or \c NULL if memory allocation failed
  */
-sb_error_t sb_event_list_new(sb_event_list_t** events, size_t max_events)
+sb_event_list_t* sb_event_list_new(size_t max_events)
 {
-    sb_error_t retval;
-    sb_event_list_t* event = sb_calloc(sb_event_list_t, 1);
-    if (event == 0) {
-        return SB_ENOMEM; /* LCOV_EXCL_LINE */
+    sb_event_list_t* events = sb_calloc(sb_event_list_t, 1);
+
+    if (events) {
+        if (sb_event_list_init(events, max_events)) {
+            sb_free(events);
+        }
     }
 
-    retval = sb_event_list_init(event, max_events);
-    if (retval) {
-        sb_free(event);
-        return retval;
-    }
-
-    *events = event;
-
-    return SB_SUCCESS;
+    return events;
 }
 
 /**
