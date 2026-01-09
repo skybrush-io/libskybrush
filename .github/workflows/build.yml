@@ -35,3 +35,9 @@ jobs:
         env:
           CTEST_OUTPUT_ON_FAILURE: 1
         run: ctest -C ${{env.BUILD_TYPE}}
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
