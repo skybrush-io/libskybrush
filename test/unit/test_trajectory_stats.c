@@ -23,13 +23,14 @@
 
 #include "unity.h"
 
-sb_trajectory_t trajectory;
+sb_trajectory_t* trajectory;
 
-void loadFixture(const char* fname);
+sb_error_t loadFixture(const char* fname);
 void closeFixture(void);
 
 void setUp(void)
 {
+    trajectory = sb_trajectory_new();
     loadFixture("fixtures/real_show.skyb");
 }
 
@@ -38,10 +39,11 @@ void tearDown(void)
     closeFixture();
 }
 
-void loadFixture(const char* fname)
+sb_error_t loadFixture(const char* fname)
 {
     FILE* fp;
     int fd;
+    sb_error_t retval;
 
     fp = fopen(fname, "rb");
     if (fp == 0) {
@@ -53,14 +55,16 @@ void loadFixture(const char* fname)
         abort();
     }
 
-    sb_trajectory_init_from_binary_file(&trajectory, fd);
+    retval = sb_trajectory_update_from_binary_file(trajectory, fd);
 
     fclose(fp);
+
+    return retval;
 }
 
 void closeFixture(void)
 {
-    SB_DECREF_STATIC(&trajectory);
+    SB_XDECREF(trajectory);
 }
 
 void check_stats(const sb_trajectory_stats_t* stats)
@@ -79,7 +83,7 @@ void test_calculate_stats(void)
 
     sb_trajectory_stats_calculator_init(&calc, 1000);
     sb_trajectory_stats_calculator_set_components(&calc, SB_TRAJECTORY_STATS_ALL);
-    sb_trajectory_stats_calculator_run(&calc, &trajectory, &stats);
+    sb_trajectory_stats_calculator_run(&calc, trajectory, &stats);
     sb_trajectory_stats_calculator_destroy(&calc);
 
     check_stats(&stats);
@@ -98,7 +102,7 @@ void test_calculate_stats_none(void)
 
     sb_trajectory_stats_calculator_init(&calc, 1000);
     sb_trajectory_stats_calculator_set_components(&calc, SB_TRAJECTORY_STATS_NONE);
-    sb_trajectory_stats_calculator_run(&calc, &trajectory, &stats);
+    sb_trajectory_stats_calculator_run(&calc, trajectory, &stats);
     sb_trajectory_stats_calculator_destroy(&calc);
 
     TEST_ASSERT_EQUAL(0, memcmp(&stats, &empty_stats, sizeof(sb_trajectory_stats_t)));

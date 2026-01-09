@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -110,7 +110,7 @@ sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vec
 sb_bool_t sb_rth_plan_is_empty(const sb_rth_plan_t* plan);
 sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth_plan_entry_t* result);
 
-sb_error_t sb_trajectory_init_from_rth_plan_entry(
+sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_trajectory_t* trajectory,
     const sb_rth_plan_entry_t* entry,
     sb_vector3_with_yaw_t start);

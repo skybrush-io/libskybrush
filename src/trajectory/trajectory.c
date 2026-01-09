@@ -35,9 +35,55 @@
 #include "./utils.h"
 
 static void sb_i_trajectory_destroy(sb_trajectory_t* trajectory);
-static sb_error_t sb_i_trajectory_init_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes, sb_bool_t owned);
-static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser);
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory);
+static sb_error_t sb_i_trajectory_update_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes, sb_bool_t owned);
+static sb_error_t sb_i_trajectory_update_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser);
+
+/**
+ * \brief Allocates a new trajectory on the heap and initializes it.
+ *
+ * \return the new trajectory, or \c NULL if memory allocation failed
+ */
+sb_trajectory_t* sb_trajectory_new(void)
+{
+    sb_trajectory_t* obj = sb_calloc(sb_trajectory_t, 1);
+
+    if (obj) {
+        if (sb_trajectory_init(obj)) {
+            sb_free(obj);
+        }
+    }
+
+    return obj;
+}
+
+/**
+ * Initializes an already allocated trajectory.
+ *
+ * You must call this function on an uninitialized trajectory before using it.
+ * \ref sb_trajectory_new() takes care of the initialization for you if you
+ * allocate the trajectory on the heap.
+ *
+ * \param trajectory  the trajectory to initialize
+ * \return \c SB_SUCCESS if the trajectory was initialized successfully,
+ *         \c SB_ENOMEM if memory allocation failed
+ */
+sb_error_t sb_trajectory_init(sb_trajectory_t* trajectory)
+{
+    SB_REF_INIT(trajectory, sb_i_trajectory_destroy);
+
+    SB_CHECK(sb_buffer_init(&trajectory->buffer, 0));
+
+    memset(&trajectory->start, 0, sizeof(trajectory->start));
+
+    trajectory->scale = 1;
+    trajectory->use_yaw = 0;
+    trajectory->header_length = 0;
+
+    return SB_SUCCESS;
+}
+
+/* ************************************************************************** */
 
 /**
  * Clears the trajectory object and removes all segments from it. Also releases
@@ -66,103 +112,85 @@ sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory)
 }
 
 /**
- * Initializes a trajectory object from the contents of a Skybrush file in
+ * Updates a trajectory object from the contents of a Skybrush file in
  * binary format.
  *
- * \param trajectory  the trajectory to initialize
- * \param fd  handle to the low-level file object to initialize the trajectory from
+ * \param trajectory  the trajectory to update
+ * \param fd  handle to the low-level file object to update the trajectory from
  *
- * \return \c SB_SUCCESS if the object was initialized successfully,
+ * \return \c SB_SUCCESS if the object was updated successfully,
  *         \c SB_ENOENT if the file did not contain a trajectory block,
  *         \c SB_EREAD for read errors
  */
-sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int fd)
+sb_error_t sb_trajectory_update_from_binary_file(sb_trajectory_t* trajectory, int fd)
 {
     sb_binary_file_parser_t parser;
     sb_error_t retval;
 
     SB_CHECK(sb_binary_file_parser_init_from_file(&parser, fd));
-    retval = sb_i_trajectory_init_from_parser(trajectory, &parser);
+    retval = sb_i_trajectory_update_from_parser(trajectory, &parser);
     sb_binary_file_parser_destroy(&parser);
 
     return retval;
 }
 
 /**
- * Initializes a trajectory object from the contents of a Skybrush file in
+ * Updates a trajectory object from the contents of a Skybrush file in
  * binary format, already loaded into memory.
  *
  * The trajectory object will be backed by a \em view into the already existing
  * in-memory buffer. The caller is responsible for ensuring that the buffer
  * remains valid for the lifetime of the trajectory object.
  *
- * \param trajectory  the trajectory to initialize
+ * \param trajectory  the trajectory to update
  * \param buf   the buffer holding the loaded Skybrush file in binary format
  * \param nbytes  the length of the buffer
  *
- * \return \c SB_SUCCESS if the object was initialized successfully,
+ * \return \c SB_SUCCESS if the object was updated successfully,
  *         \c SB_ENOENT if the memory block did not contain a trajectory
  */
-sb_error_t sb_trajectory_init_from_binary_file_in_memory(
+sb_error_t sb_trajectory_update_from_binary_file_in_memory(
     sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
 {
     sb_binary_file_parser_t parser;
     sb_error_t retval;
 
     SB_CHECK(sb_binary_file_parser_init_from_buffer(&parser, buf, nbytes));
-    retval = sb_i_trajectory_init_from_parser(trajectory, &parser);
+    retval = sb_i_trajectory_update_from_parser(trajectory, &parser);
     sb_binary_file_parser_destroy(&parser);
 
     return retval;
 }
 
 /**
- * Initializes a trajectory object from the contents of a memory buffer.
+ * Updates a trajectory object from the contents of a memory buffer.
  *
- * \param trajectory  the trajectory to initialize
+ * \param trajectory  the trajectory to update
  * \param buf   the buffer holding the encoded trajectory object
  * \param nbytes  the length of the buffer
  *
- * \return \c SB_SUCCESS if the object was initialized successfully,
+ * \return \c SB_SUCCESS if the object was updated successfully,
  *         \c SB_ENOENT if the memory buffer did not contain a trajectory
  */
-sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
+sb_error_t sb_trajectory_update_from_buffer(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
 {
-    return sb_i_trajectory_init_from_bytes(trajectory, buf, nbytes, /* owned = */ 0);
+    return sb_i_trajectory_update_from_bytes(trajectory, buf, nbytes, /* owned = */ 0);
 }
 
 /**
- * Initializes a trajectory object from the contents of a memory buffer, taking
+ * Updates a trajectory object from the contents of a memory buffer, taking
  * ownership.
  *
- * \param trajectory  the trajectory to initialize
+ * \param trajectory  the trajectory to update
  * \param buf   the buffer holding the encoded trajectory object
  * \param nbytes  the length of the buffer
  *
- * \return \c SB_SUCCESS if the object was initialized successfully,
+ * \return \c SB_SUCCESS if the object was updated successfully,
  *         \c SB_ENOENT if the memory buffer did not contain a trajectory
  */
-sb_error_t sb_trajectory_init_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
+sb_error_t sb_trajectory_update_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
 {
-    return sb_i_trajectory_init_from_bytes(trajectory, buf, nbytes, /* owned = */ 1);
-}
-
-/**
- * Initializes an empty trajectory.
- */
-sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory)
-{
-    SB_REF_INIT(trajectory, sb_i_trajectory_destroy);
-
-    SB_CHECK(sb_buffer_init(&trajectory->buffer, 0));
-
-    memset(&trajectory->start, 0, sizeof(trajectory->start));
-
-    trajectory->scale = 1;
-    trajectory->use_yaw = 0;
-    trajectory->header_length = 0;
-
-    return SB_SUCCESS;
+    return sb_i_trajectory_update_from_bytes(trajectory, buf, nbytes, /* owned = */ 1);
 }
 
 /**
@@ -612,20 +640,25 @@ static void sb_i_trajectory_destroy(sb_trajectory_t* trajectory)
     sb_buffer_destroy(&trajectory->buffer);
 }
 
-static sb_error_t sb_i_trajectory_init_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes, sb_bool_t owned)
+static sb_error_t sb_i_trajectory_update_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes, sb_bool_t owned)
 {
-    SB_REF_INIT(trajectory, sb_i_trajectory_destroy);
+    sb_buffer_t new_buffer;
 
     if (owned) {
-        SB_CHECK(sb_buffer_init_from_bytes(&trajectory->buffer, buf, nbytes));
+        SB_CHECK(sb_buffer_init_from_bytes(&new_buffer, buf, nbytes));
     } else {
-        sb_buffer_init_view(&trajectory->buffer, buf, nbytes);
+        sb_buffer_init_view(&new_buffer, buf, nbytes);
     }
+
+    sb_buffer_destroy(&trajectory->buffer);
+    trajectory->buffer = new_buffer;
+
     trajectory->header_length = sb_i_trajectory_parse_header(trajectory);
+
     return SB_SUCCESS;
 }
 
-static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser)
+static sb_error_t sb_i_trajectory_update_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
     uint8_t* buf;
@@ -635,7 +668,7 @@ static sb_error_t sb_i_trajectory_init_from_parser(sb_trajectory_t* trajectory, 
     SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_TRAJECTORY));
     SB_CHECK(sb_binary_file_read_current_block_ex(parser, &buf, &size, &owned));
 
-    retval = sb_i_trajectory_init_from_bytes(trajectory, buf, size, owned);
+    retval = sb_i_trajectory_update_from_bytes(trajectory, buf, size, owned);
     if (retval != SB_SUCCESS) {
         if (owned) {
             sb_free(buf);

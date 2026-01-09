@@ -23,13 +23,26 @@
 #include "unity.h"
 #include "utils.h"
 
-sb_light_program_t program;
+sb_light_program_t* program;
 sb_light_player_t player;
+
+sb_error_t loadFixture(const char* fname);
 
 void setUp(void)
 {
+    program = sb_light_program_new();
+}
+
+void tearDown(void)
+{
+    SB_XDECREF(program);
+}
+
+sb_error_t loadFixture(const char* fname)
+{
     FILE* fp;
     int fd;
+    sb_error_t retval;
 
     fp = fopen("fixtures/test.skyb", "rb");
     if (fp == 0) {
@@ -41,16 +54,11 @@ void setUp(void)
         abort();
     }
 
-    sb_light_program_update_from_binary_file(&program, fd);
-    sb_light_player_init(&player, &program);
+    retval = sb_light_program_update_from_binary_file(program, fd);
 
     fclose(fp);
-}
 
-void tearDown(void)
-{
-    sb_light_player_destroy(&player);
-    SB_DECREF_STATIC(&program);
+    return retval;
 }
 
 void test_get_color_at(void)
@@ -75,6 +83,9 @@ void test_get_color_at(void)
     int i, j, n = sizeof(t) / sizeof(t[0]);
     const int random_order[] = { 12, 2, 5, 8, 11, 1, 4, 7, 10, 0, 3, 6, 9 };
 
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/test.skyb"));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_player_init(&player, program));
+
     /* test querying forward */
     for (i = 0; i < n; i++) {
         actual = sb_light_player_get_color_at(&player, t[i] * 1000);
@@ -93,6 +104,8 @@ void test_get_color_at(void)
         actual = sb_light_player_get_color_at(&player, t[i] * 1000);
         TEST_ASSERT_EQUAL_COLOR(expected[i], actual);
     }
+
+    sb_light_player_destroy(&player);
 }
 
 int main(int argc, char* argv[])

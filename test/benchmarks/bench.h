@@ -84,7 +84,7 @@ static inline void sb_trajectory_init_from_fixture(sb_trajectory_t* trajectory, 
         abort();
     }
 
-    sb_trajectory_init_from_binary_file(trajectory, fd);
+    sb_trajectory_update_from_binary_file(trajectory, fd);
 
     fclose(fp);
 }

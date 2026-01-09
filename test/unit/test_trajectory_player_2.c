@@ -22,7 +22,7 @@
 
 #include "unity.h"
 
-sb_trajectory_t trajectory;
+sb_trajectory_t* trajectory;
 sb_trajectory_player_t player;
 
 void loadFixture(const char* fname);
@@ -57,12 +57,14 @@ evaluation.
 
 void setUp(void)
 {
+    trajectory = sb_trajectory_new();
     loadFixture("fixtures/forward_left_back.skyb");
 }
 
 void tearDown(void)
 {
     closeFixture();
+    SB_XDECREF(trajectory);
 }
 
 void loadFixture(const char* fname)
@@ -80,8 +82,8 @@ void loadFixture(const char* fname)
         abort();
     }
 
-    sb_trajectory_init_from_binary_file(&trajectory, fd);
-    sb_trajectory_player_init(&player, &trajectory);
+    sb_trajectory_update_from_binary_file(trajectory, fd);
+    sb_trajectory_player_init(&player, trajectory);
 
     fclose(fp);
 }
@@ -89,7 +91,6 @@ void loadFixture(const char* fname)
 void closeFixture(void)
 {
     sb_trajectory_player_destroy(&player);
-    SB_DECREF_STATIC(&trajectory);
 }
 
 void test_position_at(void)

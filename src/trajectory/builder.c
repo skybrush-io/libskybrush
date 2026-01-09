@@ -298,12 +298,12 @@ sb_error_t sb_trajectory_builder_hold_position_for(
  * @brief Finalizes the trajectory being built and converts it into a trajectory
  * object.
  *
- * @param trajectory the trajectory to initialize
- * @param builder the trajectory builder to initialize the trajectory from. The
+ * @param trajectory the trajectory to update
+ * @param builder the trajectory builder to update the trajectory from. The
  *     builder will be reset to an uninitialized state.
  * @return error code
  */
-sb_error_t sb_trajectory_init_from_builder(
+sb_error_t sb_trajectory_update_from_builder(
     sb_trajectory_t* trajectory, sb_trajectory_builder_t* builder)
 {
     uint8_t* data;
@@ -317,7 +317,7 @@ sb_error_t sb_trajectory_init_from_builder(
     header = data[0];
 
     /* pass on the ownership of 'data' to the trajectory */
-    SB_CHECK(sb_trajectory_init_from_bytes(trajectory, data, sb_buffer_size(&builder->buffer)));
+    SB_CHECK(sb_trajectory_update_from_bytes(trajectory, data, sb_buffer_size(&builder->buffer)));
 
     /* ownership of 'data' now belongs to the trajectory so we can
      * re-initialize the buffer of the builder */

@@ -418,8 +418,10 @@ void test_hold_position_for(void)
 void test_conversion_to_trajectory(void)
 {
     sb_vector3_with_yaw_t vec;
-    sb_trajectory_t trajectory;
+    sb_trajectory_t* trajectory;
     sb_trajectory_player_t player;
+
+    TEST_ASSERT_NOT_NULL(trajectory = sb_trajectory_new());
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 2, 0));
 
@@ -445,10 +447,10 @@ void test_conversion_to_trajectory(void)
     vec.z = 0;
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_line(&builder, vec, 15000));
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_builder(&trajectory, &builder));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_builder(trajectory, &builder));
     sb_trajectory_builder_destroy(&builder);
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, &trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 0, &vec));
     TEST_ASSERT_EQUAL(10, vec.x);
@@ -463,7 +465,7 @@ void test_conversion_to_trajectory(void)
     TEST_ASSERT_EQUAL(270, vec.yaw);
 
     sb_trajectory_player_destroy(&player);
-    SB_DECREF_STATIC(&trajectory);
+    SB_XDECREF(trajectory);
 }
 
 int main(int argc, char* argv[])

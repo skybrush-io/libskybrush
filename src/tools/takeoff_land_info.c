@@ -37,7 +37,7 @@ static sb_error_t load_trajectory(sb_trajectory_t* trajectory, const char* filen
         return SB_EOPEN;
     }
 
-    retval = sb_trajectory_init_from_binary_file(trajectory, fileno(fp));
+    retval = sb_trajectory_update_from_binary_file(trajectory, fileno(fp));
 
     fclose(fp);
 
@@ -61,7 +61,7 @@ static sb_error_t calculate_stats(sb_trajectory_t* trajectory, sb_trajectory_sta
 
 int main(int argc, char* argv[])
 {
-    sb_trajectory_t trajectory;
+    sb_trajectory_t* trajectory;
     sb_trajectory_player_t player;
     sb_trajectory_stats_t stats;
     sb_bool_t first = 1;
@@ -73,15 +73,21 @@ int main(int argc, char* argv[])
     int i;
 
     if (argc < 2) {
-        printf("Usage: %s <input_file.skyb> ...\n", argv[0]);
+        fprintf(stderr, "Usage: %s <input_file.skyb> ...\n", argv[0]);
+        return 1;
+    }
+
+    trajectory = sb_trajectory_new();
+    if (!trajectory) {
+        fprintf(stderr, "Error: out of memory\n");
         return 1;
     }
 
     SB_CHECK_MAIN(sb_trajectory_stats_init(&stats));
 
     for (i = 1; i < argc; i++) {
-        SB_CHECK_MAIN(load_trajectory(&trajectory, argv[i]));
-        SB_CHECK_MAIN(calculate_stats(&trajectory, &stats));
+        SB_CHECK_MAIN(load_trajectory(trajectory, argv[i]));
+        SB_CHECK_MAIN(calculate_stats(trajectory, &stats));
 
         if (!isfinite(stats.takeoff_time_sec)) {
             error = "takeoff time is not finite";
@@ -98,7 +104,7 @@ int main(int argc, char* argv[])
         } else if (stats.duration_msec < 0) {
             error = "duration is negative";
         } else {
-            SB_CHECK_MAIN(sb_trajectory_player_init(&player, &trajectory));
+            SB_CHECK_MAIN(sb_trajectory_player_init(&player, trajectory));
 
             SB_CHECK_MAIN(sb_trajectory_player_get_position_at(&player, 0, &pos));
             starts_at_altitude = pos.z;
@@ -122,7 +128,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        SB_DECREF_STATIC(&trajectory);
+        SB_DECREF(trajectory);
 
         if (first) {
             printf(
@@ -150,6 +156,8 @@ int main(int argc, char* argv[])
     }
 
     sb_trajectory_stats_destroy(&stats);
+
+    SB_XDECREF(trajectory);
 
     return 0;
 }

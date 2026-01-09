@@ -40,8 +40,10 @@ void test_get_cubic_bezier_from_velocity_constraints(void)
     uint32_t duration_msec;
     sb_vector3_with_yaw_t control1, control2, result;
     sb_trajectory_builder_t builder;
-    sb_trajectory_t trajectory;
+    sb_trajectory_t* trajectory;
     sb_trajectory_player_t player;
+
+    TEST_ASSERT_NOT_NULL(trajectory = sb_trajectory_new());
 
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel, -1, &control1, &control2));
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel, duration, NULL, NULL));
@@ -61,8 +63,8 @@ void test_get_cubic_bezier_from_velocity_constraints(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, start));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_uint32_msec_duration_from_float_seconds(&duration_msec, duration));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_cubic_bezier(&builder, control1, control2, end, duration_msec));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_buffer(&trajectory, SB_BUFFER(builder.buffer), sb_buffer_capacity(&builder.buffer)));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, &trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_buffer(trajectory, SB_BUFFER(builder.buffer), sb_buffer_capacity(&builder.buffer)));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 0, &result));
     TEST_ASSERT_FLOAT_WITHIN(1, start.x, result.x);
@@ -95,6 +97,8 @@ void test_get_cubic_bezier_from_velocity_constraints(void)
     TEST_ASSERT_FLOAT_WITHIN(1, (start.yaw + end.yaw) / 2, result.yaw);
 
     sb_trajectory_builder_destroy(&builder);
+
+    SB_XDECREF(trajectory);
 }
 
 void test_get_travel_time(void)

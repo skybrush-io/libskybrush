@@ -137,8 +137,8 @@ void test_show_controller_chapter_transition_switches_players(void)
     sb_screenplay_t screenplay;
     sb_screenplay_chapter_t* ch0 = NULL;
     sb_screenplay_chapter_t* ch1 = NULL;
-    sb_trajectory_t traj_empty;
-    sb_trajectory_t traj_loaded;
+    sb_trajectory_t* traj_empty;
+    sb_trajectory_t* traj_loaded;
     sb_light_program_t* prog;
     sb_show_controller_t ctrl;
     sb_error_t err;
@@ -154,25 +154,25 @@ void test_show_controller_chapter_transition_switches_players(void)
     TEST_ASSERT_NOT_NULL(ch1);
 
     /* Prepare an empty trajectory for chapter 0 (no outputs expected) */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_empty(&traj_empty));
-    sb_screenplay_chapter_set_trajectory(ch0, &traj_empty);
+    TEST_ASSERT_NOT_NULL(traj_empty = sb_trajectory_new());
+    sb_screenplay_chapter_set_trajectory(ch0, traj_empty);
     /* finite duration 1000 ms for first chapter */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_set_duration_msec(ch0, 1000u));
 
     /* For chapter 1 load real trajectory and light program from fixture */
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_binary_file(&traj_loaded, fileno(fp)));
+    TEST_ASSERT_NOT_NULL(traj_loaded = sb_trajectory_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj_loaded, fileno(fp)));
     fclose(fp);
 
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
 
-    sb_screenplay_chapter_set_trajectory(ch1, &traj_loaded);
+    sb_screenplay_chapter_set_trajectory(ch1, traj_loaded);
     sb_screenplay_chapter_set_light_program(ch1, prog);
 
     /* Initialize controller with this screenplay */
@@ -210,8 +210,8 @@ void test_show_controller_chapter_transition_switches_players(void)
     sb_show_controller_destroy(&ctrl);
     sb_screenplay_destroy(&screenplay);
 
-    SB_DECREF_STATIC(&traj_empty);
-    SB_DECREF_STATIC(&traj_loaded);
+    SB_DECREF(traj_empty);
+    SB_DECREF(traj_loaded);
     SB_DECREF(prog);
 }
 
@@ -219,7 +219,7 @@ void test_show_controller_play_fixture_single_chapter(void)
 {
     sb_screenplay_t screenplay;
     sb_screenplay_chapter_t* ch = NULL;
-    sb_trajectory_t traj;
+    sb_trajectory_t* traj;
     sb_light_program_t* prog;
     sb_show_controller_t ctrl;
     sb_vector3_t pos;
@@ -238,18 +238,17 @@ void test_show_controller_play_fixture_single_chapter(void)
     /* Load trajectory and light program from fixture */
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_binary_file(&traj, fileno(fp)));
+    TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
     fclose(fp);
 
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
-
     fclose(fp);
 
-    sb_screenplay_chapter_set_trajectory(ch, &traj);
+    sb_screenplay_chapter_set_trajectory(ch, traj);
     sb_screenplay_chapter_set_light_program(ch, prog);
 
     /* Initialize controller */
@@ -292,7 +291,7 @@ void test_show_controller_play_fixture_single_chapter(void)
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
     sb_screenplay_destroy(&screenplay);
-    SB_DECREF_STATIC(&traj);
+    SB_DECREF(traj);
     SB_DECREF(prog);
 }
 
@@ -300,7 +299,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
 {
     sb_screenplay_t screenplay;
     sb_screenplay_chapter_t* ch = NULL;
-    sb_trajectory_t traj;
+    sb_trajectory_t* traj;
     sb_light_program_t* prog;
     sb_show_controller_t ctrl;
     sb_vector3_t pos;
@@ -319,18 +318,17 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     /* Load trajectory and light program from fixture */
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_binary_file(&traj, fileno(fp)));
+    TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
     fclose(fp);
 
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
-
     fclose(fp);
 
-    sb_screenplay_chapter_set_trajectory(ch, &traj);
+    sb_screenplay_chapter_set_trajectory(ch, traj);
     sb_screenplay_chapter_set_light_program(ch, prog);
 
     /* Alter the chapter time axis to run at 2x real-time for the duration of the
@@ -385,7 +383,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
     sb_screenplay_destroy(&screenplay);
-    SB_DECREF_STATIC(&traj);
+    SB_DECREF(traj);
     SB_DECREF(prog);
 }
 
@@ -400,7 +398,7 @@ void test_show_controller_forward_left_back_slowdown(void)
 {
     sb_screenplay_t screenplay;
     sb_screenplay_chapter_t* ch = NULL;
-    sb_trajectory_t traj;
+    sb_trajectory_t* traj;
     sb_light_program_t* prog;
     sb_show_controller_t ctrl;
     sb_vector3_t pos;
@@ -418,18 +416,17 @@ void test_show_controller_forward_left_back_slowdown(void)
     /* Load the forward_left_back fixture (trajectory + light program) */
     fp = fopen("fixtures/forward_left_back.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_from_binary_file(&traj, fileno(fp)));
+    TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
     fclose(fp);
 
     fp = fopen("fixtures/forward_left_back.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
-
     fclose(fp);
 
-    sb_screenplay_chapter_set_trajectory(ch, &traj);
+    sb_screenplay_chapter_set_trajectory(ch, traj);
     sb_screenplay_chapter_set_light_program(ch, prog);
 
     /* Set time axis: 25s at rate=1.0 (normal), then slowdown from realtime to 0 over 5s */
@@ -485,7 +482,7 @@ void test_show_controller_forward_left_back_slowdown(void)
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
     sb_screenplay_destroy(&screenplay);
-    SB_DECREF_STATIC(&traj);
+    SB_DECREF(traj);
     SB_DECREF(prog);
 }
 
@@ -501,7 +498,7 @@ void test_show_controller_play_fixture_with_yaw_control(void)
 {
     sb_screenplay_t screenplay;
     sb_screenplay_chapter_t* ch = NULL;
-    sb_yaw_control_t yaw;
+    sb_yaw_control_t* yaw;
     sb_show_controller_t ctrl;
     const sb_control_output_t* out;
     sb_error_t err;
@@ -518,12 +515,12 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     /* Load yaw control from fixture */
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init(&yaw));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_update_from_binary_file(&yaw, fileno(fp)));
+    TEST_ASSERT_NOT_NULL(yaw = sb_yaw_control_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_update_from_binary_file(yaw, fileno(fp)));
     fclose(fp);
 
     /* Attach yaw control to chapter (no trajectory / lights needed for this test) */
-    sb_screenplay_chapter_set_yaw_control(ch, &yaw);
+    sb_screenplay_chapter_set_yaw_control(ch, yaw);
 
     /* Initialize controller with this screenplay */
     err = sb_show_controller_init(&ctrl, &screenplay);
@@ -573,7 +570,7 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
     sb_screenplay_destroy(&screenplay);
-    SB_DECREF_STATIC(&yaw);
+    SB_DECREF(yaw);
 }
 
 int main(void)

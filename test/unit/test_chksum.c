@@ -20,19 +20,22 @@
 #include <skybrush/formats/binary.h>
 #include <skybrush/trajectory.h>
 
+#include "skybrush/refcount.h"
 #include "unity.h"
 
-sb_trajectory_t trajectory;
+sb_trajectory_t* trajectory;
 
 void loadFixture(const char* fname);
 void closeFixture(void);
 
 void setUp(void)
 {
+    trajectory = sb_trajectory_new();
 }
 
 void tearDown(void)
 {
+    SB_XDECREF(trajectory);
 }
 
 void loadFixtureAndValidate(const char* fname, sb_error_t expected_retval)
@@ -51,7 +54,7 @@ void loadFixtureAndValidate(const char* fname, sb_error_t expected_retval)
         abort();
     }
 
-    retval = sb_trajectory_init_from_binary_file(&trajectory, fd);
+    retval = sb_trajectory_update_from_binary_file(trajectory, fd);
     TEST_ASSERT_EQUAL(expected_retval, retval);
 
     fclose(fp);

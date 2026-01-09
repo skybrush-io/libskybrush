@@ -170,16 +170,8 @@ typedef struct sb_trajectory_s {
 struct sb_trajectory_builder_s;
 struct sb_trajectory_player_state_s;
 
-sb_error_t sb_trajectory_init_empty(sb_trajectory_t* trajectory);
-sb_error_t sb_trajectory_init_from_binary_file(sb_trajectory_t* trajectory, int fd);
-sb_error_t sb_trajectory_init_from_binary_file_in_memory(
-    sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes);
-sb_error_t sb_trajectory_init_from_buffer(sb_trajectory_t* trajectory,
-    uint8_t* buf, size_t nbytes);
-sb_error_t sb_trajectory_init_from_bytes(sb_trajectory_t* trajectory,
-    uint8_t* buf, size_t nbytes);
-sb_error_t sb_trajectory_init_from_builder(
-    sb_trajectory_t* trajectory, struct sb_trajectory_builder_s* builder);
+sb_trajectory_t* sb_trajectory_new(void);
+sb_error_t sb_trajectory_init(sb_trajectory_t* trajectory);
 
 sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory);
 sb_error_t sb_trajectory_cut_at(sb_trajectory_t* builder, float duration_sec);
@@ -194,6 +186,16 @@ sb_error_t sb_trajectory_get_start_position(
     sb_trajectory_t* trajectory, sb_vector3_with_yaw_t* result);
 uint32_t sb_trajectory_get_total_duration_msec(sb_trajectory_t* trajectory);
 float sb_trajectory_get_total_duration_sec(sb_trajectory_t* trajectory);
+
+sb_error_t sb_trajectory_update_from_binary_file(sb_trajectory_t* trajectory, int fd);
+sb_error_t sb_trajectory_update_from_binary_file_in_memory(
+    sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes);
+sb_error_t sb_trajectory_update_from_buffer(sb_trajectory_t* trajectory,
+    uint8_t* buf, size_t nbytes);
+sb_error_t sb_trajectory_update_from_bytes(sb_trajectory_t* trajectory,
+    uint8_t* buf, size_t nbytes);
+sb_error_t sb_trajectory_update_from_builder(
+    sb_trajectory_t* trajectory, struct sb_trajectory_builder_s* builder);
 
 float sb_trajectory_propose_takeoff_time_sec(
     sb_trajectory_t* trajectory, float min_ascent, float speed, float acceleration);

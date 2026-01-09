@@ -23,7 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   object and the caller will own a reference to the initialized object when the
   initializer function returns.
 
-- `sb_trajectory_t` is now reference-counted. `sb_trajectory_destroy()` is removed;
+- `sb_trajectory_t` is now reference-counted. Use `sb_trajectory_new()` to
+  allocate a new trajectory on the heap or `sb_trajectory_init()` to initialize
+  a trajectory that is allocated on the stack. `sb_trajectory_destroy()`is removed;
   you should call `SB_DECREF()` on the trajectory object instead when you want to
   release it. Trajectories without active references are automatically freed.
 

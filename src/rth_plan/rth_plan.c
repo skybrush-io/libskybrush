@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -438,7 +438,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
  * assumed that the code evaluating the trajectory will automatically land when
  * the trajectory ends.
  *
- * @param trajectory  an uninitialized trajectory where the result will be stored
+ * @param trajectory  a trajectory where the result will be stored
  * @param entry  the RTH plan entry to convert into a trajectory
  * @param start  the current position of the vehicle that will fly the
  *        trajectory; it is assumed to be the coordinate where the RTH plan
@@ -448,7 +448,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
  *        trajectory will contain a constant segment from time zero up to this
  *        start time.
  */
-sb_error_t sb_trajectory_init_from_rth_plan_entry(
+sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_trajectory_t* trajectory,
     const sb_rth_plan_entry_t* entry,
     sb_vector3_with_yaw_t start)
@@ -535,7 +535,7 @@ sb_error_t sb_trajectory_init_from_rth_plan_entry(
         SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
     }
 
-    retval = sb_trajectory_init_from_builder(trajectory, &builder);
+    retval = sb_trajectory_update_from_builder(trajectory, &builder);
 
 cleanup:
     sb_trajectory_builder_destroy(&builder);

@@ -20,10 +20,11 @@
 #include <skybrush/formats/binary.h>
 #include <skybrush/trajectory.h>
 
+#include "skybrush/refcount.h"
 #include "unity.h"
 
 uint8_t* buf;
-sb_trajectory_t trajectory;
+sb_trajectory_t* trajectory;
 sb_bool_t trajectory_loaded;
 
 sb_error_t loadFixture(const char* fname);
@@ -31,14 +32,13 @@ void closeFixture(void);
 
 void setUp(void)
 {
+    trajectory = sb_trajectory_new();
     loadFixture("fixtures/test.skyb");
 }
 
 void tearDown(void)
 {
-    if (trajectory_loaded) {
-        closeFixture();
-    }
+    SB_XDECREF(trajectory);
 }
 
 sb_error_t loadFixture(const char* fname)
@@ -59,7 +59,7 @@ sb_error_t loadFixture(const char* fname)
         abort();
     }
 
-    retval = sb_trajectory_init_from_binary_file(&trajectory, fd);
+    retval = sb_trajectory_update_from_binary_file(trajectory, fd);
 
     fclose(fp);
 
@@ -95,7 +95,7 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
     fclose(fp);
 
-    retval = sb_trajectory_init_from_binary_file_in_memory(&trajectory, buf, num_bytes);
+    retval = sb_trajectory_update_from_binary_file_in_memory(trajectory, buf, num_bytes);
 
     trajectory_loaded = retval == SB_SUCCESS;
     /* sb_trajectory_init_from_binary_file_in_memory() created a view so we need to kep buf around */
@@ -105,7 +105,6 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
 void closeFixture(void)
 {
-    SB_DECREF_STATIC(&trajectory);
     trajectory_loaded = 0;
 
     if (buf) {
@@ -121,9 +120,9 @@ void test_trajectory_is_really_empty(void)
     sb_vector3_with_yaw_t vec;
     sb_trajectory_player_t player;
 
-    TEST_ASSERT(sb_trajectory_is_empty(&trajectory));
+    TEST_ASSERT(sb_trajectory_is_empty(trajectory));
 
-    sb_trajectory_player_init(&player, &trajectory);
+    sb_trajectory_player_init(&player, trajectory);
 
     for (i = 0; i < n; i++) {
         sb_trajectory_player_get_position_at(&player, t[i], &vec);
@@ -144,12 +143,12 @@ void test_trajectory_is_really_empty(void)
 
 void test_clear(void)
 {
-    sb_trajectory_clear(&trajectory);
+    sb_trajectory_clear(trajectory);
     test_trajectory_is_really_empty();
 
     /* ensure that the buffer behind the trajectory did not become a view in
      * the process */
-    TEST_ASSERT(!sb_buffer_is_view(&trajectory.buffer));
+    TEST_ASSERT(!sb_buffer_is_view(&trajectory->buffer));
 }
 
 void test_clear_view(void)
@@ -161,21 +160,21 @@ void test_clear_view(void)
 
     closeFixture();
 
-    sb_trajectory_init_from_buffer(&trajectory, buf, sizeof(buf) / sizeof(buf)[0]);
+    sb_trajectory_update_from_buffer(trajectory, buf, sizeof(buf) / sizeof(buf)[0]);
 
-    sb_trajectory_clear(&trajectory);
+    sb_trajectory_clear(trajectory);
     test_trajectory_is_really_empty();
 
     /* ensure that the buffer behind the trajectory remained a view in
      * the process */
-    TEST_ASSERT(sb_buffer_is_view(&trajectory.buffer));
+    TEST_ASSERT(sb_buffer_is_view(&trajectory->buffer));
 }
 
 void test_init_empty(void)
 {
     closeFixture(); /* was created in setUp() */
 
-    sb_trajectory_init_empty(&trajectory);
+    sb_trajectory_init(trajectory);
     trajectory_loaded = 1;
 
     test_trajectory_is_really_empty();
@@ -185,7 +184,7 @@ void test_get_start_position(void)
 {
     sb_vector3_with_yaw_t pos;
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_start_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_start_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(0, pos.z);
@@ -196,7 +195,7 @@ void test_get_end_position(void)
 {
     sb_vector3_with_yaw_t pos;
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(0, pos.z);
@@ -205,15 +204,15 @@ void test_get_end_position(void)
 
 void test_get_total_duration(void)
 {
-    TEST_ASSERT_EQUAL_UINT32(50000, sb_trajectory_get_total_duration_msec(&trajectory));
-    TEST_ASSERT_EQUAL_FLOAT(50, sb_trajectory_get_total_duration_sec(&trajectory));
+    TEST_ASSERT_EQUAL_UINT32(50000, sb_trajectory_get_total_duration_msec(trajectory));
+    TEST_ASSERT_EQUAL_FLOAT(50, sb_trajectory_get_total_duration_sec(trajectory));
 }
 
 void test_get_axis_aligned_bounding_box(void)
 {
     sb_bounding_box_t box;
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(&trajectory, &box));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(trajectory, &box));
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.x.min);
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.x.max);
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.y.min);
@@ -222,7 +221,7 @@ void test_get_axis_aligned_bounding_box(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.z.max);
 
     /* Check that the function does not freak out if box == NULL */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(&trajectory, NULL));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(trajectory, NULL));
 }
 
 void test_get_axis_aligned_bounding_box_from_trajectory_in_memory(void)
@@ -232,7 +231,7 @@ void test_get_axis_aligned_bounding_box_from_trajectory_in_memory(void)
     closeFixture();
     TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixtureInMemory("fixtures/test.skyb"));
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(&trajectory, &box));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(trajectory, &box));
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.x.min);
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.x.max);
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.y.min);
@@ -244,12 +243,12 @@ void test_get_axis_aligned_bounding_box_from_trajectory_in_memory(void)
 void test_propose_takeoff_time_const_speed(void)
 {
     /* Test invalid values first */
-    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, -1, 1, INFINITY));
-    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, 0, INFINITY));
-    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, -1, INFINITY));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(trajectory, -1, 1, INFINITY));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(trajectory, 1.5, 0, INFINITY));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(trajectory, 1.5, -1, INFINITY));
 
     /* Test the case when the minimum ascent is zero so we can take off immediately */
-    TEST_ASSERT_EQUAL_FLOAT(0, sb_trajectory_propose_takeoff_time_sec(&trajectory, 0, 1, INFINITY));
+    TEST_ASSERT_EQUAL_FLOAT(0, sb_trajectory_propose_takeoff_time_sec(trajectory, 0, 1, INFINITY));
 
     /* Test some valid combinations. The trajectory starts with an ascent of
      * 1 m/sec for 10 seconds, so it reaches 2 meters in 2 seconds. If we can
@@ -258,33 +257,33 @@ void test_propose_takeoff_time_const_speed(void)
      * earlier than the start of the trajectory to get to our place in time */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, 0,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 1000 /* mm/sec */, INFINITY));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 2000 /* mm */, 1000 /* mm/sec */, INFINITY));
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, -2,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 500 /* mm/sec */, INFINITY));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 2000 /* mm */, 500 /* mm/sec */, INFINITY));
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, 1,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 2000 /* mm/sec */, INFINITY));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 2000 /* mm */, 2000 /* mm/sec */, INFINITY));
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, 1.5,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 4000 /* mm/sec */, INFINITY));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 2000 /* mm */, 4000 /* mm/sec */, INFINITY));
 
     /* Test what happens if we pass an altitude that the trajectory never
      * reaches. We should get positive infinity, indicating that we should
      * never take off at all. */
     TEST_ASSERT_EQUAL_FLOAT(
         INFINITY,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 200000 /* mm */, 1000 /* mm/sec */, INFINITY));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 200000 /* mm */, 1000 /* mm/sec */, INFINITY));
 }
 
 void test_propose_takeoff_time_const_acceleration(void)
 {
     /* Test invalid values first */
-    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, 1, 0));
-    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(&trajectory, 1.5, 1, -1));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(trajectory, 1.5, 1, 0));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_trajectory_propose_takeoff_time_sec(trajectory, 1.5, 1, -1));
 
     /* Test the case when the minimum ascent is zero so we can take off immediately */
-    TEST_ASSERT_EQUAL_FLOAT(0, sb_trajectory_propose_takeoff_time_sec(&trajectory, 0, 1, 1));
+    TEST_ASSERT_EQUAL_FLOAT(0, sb_trajectory_propose_takeoff_time_sec(trajectory, 0, 1, 1));
 
     /* Test some valid combinations. The trajectory starts with an ascent of
      * 1 m/sec for 10 seconds, so it reaches 2 meters in 2 seconds. */
@@ -293,63 +292,63 @@ void test_propose_takeoff_time_const_acceleration(void)
      * and takes 0.5 m distance. So entire motion should take 1 + 1 + 1 seconds. */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, -1,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 1000 /* mm/sec */, 1000 /* mm/sec/sec */));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 2000 /* mm */, 1000 /* mm/sec */, 1000 /* mm/sec/sec */));
 
     /* With 0.5 m/s/s acceleration it takes 2 sec to reach 1 m/s speed,
      * and takes 1 m distance. So entire motion should take 2 + 0 + 2 seconds. */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, -2,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 1000 /* mm/sec */, 500 /* mm/sec/sec */));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 2000 /* mm */, 1000 /* mm/sec */, 500 /* mm/sec/sec */));
 
     /* With 0.25 m/s/s acceleration it takes 4 sec to reach 1 m/s speed,
      * and takes 2 m distance. So motion should be only acceleration and deceleration (1 + 1 m),
      * and should take sqrt(8) + 0 + sqrt(8) seconds. */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-7, 2 - 2 * sqrt(8),
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2000 /* mm */, 1000 /* mm/sec */, 250 /* mm/sec/sec */));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 2000 /* mm */, 1000 /* mm/sec */, 250 /* mm/sec/sec */));
 
     /* Test what happens if we pass an altitude that the trajectory never
      * reaches. We should get positive infinity, indicating that we should
      * never take off at all. */
     TEST_ASSERT_EQUAL_FLOAT(
         INFINITY,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 200000 /* mm */, 1000 /* mm/sec */, 1000 /* mm/sec/sec */));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 200000 /* mm */, 1000 /* mm/sec */, 1000 /* mm/sec/sec */));
 }
 
 void test_propose_landing_time(void)
 {
-    float total_duration = sb_trajectory_get_total_duration_sec(&trajectory);
+    float total_duration = sb_trajectory_get_total_duration_sec(trajectory);
 
     /* Test invalid values first. Negative ascent is treated as zero so we
      * should get back the duration of the trajectory */
-    TEST_ASSERT_EQUAL_FLOAT(total_duration, sb_trajectory_propose_landing_time_sec(&trajectory, -1, 50 /* mm */));
+    TEST_ASSERT_EQUAL_FLOAT(total_duration, sb_trajectory_propose_landing_time_sec(trajectory, -1, 50 /* mm */));
 
     /* Test the case when the minimum ascent is zero so we send the landing
      * command at the end of the trajectory */
-    TEST_ASSERT_FLOAT_WITHIN(1e-7, total_duration, sb_trajectory_propose_landing_time_sec(&trajectory, 0, 50 /* mm */));
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, total_duration, sb_trajectory_propose_landing_time_sec(trajectory, 0, 50 /* mm */));
 
     /* Test the case when the verticality threshold is negative; should be
      * interpreted as zero */
-    TEST_ASSERT_FLOAT_WITHIN(1e-7, total_duration, sb_trajectory_propose_landing_time_sec(&trajectory, 0, -50 /* mm */));
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, total_duration, sb_trajectory_propose_landing_time_sec(trajectory, 0, -50 /* mm */));
 
     /* Test some valid combinations. The trajectory ends with a descent of
      * 1 m/sec for 10 seconds, so it reaches 2 meters 2 seconds before the
      * end of the trajectory. */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-1, total_duration - 2,
-        sb_trajectory_propose_landing_time_sec(&trajectory, 2000 /* mm */, 50 /* mm */));
+        sb_trajectory_propose_landing_time_sec(trajectory, 2000 /* mm */, 50 /* mm */));
 
     /* What if we request exactly 10m of descent? */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-1, total_duration - 10,
-        sb_trajectory_propose_landing_time_sec(&trajectory, 10000 /* mm */, 50 /* mm */));
+        sb_trajectory_propose_landing_time_sec(trajectory, 10000 /* mm */, 50 /* mm */));
 
     /* Test what happens if we pass an altitude that the trajectory never
      * reaches. We should get the timetamp of the first point where the
      * trajectory starts going vertically down */
     TEST_ASSERT_EQUAL_FLOAT(
         40,
-        sb_trajectory_propose_landing_time_sec(&trajectory, 200000 /* mm */, 50 /* mm */));
+        sb_trajectory_propose_landing_time_sec(trajectory, 200000 /* mm */, 50 /* mm */));
 }
 
 void test_propose_takeoff_time_hover_3m(void)
@@ -362,7 +361,7 @@ void test_propose_takeoff_time_hover_3m(void)
     TEST_ASSERT_FLOAT_WITHIN(
         1e-4,
         2.441f,
-        sb_trajectory_propose_takeoff_time_sec(&trajectory, 2500 /* mm */, 1000 /* mm/sec */, INFINITY));
+        sb_trajectory_propose_takeoff_time_sec(trajectory, 2500 /* mm */, 1000 /* mm/sec */, INFINITY));
 }
 
 void test_propose_landing_time_multiple_trailing_vertical_segments(void)
@@ -372,7 +371,7 @@ void test_propose_landing_time_multiple_trailing_vertical_segments(void)
     closeFixture();
     loadFixture("fixtures/multiple_vertical_landing_segments.skyb");
 
-    total_duration = sb_trajectory_get_total_duration_sec(&trajectory);
+    total_duration = sb_trajectory_get_total_duration_sec(trajectory);
 
     /* there are multiple vertical segments at the end of file, descending
      * every 1s according to the following schedule: 10m, 9m, 8m, 7.5m,
@@ -385,21 +384,21 @@ void test_propose_landing_time_multiple_trailing_vertical_segments(void)
     TEST_ASSERT_FLOAT_WITHIN(
         1e-4,
         total_duration - 20 / 3.0f,
-        sb_trajectory_propose_landing_time_sec(&trajectory, 7000 /* mm */, 50 /* mm */));
+        sb_trajectory_propose_landing_time_sec(trajectory, 7000 /* mm */, 50 /* mm */));
 
     /* Landing time is equal to the total duration if we do not want to descend
      * at all in landing mode */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-4,
         total_duration,
-        sb_trajectory_propose_landing_time_sec(&trajectory, 0 /* mm */, 50 /* mm */));
+        sb_trajectory_propose_landing_time_sec(trajectory, 0 /* mm */, 50 /* mm */));
 
     /* Landing time is equal to the time when the last vertical segment starts
      * if we want to descend more than the length of this segment */
     TEST_ASSERT_FLOAT_WITHIN(
         1e-4,
         total_duration - 10.0f,
-        sb_trajectory_propose_landing_time_sec(&trajectory, 15000 /* mm */, 50 /* mm */));
+        sb_trajectory_propose_landing_time_sec(trajectory, 15000 /* mm */, 50 /* mm */));
 }
 
 void test_cut_at(void)
@@ -407,90 +406,90 @@ void test_cut_at(void)
     sb_vector3_with_yaw_t pos;
 
     /* Cutting at a point that is longer than the entire trajectory */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 60));
-    TEST_ASSERT_EQUAL(50, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, 60));
+    TEST_ASSERT_EQUAL(50, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(0, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
     /* Cutting right at the end */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 50));
-    TEST_ASSERT_EQUAL(50, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, 50));
+    TEST_ASSERT_EQUAL(50, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(0, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
     /* Cutting 15 seconds before the end, middle of the last vertical segment */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 45));
-    TEST_ASSERT_EQUAL(45, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, 45));
+    TEST_ASSERT_EQUAL(45, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(5000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
     /* Cutting 20 seconds before the end, last vertical segment stripped entirely */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 40));
-    TEST_ASSERT_EQUAL(40, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, 40));
+    TEST_ASSERT_EQUAL(40, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(10000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
     /* Cutting 22.5 seconds before the end, 75% into the diagonal segment */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 37.5));
-    TEST_ASSERT_EQUAL(37.5, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, 37.5));
+    TEST_ASSERT_EQUAL(37.5, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(2500, pos.x);
     TEST_ASSERT_EQUAL(2500, pos.y);
     TEST_ASSERT_EQUAL(10000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
     /* Cutting at 20 seconds, right at the end of the "forward" segment */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 20));
-    TEST_ASSERT_EQUAL(20, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, 20));
+    TEST_ASSERT_EQUAL(20, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(10000, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(10000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
     /* Cutting at 10 seconds, right at the end of the takeoff segment */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 10));
-    TEST_ASSERT_EQUAL(10, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, 10));
+    TEST_ASSERT_EQUAL(10, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(10000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
     /* Cutting at 5 seconds, middle of the takeoff segment */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 5));
-    TEST_ASSERT_EQUAL(5, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, 5));
+    TEST_ASSERT_EQUAL(5, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(5000, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
     /* Cutting at the beginning */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, 0));
-    TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, 0));
+    TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(0, pos.z);
     TEST_ASSERT_EQUAL(0, pos.yaw);
 
     /* Cutting before the beginning */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(&trajectory, -5));
-    TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_sec(&trajectory));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(&trajectory, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, -5));
+    TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_sec(trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_end_position(trajectory, &pos));
     TEST_ASSERT_EQUAL(0, pos.x);
     TEST_ASSERT_EQUAL(0, pos.y);
     TEST_ASSERT_EQUAL(0, pos.z);
@@ -519,7 +518,7 @@ void test_replace_end_to_land_at(void)
     sb_trajectory_stats_t stats;
     sb_trajectory_player_t player;
 
-    prepare_stats_for_replace_end_to_land_at(&trajectory, &stats);
+    prepare_stats_for_replace_end_to_land_at(trajectory, &stats);
 
     /* Trajectory ends at (0, 0, 0) at T=60. Descent starts from an altitude
      * of 10m at T=40. Midpoint at 5m is reached at T=45. We will bend the
@@ -534,12 +533,12 @@ void test_replace_end_to_land_at(void)
     TEST_ASSERT_EQUAL(50, stats.duration_sec);
     TEST_ASSERT_EQUAL(50000, stats.duration_msec);
     TEST_ASSERT_EQUAL(0, stats.start_to_end_distance_xy);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_replace_end_to_land_at(&trajectory, &stats, origin, 500));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_replace_end_to_land_at(trajectory, &stats, origin, 500));
     TEST_ASSERT_EQUAL(55, stats.duration_sec);
     TEST_ASSERT_EQUAL(55000, stats.duration_msec);
     TEST_ASSERT_EQUAL(1000, stats.start_to_end_distance_xy);
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, &trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
 
     /* Solution for the last segment:
      *
@@ -606,7 +605,7 @@ void test_replace_end_to_land_at_missing_stats(void)
     sb_trajectory_stats_t stats;
 
     sb_trajectory_stats_init(&stats);
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at(&trajectory, &stats, origin, 500));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at(trajectory, &stats, origin, 500));
 }
 
 void test_load_truncated_file(void)
