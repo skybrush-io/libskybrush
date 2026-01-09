@@ -34,11 +34,9 @@ void tearDown(void)
 void test_screenplay_init_sets_defaults_and_allocates(void)
 {
     sb_screenplay_t screenplay;
-    sb_error_t err;
 
     /* Initialize the screenplay */
-    err = sb_screenplay_init(&screenplay);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
     /* chapters storage must be allocated */
     TEST_ASSERT_NOT_NULL(screenplay.chapters);
@@ -82,12 +80,10 @@ void test_sb_screenplay_get_current_chapter_ptr_empty(void)
 void test_sb_screenplay_get_current_chapter_ptr_infinite_first(void)
 {
     sb_screenplay_t screenplay;
-    sb_error_t err;
     uint32_t time_msec = 5000u;
     const sb_screenplay_chapter_t* ptr;
 
-    err = sb_screenplay_init(&screenplay);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
     /* Append a single chapter (default is infinite duration) */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, NULL));
@@ -103,12 +99,10 @@ void test_sb_screenplay_get_current_chapter_ptr_infinite_first(void)
 void test_sb_screenplay_get_current_chapter_ptr_finite_offsets_and_overflow(void)
 {
     sb_screenplay_t screenplay;
-    sb_error_t err;
     uint32_t time_msec;
     sb_screenplay_chapter_t* ptr;
 
-    err = sb_screenplay_init(&screenplay);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
     /* Append three chapters and set durations: 1000, 2000, 3000 (all finite) */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
@@ -154,12 +148,10 @@ void test_sb_screenplay_get_current_chapter_ptr_finite_offsets_and_overflow(void
 void test_sb_screenplay_get_current_chapter_ptr_with_infinite_later_chapter(void)
 {
     sb_screenplay_t screenplay;
-    sb_error_t err;
     uint32_t time_msec;
     sb_screenplay_chapter_t* ptr;
 
-    err = sb_screenplay_init(&screenplay);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
     /* Append three chapters and set durations: 1000, 2000, infinite */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
@@ -183,10 +175,8 @@ void test_sb_screenplay_remove_last_chapter(void)
 {
     sb_screenplay_t screenplay;
     sb_screenplay_chapter_t* ptr;
-    sb_error_t err;
 
-    err = sb_screenplay_init(&screenplay);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
     /* Removing from an empty screenplay should return SB_EEMPTY and leave size 0 */
     TEST_ASSERT_EQUAL(SB_EEMPTY, sb_screenplay_remove_last_chapter(&screenplay));
@@ -213,6 +203,71 @@ void test_sb_screenplay_remove_last_chapter(void)
     sb_screenplay_destroy(&screenplay);
 }
 
+/* Test updating a screenplay from a binary show file that is loaded
+ * entirely in memory. The test keeps the buffer alive until the screenplay is
+ * destroyed because the chapter (and its trajectory) may reference the buffer.
+ */
+void test_screenplay_update_from_binary_file_in_memory(void)
+{
+    sb_screenplay_t screenplay;
+    sb_screenplay_chapter_t* chapter;
+    FILE* fp;
+    size_t num_bytes;
+    uint8_t* buf = NULL;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
+
+    /* open fixture and read into memory */
+    fp = fopen("fixtures/test.skyb", "rb");
+    if (fp == NULL) {
+        perror("fixtures/test.skyb");
+        abort();
+    }
+
+    buf = (uint8_t*)malloc(65536);
+    TEST_ASSERT_NOT_NULL(buf);
+
+    num_bytes = fread(buf, sizeof(uint8_t), 65536, fp);
+    if (ferror(fp)) {
+        perror(NULL);
+        fclose(fp);
+        free(buf);
+        abort();
+    }
+
+    fclose(fp);
+
+    /* update screenplay from in-memory binary show */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_update_from_binary_file_in_memory(&screenplay, buf, num_bytes));
+
+    /* check chapter count */
+    TEST_ASSERT_EQUAL(1, sb_screenplay_size(&screenplay));
+
+    chapter = sb_screenplay_get_chapter_ptr(&screenplay, 0);
+    TEST_ASSERT_NOT_NULL(chapter);
+
+    /* trajectory, light program and yaw control data must be loaded */
+    TEST_ASSERT_NOT_NULL(sb_screenplay_chapter_get_trajectory(chapter));
+    TEST_ASSERT_NOT_NULL(sb_screenplay_chapter_get_light_program(chapter));
+    TEST_ASSERT_NOT_NULL(sb_screenplay_chapter_get_yaw_control(chapter));
+
+    /* no events in file so no event list must be associated to the chapter */
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_events(chapter));
+
+    /* duration must be infinite and time axis must be reset */
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_chapter_get_duration_msec(chapter));
+    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(sb_screenplay_chapter_get_time_axis(chapter)));
+
+    /* update screenplay from null data */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_update_from_binary_file_in_memory(&screenplay, 0, 0));
+    TEST_ASSERT_TRUE(sb_screenplay_is_empty(&screenplay));
+
+    /* cleanup: destroy screenplay while buffer is still valid, then free buffer */
+    sb_screenplay_destroy(&screenplay);
+
+    free(buf);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -223,6 +278,7 @@ int main(void)
     RUN_TEST(test_sb_screenplay_get_current_chapter_ptr_finite_offsets_and_overflow);
     RUN_TEST(test_sb_screenplay_get_current_chapter_ptr_with_infinite_later_chapter);
     RUN_TEST(test_sb_screenplay_remove_last_chapter);
+    RUN_TEST(test_screenplay_update_from_binary_file_in_memory);
 
     return UNITY_END();
 }

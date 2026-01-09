@@ -107,10 +107,12 @@ void sb_screenplay_chapter_set_light_program(
     sb_screenplay_chapter_t* chapter, sb_light_program_t* light_program);
 void sb_screenplay_chapter_set_yaw_control(
     sb_screenplay_chapter_t* chapter, sb_yaw_control_t* yaw_control);
-void sb_screenplay_chapter_set_event_list(
+void sb_screenplay_chapter_set_events(
     sb_screenplay_chapter_t* chapter, sb_event_list_t* events);
 
 void sb_screenplay_chapter_reset(sb_screenplay_chapter_t* chapter);
+sb_error_t sb_screenplay_chapter_update_from_binary_file_in_memory(
+    sb_screenplay_chapter_t* chapter, uint8_t* show_data, size_t length);
 
 /* ************************************************************************* */
 
@@ -147,6 +149,8 @@ void sb_screenplay_clear(sb_screenplay_t* screenplay);
 sb_error_t sb_screenplay_append_new_chapter(
     sb_screenplay_t* screenplay, sb_screenplay_chapter_t** out_chapter);
 sb_error_t sb_screenplay_remove_last_chapter(sb_screenplay_t* screenplay);
+sb_error_t sb_screenplay_update_from_binary_file_in_memory(
+    sb_screenplay_t* screenplay, uint8_t* show_data, size_t length);
 
 __END_DECLS
 

@@ -210,6 +210,26 @@ sb_error_t sb_screenplay_remove_last_chapter(sb_screenplay_t* screenplay)
     return SB_SUCCESS;
 }
 
+/**
+ * @brief Updates the screenplay from binary show file data in memory.
+ *
+ * This function clears the existing chapters in the screenplay and creates a new
+ * chapter based on the provided binary show file data. If the show data is NULL or has
+ * zero length, the screenplay will be cleared and no new chapter will be added.
+ */
+sb_error_t sb_screenplay_update_from_binary_file_in_memory(sb_screenplay_t* screenplay, uint8_t* show_data, size_t length)
+{
+    sb_screenplay_chapter_t* chapter = NULL;
+
+    sb_screenplay_clear(screenplay);
+    if (show_data && length > 0) {
+        SB_CHECK(sb_screenplay_append_new_chapter(screenplay, &chapter));
+        SB_CHECK(sb_screenplay_chapter_update_from_binary_file_in_memory(chapter, show_data, length));
+    }
+
+    return SB_SUCCESS;
+}
+
 /* ************************************************************************** */
 
 /**

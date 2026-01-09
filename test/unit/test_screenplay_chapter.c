@@ -21,6 +21,8 @@
 #include "unity.h"
 #include <math.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <skybrush/screenplay.h>
 #include <skybrush/time_axis.h>
@@ -102,7 +104,7 @@ void test_screenplay_chapter_getters_and_setters(void)
     TEST_ASSERT_EQUAL(2, SB_REFCNT(&yaw));
 
     /* set event list */
-    sb_screenplay_chapter_set_event_list(&chapter, &events);
+    sb_screenplay_chapter_set_events(&chapter, &events);
     TEST_ASSERT_EQUAL_PTR(&events, sb_screenplay_chapter_get_events(&chapter));
     TEST_ASSERT_EQUAL(2, SB_REFCNT(&events));
 
@@ -122,7 +124,7 @@ void test_screenplay_chapter_getters_and_setters(void)
     TEST_ASSERT_NULL(sb_screenplay_chapter_get_yaw_control(&chapter));
     TEST_ASSERT_EQUAL(1, SB_REFCNT(&yaw));
 
-    sb_screenplay_chapter_set_event_list(&chapter, NULL);
+    sb_screenplay_chapter_set_events(&chapter, NULL);
     TEST_ASSERT_NULL(sb_screenplay_chapter_get_events(&chapter));
     TEST_ASSERT_EQUAL(1, SB_REFCNT(&events));
 
@@ -296,7 +298,7 @@ void test_screenplay_chapter_reset(void)
     sb_screenplay_chapter_set_trajectory(&chapter, &traj);
     sb_screenplay_chapter_set_light_program(&chapter, &prog);
     sb_screenplay_chapter_set_yaw_control(&chapter, &yaw);
-    sb_screenplay_chapter_set_event_list(&chapter, &events);
+    sb_screenplay_chapter_set_events(&chapter, &events);
 
     /* ensure refcounts increased to 2 */
     TEST_ASSERT_EQUAL(2, SB_REFCNT(&traj));
@@ -343,6 +345,74 @@ void test_screenplay_chapter_reset(void)
     SB_DECREF_STATIC(&events);
 }
 
+/* Test updating a screenplay chapter from a binary show file that is loaded
+ * entirely in memory. The test keeps the buffer alive until the chapter is
+ * destroyed because the chapter (and its trajectory) may reference the buffer.
+ */
+void test_screenplay_chapter_update_from_binary_file_in_memory(void)
+{
+    sb_screenplay_chapter_t chapter;
+    FILE* fp;
+    size_t num_bytes;
+    uint8_t* buf = NULL;
+
+    /* initialize chapter */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_init(&chapter));
+
+    /* open fixture and read into memory */
+    fp = fopen("fixtures/test.skyb", "rb");
+    if (fp == NULL) {
+        perror("fixtures/test.skyb");
+        abort();
+    }
+
+    buf = (uint8_t*)malloc(65536);
+    TEST_ASSERT_NOT_NULL(buf);
+
+    num_bytes = fread(buf, sizeof(uint8_t), 65536, fp);
+    if (ferror(fp)) {
+        perror(NULL);
+        fclose(fp);
+        free(buf);
+        abort();
+    }
+
+    fclose(fp);
+
+    /* update chapter from in-memory binary show */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_update_from_binary_file_in_memory(&chapter, buf, num_bytes));
+
+    /* trajectory, light program and yaw control data must be loaded */
+    TEST_ASSERT_NOT_NULL(sb_screenplay_chapter_get_trajectory(&chapter));
+    TEST_ASSERT_NOT_NULL(sb_screenplay_chapter_get_light_program(&chapter));
+    TEST_ASSERT_NOT_NULL(sb_screenplay_chapter_get_yaw_control(&chapter));
+
+    /* no events in file so no event list must be associated to the chapter */
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_events(&chapter));
+
+    /* duration must be infinite and time axis must be reset */
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_chapter_get_duration_msec(&chapter));
+    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(sb_screenplay_chapter_get_time_axis(&chapter)));
+
+    /* now update from empty data */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_update_from_binary_file_in_memory(&chapter, 0, 0));
+
+    /* trajectory, light program and yaw control data must not be loaded */
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_trajectory(&chapter));
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_light_program(&chapter));
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_yaw_control(&chapter));
+    TEST_ASSERT_NULL(sb_screenplay_chapter_get_events(&chapter));
+
+    /* duration must be infinite and time axis must be reset */
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_chapter_get_duration_msec(&chapter));
+    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(sb_screenplay_chapter_get_time_axis(&chapter)));
+
+    /* cleanup: destroy chapter while buffer is still valid, then free buffer */
+    SB_DECREF_STATIC(&chapter);
+
+    free(buf);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -356,6 +426,7 @@ int main(void)
     RUN_TEST(test_screenplay_chapter_set_duration_sec_too_large_is_invalid_and_preserves_old);
     RUN_TEST(test_screenplay_chapter_set_duration_sec_rounds_to_uint32_max_is_invalid_and_preserves_old);
     RUN_TEST(test_screenplay_chapter_reset);
+    RUN_TEST(test_screenplay_chapter_update_from_binary_file_in_memory);
 
     return UNITY_END();
 }

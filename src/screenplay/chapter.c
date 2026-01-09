@@ -190,7 +190,7 @@ void sb_screenplay_chapter_set_yaw_control(
  * @param chapter  the chapter to modify
  * @param events   the event list to set; may be NULL
  */
-void sb_screenplay_chapter_set_event_list(
+void sb_screenplay_chapter_set_events(
     sb_screenplay_chapter_t* chapter, sb_event_list_t* events)
 {
     SB_XINCREF(events);
@@ -262,7 +262,141 @@ void sb_screenplay_chapter_reset(sb_screenplay_chapter_t* chapter)
     sb_screenplay_chapter_set_trajectory(chapter, NULL);
     sb_screenplay_chapter_set_light_program(chapter, NULL);
     sb_screenplay_chapter_set_yaw_control(chapter, NULL);
-    sb_screenplay_chapter_set_event_list(chapter, NULL);
+    sb_screenplay_chapter_set_events(chapter, NULL);
     sb_screenplay_chapter_set_duration_msec(chapter, UINT32_MAX);
     sb_time_axis_clear(&chapter->time_axis);
+}
+
+/**
+ * @brief Updates a screenplay chapter from a binary show file in memory.
+ *
+ * This function updates the trajectory, light program, yaw control and event list
+ * of the given screenplay chapter by parsing the provided binary show file data.
+ * If any of these components are not present in the show file, the corresponding
+ * component in the chapter will be set to NULL. The trajectory is considered mandatory;
+ * if it cannot be loaded, an error will be returned.
+ *
+ * The duration of the screenplay chapter will be set to infinity. The time axis
+ * will be reset. In other words, assume that `sb_screenplay_chapter_reset()` is called
+ * before loading the components from the show file.
+ *
+ * @param chapter    the screenplay chapter to update
+ * @param show_data  pointer to the binary show file data in memory. May be NULL.
+ *        The ownership of the data is not taken; the caller is responsible for
+ *        managing the memory of the data and to keep it alive while the screenplay
+ *        chapter is using it.
+ * @param length     length of the binary show file data in bytes
+ */
+sb_error_t sb_screenplay_chapter_update_from_binary_file_in_memory(
+    sb_screenplay_chapter_t* chapter, uint8_t* show_data, size_t length)
+{
+    sb_error_t retval;
+    sb_trajectory_t* trajectory = NULL;
+    sb_light_program_t* light_program = NULL;
+    sb_yaw_control_t* yaw_control = NULL;
+    sb_event_list_t* event_list = NULL;
+
+    sb_screenplay_chapter_reset(chapter);
+    if (!show_data || length == 0) {
+        return SB_SUCCESS;
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Loading trajectory
+    // ---------------------------------------------------------------------------------
+
+    trajectory = sb_trajectory_new();
+    if (!trajectory) {
+        /* LCOV_EXCL_START */
+        retval = SB_ENOMEM;
+        goto exit;
+        /* LCOV_EXCL_STOP */
+    }
+
+    retval = sb_trajectory_update_from_binary_file_in_memory(trajectory, show_data, length);
+    if (retval) {
+        // Error while loading trajectory or no trajectory in show file
+        goto exit;
+    }
+
+    sb_screenplay_chapter_set_trajectory(chapter, trajectory);
+
+    // ---------------------------------------------------------------------------------
+    // Loading light program
+    // ---------------------------------------------------------------------------------
+
+    light_program = sb_light_program_new();
+    if (!light_program) {
+        /* LCOV_EXCL_START */
+        retval = SB_ENOMEM;
+        goto exit;
+        /* LCOV_EXCL_STOP */
+    }
+
+    retval = sb_light_program_update_from_binary_file_in_memory(light_program, show_data, length);
+    if (retval == SB_SUCCESS) {
+        // Light program loaded successfully
+        sb_screenplay_chapter_set_light_program(chapter, light_program);
+    } else if (retval == SB_ENOENT) {
+        // No light program in show file, this is okay
+    } else {
+        // Some other error
+        goto exit;
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Loading yaw control data
+    // ---------------------------------------------------------------------------------
+
+    yaw_control = sb_yaw_control_new();
+    if (!yaw_control) {
+        /* LCOV_EXCL_START */
+        retval = SB_ENOMEM;
+        goto exit;
+        /* LCOV_EXCL_STOP */
+    }
+
+    retval = sb_yaw_control_update_from_binary_file_in_memory(yaw_control, show_data, length);
+    if (retval == SB_SUCCESS) {
+        // Yaw control loaded successfully
+        sb_screenplay_chapter_set_yaw_control(chapter, yaw_control);
+    } else if (retval == SB_ENOENT) {
+        // No yaw control in show file, this is okay
+    } else {
+        // Some other error
+        goto exit;
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Loading event list
+    // ---------------------------------------------------------------------------------
+
+    event_list = sb_event_list_new(4);
+    if (!event_list) {
+        /* LCOV_EXCL_START */
+        retval = SB_ENOMEM;
+        goto exit;
+        /* LCOV_EXCL_STOP */
+    }
+
+    retval = sb_event_list_update_from_binary_file_in_memory(event_list, show_data, length);
+    if (retval == SB_SUCCESS) {
+        // Event list loaded successfully
+        sb_screenplay_chapter_set_events(chapter, event_list);
+    } else if (retval == SB_ENOENT) {
+        // No event list in show file, this is okay
+    } else {
+        // Some other error
+        goto exit;
+    }
+
+    retval = SB_SUCCESS;
+
+exit:
+    SB_XDECREF(trajectory);
+    SB_XDECREF(light_program);
+    SB_XDECREF(yaw_control);
+    SB_XDECREF(event_list);
+
+    return retval;
 }
