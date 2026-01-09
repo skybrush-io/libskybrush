@@ -36,7 +36,7 @@ void setUp(void)
 
 void tearDown(void)
 {
-    SB_DECREF(ctrl);
+    SB_XDECREF(ctrl);
 }
 
 sb_error_t loadFixture(const char* fname)
