@@ -101,6 +101,7 @@ typedef struct sb_event_list_s {
     size_t max_entries; /**< The maximum number of events that the list can hold */
 } sb_event_list_t;
 
+sb_error_t sb_event_list_new(sb_event_list_t** events, size_t max_events);
 sb_error_t sb_event_list_init(sb_event_list_t* events, size_t max_events);
 
 void sb_event_list_clear(sb_event_list_t* events);

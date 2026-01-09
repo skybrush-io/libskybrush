@@ -31,11 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   you should call `SB_DECREF()` on the light program instead when you want to
   release it. Light programs without active references are automatically freed.
 
-- `sb_yaw_control_t` is now reference-counted. `sb_yaw_control_destroy()` is removed;
+- `sb_yaw_control_t` is now reference-counted. Use `sb_yaw_control_new()` to allocate a
+  new yaw control object on the heap or `sb_yaw_control_init()` to initialize a yaw
+  control object that is allocated on the stack. `sb_yaw_control_destroy()` is removed;
   you should call `SB_DECREF()` on the yaw control object instead when you want to
   release it. Yaw control objects without active references are automatically freed.
 
-- `sb_event_list_t` is now reference-counted. `sb_event_list_destroy()` is removed;
+- `sb_event_list_t` is now reference-counted. Use `sb_event_list_new()` to allocate a
+  new event list on the heap or `sb_event_list_init()` to initialize an event list
+  that is allocated on the stack. `sb_event_list_destroy()` is removed;
   you should call `SB_DECREF()` on the event list instead when you want to
   release it. Event lists without active references are automatically freed.
 

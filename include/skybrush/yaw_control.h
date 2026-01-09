@@ -86,10 +86,13 @@ typedef struct sb_yaw_control_s {
     int16_t yaw_offset_ddeg; /**< The yaw offset used by the yaw control object, in 1/10th of degrees */
 } sb_yaw_control_t;
 
-sb_error_t sb_yaw_control_init_from_binary_file(sb_yaw_control_t* ctrl, int fd);
-sb_error_t sb_yaw_control_init_from_binary_file_in_memory(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes);
-sb_error_t sb_yaw_control_init_from_buffer(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes);
-sb_error_t sb_yaw_control_init_empty(sb_yaw_control_t* ctrl);
+sb_yaw_control_t* sb_yaw_control_new(void);
+sb_error_t sb_yaw_control_init(sb_yaw_control_t* ctrl);
+
+sb_error_t sb_yaw_control_update_from_binary_file(sb_yaw_control_t* ctrl, int fd);
+sb_error_t sb_yaw_control_update_from_binary_file_in_memory(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes);
+sb_error_t sb_yaw_control_update_from_buffer(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes);
+
 sb_bool_t sb_yaw_control_is_empty(const sb_yaw_control_t* ctrl);
 
 /* ************************************************************************* */

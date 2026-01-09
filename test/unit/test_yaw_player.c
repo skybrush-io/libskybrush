@@ -30,12 +30,14 @@ void closeFixture(void);
 
 void setUp(void)
 {
+    sb_yaw_control_init(&ctrl);
     loadFixture("fixtures/test.skyb");
 }
 
 void tearDown(void)
 {
     closeFixture();
+    SB_DECREF_STATIC(&ctrl);
 }
 
 void loadFixture(const char* fname)
@@ -53,7 +55,7 @@ void loadFixture(const char* fname)
         abort();
     }
 
-    sb_yaw_control_init_from_binary_file(&ctrl, fd);
+    sb_yaw_control_update_from_binary_file(&ctrl, fd);
     sb_yaw_player_init(&player, &ctrl);
 
     fclose(fp);
@@ -62,7 +64,6 @@ void loadFixture(const char* fname)
 void closeFixture(void)
 {
     sb_yaw_player_destroy(&player);
-    SB_DECREF_STATIC(&ctrl);
 }
 
 void test_yaw_at(void)

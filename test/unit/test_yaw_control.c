@@ -24,22 +24,19 @@
 #include "skybrush/refcount.h"
 #include "unity.h"
 
-sb_yaw_control_t ctrl;
-sb_bool_t yaw_control_loaded;
+sb_yaw_control_t* ctrl;
 
 sb_error_t loadFixture(const char* fname);
 void closeFixture(void);
 
 void setUp(void)
 {
-    loadFixture("fixtures/test.skyb");
+    ctrl = sb_yaw_control_new();
 }
 
 void tearDown(void)
 {
-    if (yaw_control_loaded) {
-        closeFixture();
-    }
+    SB_DECREF(ctrl);
 }
 
 sb_error_t loadFixture(const char* fname)
@@ -60,11 +57,9 @@ sb_error_t loadFixture(const char* fname)
         abort();
     }
 
-    retval = sb_yaw_control_init_from_binary_file(&ctrl, fd);
+    retval = sb_yaw_control_update_from_binary_file(ctrl, fd);
 
     fclose(fp);
-
-    yaw_control_loaded = retval == SB_SUCCESS;
 
     return retval;
 }
@@ -96,20 +91,13 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
     fclose(fp);
 
-    retval = sb_yaw_control_init_from_binary_file_in_memory(&ctrl, buf, num_bytes);
-    yaw_control_loaded = retval == SB_SUCCESS;
+    retval = sb_yaw_control_update_from_binary_file_in_memory(ctrl, buf, num_bytes);
 
     /* sb_yaw_control_init_from_binary_file_in_memory() copied the data so we
      * must free it */
     free(buf);
 
     return retval;
-}
-
-void closeFixture(void)
-{
-    SB_DECREF_STATIC(&ctrl);
-    yaw_control_loaded = 0;
 }
 
 void test_yaw_control_is_really_empty(void)
@@ -119,9 +107,9 @@ void test_yaw_control_is_really_empty(void)
     float value;
     sb_yaw_player_t player;
 
-    TEST_ASSERT(sb_yaw_control_is_empty(&ctrl));
+    TEST_ASSERT(sb_yaw_control_is_empty(ctrl));
 
-    sb_yaw_player_init(&player, &ctrl);
+    sb_yaw_player_init(&player, ctrl);
 
     for (i = 0; i < n; i++) {
         sb_yaw_player_get_yaw_at(&player, t[i], &value);
@@ -136,22 +124,19 @@ void test_yaw_control_is_really_empty(void)
 
 void test_init_empty(void)
 {
-    closeFixture(); /* was created in setUp() */
-    yaw_control_loaded = sb_yaw_control_init_empty(&ctrl) == SB_SUCCESS;
     test_yaw_control_is_really_empty();
 }
 
 void test_loaded_deltas_in_memory(void)
 {
-    closeFixture();
     loadFixtureInMemory("fixtures/test.skyb");
 
-    TEST_ASSERT_EQUAL(11, sb_buffer_size(&ctrl.buffer));
-    TEST_ASSERT_EQUAL(3, ctrl.header_length);
-    TEST_ASSERT_EQUAL(1, sb_buffer_is_view(&ctrl.buffer));
-    TEST_ASSERT_EQUAL(0, ctrl.auto_yaw);
-    TEST_ASSERT_EQUAL(40, ctrl.yaw_offset_ddeg);
-    TEST_ASSERT_EQUAL(2, ctrl.num_deltas);
+    TEST_ASSERT_EQUAL(11, sb_buffer_size(&ctrl->buffer));
+    TEST_ASSERT_EQUAL(3, ctrl->header_length);
+    TEST_ASSERT_EQUAL(1, sb_buffer_is_view(&ctrl->buffer));
+    TEST_ASSERT_EQUAL(0, ctrl->auto_yaw);
+    TEST_ASSERT_EQUAL(40, ctrl->yaw_offset_ddeg);
+    TEST_ASSERT_EQUAL(2, ctrl->num_deltas);
 }
 
 int main(int argc, char* argv[])

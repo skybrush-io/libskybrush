@@ -507,7 +507,8 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     /* Load yaw control from fixture */
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init_from_binary_file(&yaw, fileno(fp)));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init(&yaw));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_update_from_binary_file(&yaw, fileno(fp)));
     fclose(fp);
 
     /* Attach yaw control to chapter (no trajectory / lights needed for this test) */

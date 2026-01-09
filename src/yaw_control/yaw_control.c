@@ -34,14 +34,15 @@
 #include <skybrush/yaw_control.h>
 
 #include "../parsing.h"
+#include "skybrush/buffer.h"
 
 #define SIZE_OF_DELTA (sizeof(uint16_t) + sizeof(int16_t))
 #define OFFSET_OF_DELTA(index) (ctrl->header_length + (index) * SIZE_OF_DELTA)
 
 void sb_yaw_player_dump_current_setpoint(const sb_yaw_player_t* player);
 
-static sb_error_t sb_i_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned);
-static sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
+static sb_error_t sb_i_yaw_control_update_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned);
+static sb_error_t sb_i_yaw_control_update_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
 static void sb_i_yaw_control_destroy(sb_yaw_control_t* ctrl);
 
 static sb_error_t sb_i_yaw_player_build_current_setpoint(
@@ -56,130 +57,35 @@ static sb_error_t sb_i_yaw_player_seek_to_time(sb_yaw_player_t* player, float t,
 /*****************************************************************************/
 
 /**
- * Initializes a yaw control object from the contents of a Skybrush file in
- * binary format.
+ * \brief Allocates a new yaw control object on the heap and initializes it.
  *
- * \param ctrl  the yaw control object to initialize
- * \param fd  handle to the low-level file object to initialize the object from
- *
- * \return \c SB_SUCCESS if the object was initialized successfully,
- *         \c SB_ENOENT if the file did not contain a yaw control block,
- *         \c SB_EREAD for read errors
+ * \return the new yaw control object, or \c NULL if memory allocation failed
  */
-sb_error_t sb_yaw_control_init_from_binary_file(sb_yaw_control_t* ctrl, int fd)
+sb_yaw_control_t* sb_yaw_control_new(void)
 {
-    sb_binary_file_parser_t parser;
-    sb_error_t retval;
+    sb_yaw_control_t* obj = sb_calloc(sb_yaw_control_t, 1);
 
-    SB_CHECK(sb_binary_file_parser_init_from_file(&parser, fd));
-    retval = sb_i_yaw_control_init_from_parser(ctrl, &parser);
-    sb_binary_file_parser_destroy(&parser);
-
-    return retval;
-}
-
-/**
- * Initializes a yaw control object from the contents of a Skybrush file in
- * binary format, already loaded into memory.
- *
- * The yaw control object will be backed by a \em view into the already existing
- * in-memory buffer. The caller is responsible for ensuring that the buffer
- * remains valid for the lifetime of the yaw control object.
- *
- * \param ctrl  the yaw control object to initialize
- * \param buf   the buffer holding the loaded Skybrush file in binary format
- * \param nbytes  the length of the buffer
- *
- * \return \c SB_SUCCESS if the object was initialized successfully,
- *         \c SB_ENOENT if the memory block did not contain a yaw control block
- */
-sb_error_t sb_yaw_control_init_from_binary_file_in_memory(
-    sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes)
-{
-    sb_binary_file_parser_t parser;
-    sb_error_t retval;
-
-    SB_CHECK(sb_binary_file_parser_init_from_buffer(&parser, buf, nbytes));
-    retval = sb_i_yaw_control_init_from_parser(ctrl, &parser);
-    sb_binary_file_parser_destroy(&parser);
-
-    return retval;
-}
-
-static sb_error_t sb_i_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned)
-{
-    if (owned) {
-        SB_CHECK(sb_buffer_init_from_bytes(&ctrl->buffer, buf, nbytes));
-    } else {
-        sb_buffer_init_view(&ctrl->buffer, buf, nbytes);
-    }
-    ctrl->header_length = sb_i_yaw_control_parse_header(ctrl);
-    SB_REF_INIT(ctrl, sb_i_yaw_control_destroy);
-    return SB_SUCCESS;
-}
-
-static sb_error_t sb_i_yaw_control_init_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser)
-{
-    sb_error_t retval;
-    uint8_t* buf;
-    size_t size;
-    sb_bool_t owned;
-
-    SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_YAW_CONTROL));
-    SB_CHECK(sb_binary_file_read_current_block_ex(parser, &buf, &size, &owned));
-
-    retval = sb_i_yaw_control_init_from_bytes(ctrl, buf, size, owned);
-    if (retval != SB_SUCCESS) {
-        if (owned) {
-            sb_free(buf);
+    if (obj) {
+        if (sb_yaw_control_init(obj)) {
+            sb_free(obj);
         }
-        return retval;
     }
 
-    /* ownership of 'buf' taken by the yaw control object if needed */
-
-    SB_REF_INIT(ctrl, sb_i_yaw_control_destroy);
-
-    return SB_SUCCESS;
+    return obj;
 }
 
 /**
- * Initializes a yaw control object from the contents of a memory buffer.
+ * \brief Initializes an already allocated yaw control object.
+ *
+ * You must call this function on an uninitialized yaw control object before using it.
+ * \ref sb_yaw_control_new() takes care of the initialization for you if you
+ * allocate the yaw control object on the heap.
  *
  * \param ctrl  the yaw control object to initialize
- * \param buf   the buffer holding the encoded yaw control object
- * \param nbytes  the length of the buffer
- *
- * \return \c SB_SUCCESS if the object was initialized successfully,
- *         \c SB_ENOENT if the memory buffer did not contain a yaw control object
+ * \return \c SB_SUCCESS if the list was initialized successfully,
+ *         \c SB_ENOMEM if memory allocation failed
  */
-sb_error_t sb_yaw_control_init_from_buffer(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes)
-{
-    return sb_i_yaw_control_init_from_bytes(ctrl, buf, nbytes, /* owned = */ 0);
-}
-
-/**
- * Initializes a yaw control object from the contents of a memory buffer, taking
- * ownership.
- *
- * \param ctrl  the yaw control object to initialize
- * \param buf   the buffer holding the encoded trajectory object
- * \param nbytes  the length of the buffer
- *
- * \return \c SB_SUCCESS if the object was initialized successfully,
- *         \c SB_ENOENT if the memory buffer did not contain a yaw control object
- */
-sb_error_t sb_yaw_control_init_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes)
-{
-    return sb_i_yaw_control_init_from_bytes(ctrl, buf, nbytes, /* owned = */ 1);
-}
-
-/**
- * Initializes an empty yaw control object.
- *
- * \param ctrl  the yaw control object to initialize
- */
-sb_error_t sb_yaw_control_init_empty(sb_yaw_control_t* ctrl)
+sb_error_t sb_yaw_control_init(sb_yaw_control_t* ctrl)
 {
     SB_CHECK(sb_buffer_init(&ctrl->buffer, 0));
 
@@ -193,6 +99,8 @@ sb_error_t sb_yaw_control_init_empty(sb_yaw_control_t* ctrl)
     return SB_SUCCESS;
 }
 
+/* ************************************************************************** */
+
 /**
  * @brief Returns whether the yaw control object is empty (i.e. has no deltas).
  *
@@ -202,6 +110,72 @@ sb_error_t sb_yaw_control_init_empty(sb_yaw_control_t* ctrl)
 sb_bool_t sb_yaw_control_is_empty(const sb_yaw_control_t* ctrl)
 {
     return ctrl->num_deltas == 0;
+}
+
+/**
+ * Initializes a yaw control object from the contents of a memory buffer.
+ *
+ * \param ctrl  the yaw control object to initialize
+ * \param buf   the buffer holding the encoded yaw control object
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was initialized successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain a yaw control object
+ */
+sb_error_t sb_yaw_control_update_from_buffer(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes)
+{
+    return sb_i_yaw_control_update_from_bytes(ctrl, buf, nbytes, /* owned = */ 0);
+}
+
+/**
+ * Updates a yaw control object from the contents of a Skybrush file in
+ * binary format.
+ *
+ * \param ctrl  the yaw control object to update
+ * \param fd  handle to the low-level file object to update the object from
+ *
+ * \return \c SB_SUCCESS if the object was updated successfully,
+ *         \c SB_ENOENT if the file did not contain a yaw control block,
+ *         \c SB_EREAD for read errors
+ */
+sb_error_t sb_yaw_control_update_from_binary_file(sb_yaw_control_t* ctrl, int fd)
+{
+    sb_binary_file_parser_t parser;
+    sb_error_t retval;
+
+    SB_CHECK(sb_binary_file_parser_init_from_file(&parser, fd));
+    retval = sb_i_yaw_control_update_from_parser(ctrl, &parser);
+    sb_binary_file_parser_destroy(&parser);
+
+    return retval;
+}
+
+/**
+ * Updates a yaw control object from the contents of a Skybrush file in
+ * binary format, already loaded into memory.
+ *
+ * The yaw control object will be backed by a \em view into the already existing
+ * in-memory buffer. The caller is responsible for ensuring that the buffer
+ * remains valid for the lifetime of the yaw control object.
+ *
+ * \param ctrl  the yaw control object to update
+ * \param buf   the buffer holding the loaded Skybrush file in binary format
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was updated successfully,
+ *         \c SB_ENOENT if the memory block did not contain a yaw control block
+ */
+sb_error_t sb_yaw_control_update_from_binary_file_in_memory(
+    sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes)
+{
+    sb_binary_file_parser_t parser;
+    sb_error_t retval;
+
+    SB_CHECK(sb_binary_file_parser_init_from_buffer(&parser, buf, nbytes));
+    retval = sb_i_yaw_control_update_from_parser(ctrl, &parser);
+    sb_binary_file_parser_destroy(&parser);
+
+    return retval;
 }
 
 /* ************************************************************************** */
@@ -259,6 +233,47 @@ static uint16_t sb_i_yaw_control_parse_duration(const sb_yaw_control_t* ctrl, si
 static int16_t sb_i_yaw_control_parse_yaw(const sb_yaw_control_t* ctrl, size_t* offset)
 {
     return sb_parse_int16(SB_BUFFER(ctrl->buffer), offset);
+}
+
+static sb_error_t sb_i_yaw_control_update_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned)
+{
+    sb_buffer_t new_buffer;
+
+    if (owned) {
+        SB_CHECK(sb_buffer_init_from_bytes(&new_buffer, buf, nbytes));
+    } else {
+        sb_buffer_init_view(&new_buffer, buf, nbytes);
+    }
+
+    sb_buffer_destroy(&ctrl->buffer);
+    ctrl->buffer = new_buffer;
+
+    ctrl->header_length = sb_i_yaw_control_parse_header(ctrl);
+
+    return SB_SUCCESS;
+}
+
+static sb_error_t sb_i_yaw_control_update_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser)
+{
+    sb_error_t retval;
+    uint8_t* buf;
+    size_t size;
+    sb_bool_t owned;
+
+    SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_YAW_CONTROL));
+    SB_CHECK(sb_binary_file_read_current_block_ex(parser, &buf, &size, &owned));
+
+    retval = sb_i_yaw_control_update_from_bytes(ctrl, buf, size, owned);
+    if (retval != SB_SUCCESS) {
+        if (owned) {
+            sb_free(buf);
+        }
+        return retval;
+    }
+
+    /* ownership of 'buf' taken by the yaw control object if needed */
+
+    return SB_SUCCESS;
 }
 
 /* ************************************************************************** */

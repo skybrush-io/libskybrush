@@ -39,7 +39,41 @@ static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events, sb
 static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events);
 
 /**
- * \brief Initializes an event list.
+ * \brief Allocates a new event list on the heap and initializes it.
+ *
+ * \param events  pointer to the location where the pointer to the new event list
+ *        will be stored
+ * \param max_events  the maximum number of events that can be stored in the
+ *        list. Use \ref sb_event_list_resize() to change the capacity of the list
+ *        later.
+ * \return \c SB_SUCCESS if the list was created and initialized successfully,
+ *         \c SB_ENOMEM if memory allocation failed
+ */
+sb_error_t sb_event_list_new(sb_event_list_t** events, size_t max_events)
+{
+    sb_error_t retval;
+    sb_event_list_t* event = sb_calloc(sb_event_list_t, 1);
+    if (event == 0) {
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
+    }
+
+    retval = sb_event_list_init(event, max_events);
+    if (retval) {
+        sb_free(event);
+        return retval;
+    }
+
+    *events = event;
+
+    return SB_SUCCESS;
+}
+
+/**
+ * \brief Initializes an already allocated event list.
+ *
+ * You must call this function on an uninitialized event list before using it.
+ * \ref sb_event_list_new() takes care of the initialization for you if you
+ * allocate the event list on the heap.
  *
  * \param events  the event list to initialize
  * @param max_events  the maximum number of events that can be stored in the
