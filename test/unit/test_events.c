@@ -131,7 +131,7 @@ void test_init_empty(void)
 
 void test_loaded_events(void)
 {
-    loadFixture("fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
 
     TEST_ASSERT_EQUAL(4, sb_event_list_size(events));
     TEST_ASSERT_EQUAL(10000, sb_event_list_get_ptr(events, 0)->time_msec);
@@ -166,7 +166,8 @@ void test_loaded_events(void)
 
 void test_loaded_events_in_memory(void)
 {
-    loadFixtureInMemory("fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixtureInMemory("fixtures/pyro_events.skyb"));
+
     test_loaded_events();
 }
 
@@ -177,7 +178,7 @@ void test_append_with_earlier_timestamp(void)
     event.type = SB_EVENT_TYPE_PYRO;
     event.subtype = 1;
 
-    loadFixture("fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
 
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_event_list_append(events, &event));
 }
@@ -188,7 +189,7 @@ void test_insertion(void)
     event.type = SB_EVENT_TYPE_PYRO;
     event.subtype = 1;
 
-    loadFixture("fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
 
     /* 10000, 50000, 90000, 90000 -- inserting in front */
     event.time_msec = 5000;
@@ -265,7 +266,7 @@ void test_is_sorted(void)
     uint32_t timestamp;
     sb_event_t* event_ptr;
 
-    loadFixture("fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
 
     TEST_ASSERT_TRUE(sb_event_list_is_sorted(events));
 
@@ -287,7 +288,7 @@ void test_sort(void)
     uint32_t timestamp;
     sb_event_t* event_ptr;
 
-    loadFixture("fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
 
     /* Mix up the event timestamps a bit */
     event_ptr = sb_event_list_get_ptr(events, 1);
@@ -304,7 +305,7 @@ void test_adjust_timestamps(void)
 {
     sb_event_t* event_ptr;
 
-    loadFixture("fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
 
     /* Adjust the timestamps of the pyro events forward by 1000 ms */
     sb_event_list_adjust_timestamps_by_type(events, SB_EVENT_TYPE_PYRO, 1000);
@@ -376,7 +377,7 @@ void test_add_pyro_off_events(void)
 {
     sb_error_t retval;
 
-    loadFixture("fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
 
     sb_event_list_get_ptr(events, 0)->subtype = 1;
     sb_event_list_get_ptr(events, 1)->subtype = 2;
@@ -426,7 +427,7 @@ void test_add_pyro_off_events_overlapping(void)
 {
     sb_error_t retval;
 
-    loadFixture("fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
 
     sb_event_list_get_ptr(events, 0)->subtype = 1;
     sb_event_list_get_ptr(events, 1)->subtype = 2;

@@ -129,7 +129,7 @@ void test_init_empty(void)
 
 void test_loaded_deltas_in_memory(void)
 {
-    loadFixtureInMemory("fixtures/test.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixtureInMemory("fixtures/test.skyb"));
 
     TEST_ASSERT_EQUAL(11, sb_buffer_size(&ctrl->buffer));
     TEST_ASSERT_EQUAL(3, ctrl->header_length);

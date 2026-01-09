@@ -41,7 +41,7 @@ void setUp(void)
         abort();
     }
 
-    sb_light_program_init_from_binary_file(&program, fd);
+    sb_light_program_update_from_binary_file(&program, fd);
     sb_light_player_init(&player, &program);
 
     fclose(fp);

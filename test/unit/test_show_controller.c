@@ -139,7 +139,7 @@ void test_show_controller_chapter_transition_switches_players(void)
     sb_screenplay_chapter_t* ch1 = NULL;
     sb_trajectory_t traj_empty;
     sb_trajectory_t traj_loaded;
-    sb_light_program_t prog;
+    sb_light_program_t* prog;
     sb_show_controller_t ctrl;
     sb_error_t err;
     FILE* fp;
@@ -167,11 +167,13 @@ void test_show_controller_chapter_transition_switches_players(void)
 
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init_from_binary_file(&prog, fileno(fp)));
+
+    TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
 
     sb_screenplay_chapter_set_trajectory(ch1, &traj_loaded);
-    sb_screenplay_chapter_set_light_program(ch1, &prog);
+    sb_screenplay_chapter_set_light_program(ch1, prog);
 
     /* Initialize controller with this screenplay */
     err = sb_show_controller_init(&ctrl, &screenplay);
@@ -210,7 +212,7 @@ void test_show_controller_chapter_transition_switches_players(void)
 
     SB_DECREF_STATIC(&traj_empty);
     SB_DECREF_STATIC(&traj_loaded);
-    SB_DECREF_STATIC(&prog);
+    SB_DECREF(prog);
 }
 
 void test_show_controller_play_fixture_single_chapter(void)
@@ -218,7 +220,7 @@ void test_show_controller_play_fixture_single_chapter(void)
     sb_screenplay_t screenplay;
     sb_screenplay_chapter_t* ch = NULL;
     sb_trajectory_t traj;
-    sb_light_program_t prog;
+    sb_light_program_t* prog;
     sb_show_controller_t ctrl;
     sb_vector3_t pos;
     sb_vector3_t vel;
@@ -241,11 +243,14 @@ void test_show_controller_play_fixture_single_chapter(void)
 
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init_from_binary_file(&prog, fileno(fp)));
+
+    TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
+
     fclose(fp);
 
     sb_screenplay_chapter_set_trajectory(ch, &traj);
-    sb_screenplay_chapter_set_light_program(ch, &prog);
+    sb_screenplay_chapter_set_light_program(ch, prog);
 
     /* Initialize controller */
     err = sb_show_controller_init(&ctrl, &screenplay);
@@ -288,7 +293,7 @@ void test_show_controller_play_fixture_single_chapter(void)
     sb_show_controller_destroy(&ctrl);
     sb_screenplay_destroy(&screenplay);
     SB_DECREF_STATIC(&traj);
-    SB_DECREF_STATIC(&prog);
+    SB_DECREF(prog);
 }
 
 void test_show_controller_play_fixture_time_axis_2x(void)
@@ -296,7 +301,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     sb_screenplay_t screenplay;
     sb_screenplay_chapter_t* ch = NULL;
     sb_trajectory_t traj;
-    sb_light_program_t prog;
+    sb_light_program_t* prog;
     sb_show_controller_t ctrl;
     sb_vector3_t pos;
     sb_vector3_t vel;
@@ -319,11 +324,14 @@ void test_show_controller_play_fixture_time_axis_2x(void)
 
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init_from_binary_file(&prog, fileno(fp)));
+
+    TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
+
     fclose(fp);
 
     sb_screenplay_chapter_set_trajectory(ch, &traj);
-    sb_screenplay_chapter_set_light_program(ch, &prog);
+    sb_screenplay_chapter_set_light_program(ch, prog);
 
     /* Alter the chapter time axis to run at 2x real-time for the duration of the
      * fixture so warped_time = 2 * wall_clock_time.
@@ -378,7 +386,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     sb_show_controller_destroy(&ctrl);
     sb_screenplay_destroy(&screenplay);
     SB_DECREF_STATIC(&traj);
-    SB_DECREF_STATIC(&prog);
+    SB_DECREF(prog);
 }
 
 /* New test: forward_left_back fixture played with a time axis that runs at real-time
@@ -393,7 +401,7 @@ void test_show_controller_forward_left_back_slowdown(void)
     sb_screenplay_t screenplay;
     sb_screenplay_chapter_t* ch = NULL;
     sb_trajectory_t traj;
-    sb_light_program_t prog;
+    sb_light_program_t* prog;
     sb_show_controller_t ctrl;
     sb_vector3_t pos;
     sb_vector3_t vel;
@@ -415,11 +423,14 @@ void test_show_controller_forward_left_back_slowdown(void)
 
     fp = fopen("fixtures/forward_left_back.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init_from_binary_file(&prog, fileno(fp)));
+
+    TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
+
     fclose(fp);
 
     sb_screenplay_chapter_set_trajectory(ch, &traj);
-    sb_screenplay_chapter_set_light_program(ch, &prog);
+    sb_screenplay_chapter_set_light_program(ch, prog);
 
     /* Set time axis: 25s at rate=1.0 (normal), then slowdown from realtime to 0 over 5s */
     sb_time_axis_t* axis = sb_screenplay_chapter_get_time_axis(ch);
@@ -475,7 +486,7 @@ void test_show_controller_forward_left_back_slowdown(void)
     sb_show_controller_destroy(&ctrl);
     sb_screenplay_destroy(&screenplay);
     SB_DECREF_STATIC(&traj);
-    SB_DECREF_STATIC(&prog);
+    SB_DECREF(prog);
 }
 
 /*

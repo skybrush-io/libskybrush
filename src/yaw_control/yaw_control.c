@@ -82,7 +82,7 @@ sb_yaw_control_t* sb_yaw_control_new(void)
  * allocate the yaw control object on the heap.
  *
  * \param ctrl  the yaw control object to initialize
- * \return \c SB_SUCCESS if the list was initialized successfully,
+ * \return \c SB_SUCCESS if the yaw control object was initialized successfully,
  *         \c SB_ENOMEM if memory allocation failed
  */
 sb_error_t sb_yaw_control_init(sb_yaw_control_t* ctrl)

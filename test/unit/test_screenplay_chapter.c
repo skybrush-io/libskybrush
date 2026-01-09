@@ -76,7 +76,7 @@ void test_screenplay_chapter_getters_and_setters(void)
 
     /* initialize objects to be attached */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_empty(&traj));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init_empty(&prog));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init(&prog));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init(&yaw));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_init(&events, 0));
 
@@ -282,7 +282,7 @@ void test_screenplay_chapter_reset(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init_empty(&traj));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init_empty(&prog));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init(&prog));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init(&yaw));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_init(&events, 0));
 

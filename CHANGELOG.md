@@ -15,31 +15,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   structures clearly document whether they return a new reference (where the ownership
   of the reference is passed to the caller and the caller is responsible to call
   `SB_DECREF()` later) or a borrowed reference (where the caller does not own the
-  object and _must_ call `SB_INCREF()` on it if it wants to hold on to the object for
-  a longer time). Functions that take pointers to reference-counted objects assume
-  that they receive a _borrowed_ reference and increase the reference count if needed,
-  unless documented otherwise. The only exceptions are `_init()` functions for a
-  reference-counted type; these assume that they receive an uninitialized object and
-  the caller will own a reference to the initialized object when the initializer
-  function returns.
+  object and _must_ call `SB_INCREF()` on it if it wants to hold on to the object
+  for a longer time). Functions that take pointers to reference-counted objects
+  assume that they receive a _borrowed_ reference and increase the reference count
+  if needed, unless documented otherwise. The only exceptions are `_init()` functions
+  for a reference-counted type; these assume that they receive an uninitialized
+  object and the caller will own a reference to the initialized object when the
+  initializer function returns.
 
 - `sb_trajectory_t` is now reference-counted. `sb_trajectory_destroy()` is removed;
   you should call `SB_DECREF()` on the trajectory object instead when you want to
   release it. Trajectories without active references are automatically freed.
 
-- `sb_light_program_t` is now reference-counted. `sb_light_program_destroy()` is removed;
-  you should call `SB_DECREF()` on the light program instead when you want to
-  release it. Light programs without active references are automatically freed.
+- `sb_light_program_t` is now reference-counted. Use `sb_light_program_new()` to
+  allocate a new light program on the heap or `sb_light_program_init()` to
+  initialize a light program that is allocated on the stack.
+  `sb_light_program_destroy()` is removed; you should call `SB_DECREF()` on the
+  light program instead when you want to release it. Light programs without
+  active references are automatically freed.
 
-- `sb_yaw_control_t` is now reference-counted. Use `sb_yaw_control_new()` to allocate a
-  new yaw control object on the heap or `sb_yaw_control_init()` to initialize a yaw
-  control object that is allocated on the stack. `sb_yaw_control_destroy()` is removed;
-  you should call `SB_DECREF()` on the yaw control object instead when you want to
-  release it. Yaw control objects without active references are automatically freed.
+- `sb_yaw_control_t` is now reference-counted. Use `sb_yaw_control_new()` to allocate
+  a new yaw control object on the heap or `sb_yaw_control_init()` to initialize
+  a yaw control object that is allocated on the stack. `sb_yaw_control_destroy()`
+  is removed; you should call `SB_DECREF()` on the yaw control object instead when
+  you want to release it. Yaw control objects without active references are
+  automatically freed.
 
-- `sb_event_list_t` is now reference-counted. Use `sb_event_list_new()` to allocate a
-  new event list on the heap or `sb_event_list_init()` to initialize an event list
-  that is allocated on the stack. `sb_event_list_destroy()` is removed;
+- `sb_event_list_t` is now reference-counted. Use `sb_event_list_new()` to allocate
+  a new event list on the heap or `sb_event_list_init()` to initialize an event
+  list that is allocated on the stack. `sb_event_list_destroy()` is removed;
   you should call `SB_DECREF()` on the event list instead when you want to
   release it. Event lists without active references are automatically freed.
 
