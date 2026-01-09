@@ -18,7 +18,6 @@
  */
 
 #include <float.h>
-#include <math.h>
 #include <skybrush/time_axis.h>
 
 #include "unity.h"

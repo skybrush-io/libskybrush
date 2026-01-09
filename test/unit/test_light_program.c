@@ -20,6 +20,7 @@
 #include <skybrush/formats/binary.h>
 #include <skybrush/lights.h>
 
+#include "skybrush/refcount.h"
 #include "unity.h"
 #include "utils.h"
 
@@ -83,8 +84,11 @@ void test_clear(void)
     test_light_program_is_really_empty();
 }
 
-void test_init_empty(void)
+void test_new(void)
 {
+    SB_XDECREF(program);
+
+    program = sb_light_program_new();
     test_light_program_is_really_empty();
 }
 
@@ -134,7 +138,7 @@ int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_init_empty);
+    RUN_TEST(test_new);
     RUN_TEST(test_clear);
     RUN_TEST(test_file_without_light_program);
     RUN_TEST(test_light_program_with_wait_until_command);

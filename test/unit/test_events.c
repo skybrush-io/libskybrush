@@ -123,8 +123,11 @@ void test_event_list_is_empty(void)
     */
 }
 
-void test_init_empty(void)
+void test_new(void)
 {
+    SB_XDECREF(events);
+
+    events = sb_event_list_new(1);
     test_event_list_is_empty();
     TEST_ASSERT_EQUAL(1, sb_event_list_capacity(events));
 }
@@ -467,7 +470,7 @@ int main(int argc, char* argv[])
     UNITY_BEGIN();
 
     /* basic tests with pyro_events.skyb */
-    RUN_TEST(test_init_empty);
+    RUN_TEST(test_new);
     RUN_TEST(test_loaded_events);
     RUN_TEST(test_loaded_events_in_memory);
     RUN_TEST(test_append_with_earlier_timestamp);

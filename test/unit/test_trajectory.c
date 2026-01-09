@@ -25,7 +25,6 @@
 
 uint8_t* buf;
 sb_trajectory_t* trajectory;
-sb_bool_t trajectory_loaded;
 
 sb_error_t loadFixture(const char* fname);
 void closeFixture(void);
@@ -63,7 +62,6 @@ sb_error_t loadFixture(const char* fname)
 
     fclose(fp);
 
-    trajectory_loaded = retval == SB_SUCCESS;
     buf = 0;
 
     return retval;
@@ -97,16 +95,13 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
     retval = sb_trajectory_update_from_binary_file_in_memory(trajectory, buf, num_bytes);
 
-    trajectory_loaded = retval == SB_SUCCESS;
-    /* sb_trajectory_init_from_binary_file_in_memory() created a view so we need to kep buf around */
+    /* sb_trajectory_init_from_binary_file_in_memory() created a view so we need to keep buf around */
 
     return retval;
 }
 
 void closeFixture(void)
 {
-    trajectory_loaded = 0;
-
     if (buf) {
         free(buf);
         buf = 0;
@@ -170,12 +165,12 @@ void test_clear_view(void)
     TEST_ASSERT(sb_buffer_is_view(&trajectory->buffer));
 }
 
-void test_init_empty(void)
+void test_new(void)
 {
     closeFixture(); /* was created in setUp() */
 
-    sb_trajectory_init(trajectory);
-    trajectory_loaded = 1;
+    SB_XDECREF(trajectory);
+    trajectory = sb_trajectory_new();
 
     test_trajectory_is_really_empty();
 }
@@ -629,7 +624,7 @@ int main(int argc, char* argv[])
     UNITY_BEGIN();
 
     /* basic tests with test.skyb */
-    RUN_TEST(test_init_empty);
+    RUN_TEST(test_new);
     RUN_TEST(test_clear);
     RUN_TEST(test_clear_view);
     RUN_TEST(test_get_start_position);

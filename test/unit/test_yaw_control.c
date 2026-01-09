@@ -122,8 +122,11 @@ void test_yaw_control_is_really_empty(void)
     sb_yaw_player_destroy(&player);
 }
 
-void test_init_empty(void)
+void test_new(void)
 {
+    SB_XDECREF(ctrl);
+
+    ctrl = sb_yaw_control_new();
     test_yaw_control_is_really_empty();
 }
 
@@ -144,7 +147,7 @@ int main(int argc, char* argv[])
     UNITY_BEGIN();
 
     /* basic tests with test.skyb */
-    RUN_TEST(test_init_empty);
+    RUN_TEST(test_new);
     RUN_TEST(test_loaded_deltas_in_memory);
 
     return UNITY_END();
