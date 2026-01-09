@@ -37,6 +37,7 @@ void setUp(void)
 
 void tearDown(void)
 {
+    closeFixture();
     SB_XDECREF(trajectory);
 }
 
