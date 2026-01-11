@@ -175,6 +175,9 @@ sb_error_t sb_trajectory_stats_calculator_run(
         goto cleanup;
     }
 
+    /* Copy the initial position to the result */
+    result->initial_pos = start;
+
     /* Calculate the altitude we need to cross at takeoff */
     takeoff_altitude = start.z + calc->min_ascent;
 

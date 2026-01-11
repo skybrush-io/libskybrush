@@ -89,6 +89,11 @@ typedef struct sb_trajectory_stats_s {
     float landing_time_sec;
 
     /**
+     * Initial position. Infinity if it has not been calculated.
+     */
+    sb_vector3_with_yaw_t initial_pos;
+
+    /**
      * Position at landing time. Infinity if it has not been calculated.
      */
     sb_vector3_with_yaw_t pos_at_landing_time;
