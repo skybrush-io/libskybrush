@@ -130,6 +130,8 @@ typedef struct sb_show_controller_s {
 sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* screenplay);
 void sb_show_controller_destroy(sb_show_controller_t* controller);
 
+sb_screenplay_chapter_t* sb_show_controller_get_current_chapter(
+    const sb_show_controller_t* controller);
 const sb_control_output_t* sb_show_controller_get_current_output(
     const sb_show_controller_t* controller);
 sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* controller, uint32_t time_msec);

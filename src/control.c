@@ -284,6 +284,17 @@ void sb_show_controller_destroy(sb_show_controller_t* ctrl)
 }
 
 /**
+ * @brief Returns the current chapter of the show controller.
+ *
+ * @param controller  pointer to the show controller to query
+ * @return pointer to the current chapter
+ */
+sb_screenplay_chapter_t* sb_show_controller_get_current_chapter(const sb_show_controller_t* ctrl)
+{
+    return ctrl->current_chapter;
+}
+
+/**
  * @brief Returns the current control output of the show controller.
  *
  * @param controller  pointer to the show controller to query

@@ -565,12 +565,61 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 4.6f, yaw_val);
 
     TEST_ASSERT_TRUE(sb_control_output_get_yaw_rate_if_set(out, &yaw_rate));
-    TEST_ASSERT_FLOAT_WITHIN(1e-3, 400.0f / 3, yaw_rate);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 400.0 / 3, yaw_rate);
 
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
     sb_screenplay_destroy(&screenplay);
     SB_DECREF(yaw);
+}
+
+/* New unit test: verify sb_show_controller_get_current_chapter() behaviour */
+void test_show_controller_get_current_chapter(void)
+{
+    sb_show_controller_t ctrl;
+    sb_screenplay_t screenplay;
+    sb_screenplay_chapter_t* ch0 = NULL;
+    sb_screenplay_chapter_t* ch1 = NULL;
+    sb_error_t err;
+
+    /* Initialize a screenplay with two chapters */
+    err = sb_screenplay_init(&screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch1));
+    TEST_ASSERT_NOT_NULL(ch0);
+    TEST_ASSERT_NOT_NULL(ch1);
+
+    /* Give each chapter a finite duration of 1000 ms so the screenplay spans 0..2000 ms */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_set_duration_msec(ch0, 1000u));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_set_duration_msec(ch1, 1000u));
+
+    /* Initialize controller with the screenplay */
+    err = sb_show_controller_init(&ctrl, &screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    /* Before any update, current chapter should be NULL (not yet established) */
+    TEST_ASSERT_NULL(sb_show_controller_get_current_chapter(&ctrl));
+
+    /* Update time within first chapter -> get_current_chapter should return ch0 */
+    err = sb_show_controller_update_time_msec(&ctrl, 500u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL_PTR(ch0, sb_show_controller_get_current_chapter(&ctrl));
+
+    /* Update time within second chapter -> get_current_chapter should return ch1 */
+    err = sb_show_controller_update_time_msec(&ctrl, 1500u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL_PTR(ch1, sb_show_controller_get_current_chapter(&ctrl));
+
+    /* Update time out of bounds -> no current chapter */
+    err = sb_show_controller_update_time_msec(&ctrl, 3000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_NULL(sb_show_controller_get_current_chapter(&ctrl));
+
+    /* Cleanup */
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
 }
 
 int main(void)
@@ -585,6 +634,7 @@ int main(void)
     RUN_TEST(test_show_controller_play_fixture_time_axis_2x);
     RUN_TEST(test_show_controller_forward_left_back_slowdown);
     RUN_TEST(test_show_controller_play_fixture_with_yaw_control);
+    RUN_TEST(test_show_controller_get_current_chapter);
 
     return UNITY_END();
 }
