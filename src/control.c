@@ -23,6 +23,7 @@
 #include "skybrush/events.h"
 #include "skybrush/screenplay.h"
 #include "skybrush/trajectory.h"
+#include <math.h>
 #include <skybrush/control.h>
 #include <skybrush/memory.h>
 #include <stddef.h>
@@ -329,6 +330,8 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     float warped_rate;
     float yaw;
 
+    // TODO(ntamas): handle the case when time_msec is the same as before -> no need to re-evaluate
+
     sb_control_output_clear(out);
 
     chapter = ctrl->screenplay ? sb_screenplay_get_current_chapter_ptr(ctrl->screenplay, &time_msec) : NULL;
@@ -362,7 +365,14 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
         }
 
         if (ctrl->light_player) {
-            color = sb_light_player_get_color_at(ctrl->light_player, warped_time_sec * 1000.0f);
+            /* clang-format off */
+            uint32_t warped_time_msec = (uint32_t)(
+                (warped_time_sec < 0 || !isfinite(warped_time_sec) ? 0 :
+                warped_time_sec > 86400 ? 86400 :
+                warped_time_sec) * 1000.0f
+            );
+            /* clang-format on */
+            color = sb_light_player_get_color_at(ctrl->light_player, warped_time_msec);
             sb_control_output_set_color(out, color);
         }
 
