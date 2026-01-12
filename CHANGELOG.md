@@ -49,11 +49,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   you should call `SB_DECREF()` on the event list instead when you want to
   release it. Event lists without active references are automatically freed.
 
+- `sb_trajectory_replace_end_to_land_at()` now takes an `sb_vector3_t` to specify the
+  desired landing coordinate instead of an `sb_vector3_with_yaw_t`.
+
 ### Added
 
 - Added `sb_screenplay_t` and `sb_screenplay_chapter_t` to manage a complex
   sequence of combined trajectory, light program, yaw and event list objects,
   with a varying setup of time axis objects.
+
+- Added `sb_vector3_t` type to cater for use-cases where the yaw component is not
+  needed.
 
 ## [4.3.0] - 2025-10-15
 

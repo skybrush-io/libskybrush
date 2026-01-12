@@ -509,7 +509,7 @@ void prepare_stats_for_replace_end_to_land_at(
 
 void test_replace_end_to_land_at(void)
 {
-    sb_vector3_with_yaw_t origin = { 1000, 0, 0, 0 };
+    sb_vector3_t origin = { 1000, 0, 0 };
     sb_vector3_with_yaw_t pos, vel;
     sb_trajectory_stats_t stats;
     sb_trajectory_player_t player;
@@ -597,7 +597,7 @@ void test_replace_end_to_land_at(void)
 
 void test_replace_end_to_land_at_missing_stats(void)
 {
-    sb_vector3_with_yaw_t origin = { 1000, 0, 0, 0 };
+    sb_vector3_t origin = { 1000, 0, 0 };
     sb_trajectory_stats_t stats;
 
     sb_trajectory_stats_init(&stats);

@@ -546,11 +546,11 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
 sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_trajectory_t* trajectory,
     sb_trajectory_stats_t* stats,
-    sb_vector3_with_yaw_t new_landing_position,
+    sb_vector3_t new_landing_position,
     float new_landing_velocity)
 {
     sb_error_t retval;
-    sb_vector3_with_yaw_t c1, c2, zero;
+    sb_vector3_with_yaw_t new_end, c1, c2, zero;
     sb_trajectory_builder_t builder;
     float duration_sec;
 
@@ -567,6 +567,14 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
         duration_sec = 60;
     }
 
+    // Construct the new landing position with yaw such that it takes the
+    // coordinates from the given position and the yaw from the last point
+    // of the existing trajectory
+    new_end.x = new_landing_position.x;
+    new_end.y = new_landing_position.y;
+    new_end.z = new_landing_position.z;
+    new_end.yaw = stats->pos_at_landing_time.yaw;
+
     // Calculate the cubic Bezier curve that will send the drone back to its
     // takeoff position from the point where it crosses the takeoff altitude
     // threshold from above
@@ -574,7 +582,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_get_cubic_bezier_from_velocity_constraints(
         /* start = */ stats->pos_at_landing_time,
         /* start_vel = */ stats->vel_at_landing_time,
-        /* end = */ new_landing_position,
+        /* end = */ new_end,
         /* end_vel = */ zero,
         /* duration_sec = */ duration_sec,
         &c1, &c2);
@@ -600,7 +608,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
 
     // Add the final segment
     retval = sb_trajectory_builder_append_cubic_bezier(
-        &builder, c1, c2, new_landing_position,
+        &builder, c1, c2, new_end,
         (uint32_t)(duration_sec * 1000.0f) /* [s] --> [ms] */
     );
     if (retval) {
@@ -612,7 +620,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
 
     // Update trajectory statistics
     stats->landing_time_sec += duration_sec;
-    stats->pos_at_landing_time = new_landing_position;
+    stats->pos_at_landing_time = new_end;
     stats->vel_at_landing_time = zero;
     if (stats->valid_components & SB_TRAJECTORY_STATS_DURATION) {
         stats->duration_sec += duration_sec;

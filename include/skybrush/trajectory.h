@@ -205,7 +205,7 @@ float sb_trajectory_propose_landing_time_sec(
 sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_trajectory_t* trajectory,
     sb_trajectory_stats_t* stats,
-    sb_vector3_with_yaw_t new_landing_position,
+    sb_vector3_t new_landing_position,
     float new_landing_velocity);
 
 /* ************************************************************************* */
