@@ -585,6 +585,9 @@ static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events,
 
 /* ************************************************************************** */
 
+static const sb_event_t* sb_i_event_list_player_get_next_event_earlier_than_msec(sb_event_list_player_t* player, uint32_t t_msec);
+static const sb_event_t* sb_i_event_list_player_get_next_event_not_later_than_msec(sb_event_list_player_t* player, uint32_t t_msec);
+
 sb_error_t sb_event_list_player_init(sb_event_list_player_t* player, sb_event_list_t* events)
 {
     player->events = events;
@@ -614,15 +617,19 @@ const sb_event_t* sb_event_list_player_get_next_event(sb_event_list_player_t* pl
 
 const sb_event_t* sb_event_list_player_get_next_event_not_later_than(sb_event_list_player_t* player, float t)
 {
-    const sb_event_t* result = sb_event_list_player_peek_next_event(player);
-    if (result != NULL) {
-        if (result->time_msec <= t * 1000) {
-            player->current_index++;
-        } else {
-            result = NULL;
-        }
+    uint32_t t_msec;
+
+    if (isnan(t) || t < 0) {
+        return NULL;
     }
-    return result;
+
+    if (t > UINT32_MAX / 1000) {
+        t_msec = UINT32_MAX;
+    } else {
+        t_msec = t * 1000;
+    }
+
+    return sb_i_event_list_player_get_next_event_not_later_than_msec(player, t_msec);
 }
 
 void sb_event_list_player_rewind(sb_event_list_player_t* player)
@@ -632,26 +639,44 @@ void sb_event_list_player_rewind(sb_event_list_player_t* player)
 
 void sb_event_list_player_seek(sb_event_list_player_t* player, float t)
 {
-    if (!isfinite(t) || t <= 0) {
-        player->current_index = 0;
-        return;
-    }
-
-    if (t > UINT32_MAX / 1000) {
-        player->current_index = player->events->num_entries;
-        return;
-    }
-
-    uint32_t t_msec = t * 1000;
+    uint32_t t_msec;
 
     player->current_index = 0;
-
-    /* TODO(ntamas): use binary search if this becomes a bottleneck */
-    while (player->current_index < player->events->num_entries) {
-        const sb_event_t* event = sb_event_list_get_ptr_const(player->events, player->current_index);
-        if (event->time_msec >= t_msec) {
-            break;
+    if (!isnan(t) && t > 0) {
+        if (t > UINT32_MAX / 1000) {
+            t_msec = UINT32_MAX;
+        } else {
+            t_msec = t * 1000;
         }
-        player->current_index++;
+        while (sb_i_event_list_player_get_next_event_earlier_than_msec(player, t_msec))
+            ;
     }
+}
+
+/* ************************************************************************** */
+
+static const sb_event_t* sb_i_event_list_player_get_next_event_earlier_than_msec(sb_event_list_player_t* player, uint32_t t_msec)
+{
+    const sb_event_t* result = sb_event_list_player_peek_next_event(player);
+    if (result != NULL) {
+        if (result->time_msec < t_msec) {
+            player->current_index++;
+        } else {
+            result = NULL;
+        }
+    }
+    return result;
+}
+
+static const sb_event_t* sb_i_event_list_player_get_next_event_not_later_than_msec(sb_event_list_player_t* player, uint32_t t_msec)
+{
+    const sb_event_t* result = sb_event_list_player_peek_next_event(player);
+    if (result != NULL) {
+        if (result->time_msec <= t_msec) {
+            player->current_index++;
+        } else {
+            result = NULL;
+        }
+    }
+    return result;
 }

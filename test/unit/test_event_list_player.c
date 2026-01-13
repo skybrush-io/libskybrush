@@ -103,6 +103,15 @@ void test_iteration_by_time(void)
 {
     const sb_event_t* event = NULL;
 
+    event = sb_event_list_player_get_next_event_not_later_than(&player, NAN);
+    TEST_ASSERT_NULL(event);
+
+    event = sb_event_list_player_get_next_event_not_later_than(&player, -INFINITY);
+    TEST_ASSERT_NULL(event);
+
+    event = sb_event_list_player_get_next_event_not_later_than(&player, -20);
+    TEST_ASSERT_NULL(event);
+
     event = sb_event_list_player_get_next_event_not_later_than(&player, 60);
     TEST_ASSERT_NOT_NULL(event);
     TEST_ASSERT_EQUAL(10000, event->time_msec);
@@ -147,6 +156,9 @@ void test_iteration_by_time(void)
     TEST_ASSERT_NULL(event);
 
     event = sb_event_list_player_get_next_event_not_later_than(&player, 100);
+    TEST_ASSERT_NULL(event);
+
+    event = sb_event_list_player_get_next_event_not_later_than(&player, INFINITY);
     TEST_ASSERT_NULL(event);
 }
 
