@@ -125,6 +125,12 @@ typedef struct sb_show_controller_s {
 
     /** The control output of the show controller */
     sb_control_output_t output;
+
+    /**
+     * The timestamp to which the calculated control output belongs; \c UINT32_MAX
+     * if the control output is not valid.
+     */
+    uint32_t output_time_msec;
 } sb_show_controller_t;
 
 sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* screenplay);
@@ -135,6 +141,9 @@ sb_screenplay_chapter_t* sb_show_controller_get_current_chapter(
 const sb_control_output_t* sb_show_controller_get_current_output(
     const sb_show_controller_t* controller);
 sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* controller, uint32_t time_msec);
+const sb_event_t* sb_event_list_player_get_next_event(sb_event_list_player_t* player);
+
+void sb_show_controller_invalidate_output(sb_show_controller_t* controller);
 
 __END_DECLS
 

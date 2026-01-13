@@ -262,6 +262,7 @@ sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* 
     sb_control_output_set_yaw_rate(&ctrl->default_output, 0.0f);
 
     ctrl->output = ctrl->default_output;
+    ctrl->output_time_msec = UINT32_MAX;
 
     return SB_SUCCESS;
 }
@@ -276,6 +277,7 @@ void sb_show_controller_destroy(sb_show_controller_t* ctrl)
     sb_i_show_controller_set_current_chapter(ctrl, NULL);
     sb_control_output_clear(&ctrl->output);
     memset(ctrl, 0, sizeof(sb_show_controller_t));
+    ctrl->output_time_msec = UINT32_MAX;
 }
 
 /**
@@ -324,7 +326,10 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     float warped_rate;
     float yaw;
 
-    // TODO(ntamas): handle the case when time_msec is the same as before -> no need to re-evaluate
+    if (time_msec == ctrl->output_time_msec) {
+        /* Output is already up to date */
+        return SB_SUCCESS;
+    }
 
     sb_control_output_clear(out);
 
@@ -381,7 +386,23 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
         }
     }
 
+    ctrl->output_time_msec = time_msec;
+
     return SB_SUCCESS;
+}
+
+/**
+ * @brief Invalidates the current control output of the show controller.
+ *
+ * This function must be called whenever the screenplay is modified in a way that may
+ * potentially invalidate the current output, e.g., when chapters are added, removed,
+ * or modified.
+ *
+ * @param controller  pointer to the show controller to modify
+ */
+void sb_show_controller_invalidate_output(sb_show_controller_t* controller)
+{
+    controller->output_time_msec = UINT32_MAX;
 }
 
 static sb_error_t sb_i_show_controller_set_current_chapter(

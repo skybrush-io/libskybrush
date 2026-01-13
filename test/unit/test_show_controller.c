@@ -622,6 +622,93 @@ void test_show_controller_get_current_chapter(void)
     sb_screenplay_destroy(&screenplay);
 }
 
+/* New unit test: smoke test invalidate cached output
+ *
+ * Steps:
+ *  - construct a show controller with a chapter loaded from fixtures/test.skyb
+ *  - query the show controller at t=5000 ms (within fixture range)
+ *  - query it again at same timestamp
+ *  - invalidate the show controller
+ *  - query it again at same timestamp
+ *
+ * We assert that update_time_msec returns success and that the controller's
+ * internal output_time_msec reflects caching/invalidation.
+ */
+void test_show_controller_invalidate_cached_output(void)
+{
+    sb_screenplay_t screenplay;
+    sb_screenplay_chapter_t* ch = NULL;
+    sb_trajectory_t* traj;
+    sb_light_program_t* prog;
+    sb_show_controller_t ctrl;
+    const sb_control_output_t* out;
+    sb_error_t err;
+    FILE* fp;
+
+    /* Initialize screenplay and single chapter */
+    err = sb_screenplay_init(&screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch));
+    TEST_ASSERT_NOT_NULL(ch);
+
+    /* Load trajectory and light program from fixture */
+    fp = fopen("fixtures/test.skyb", "rb");
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
+    fclose(fp);
+
+    fp = fopen("fixtures/test.skyb", "rb");
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
+    fclose(fp);
+
+    sb_screenplay_chapter_set_trajectory(ch, traj);
+    sb_screenplay_chapter_set_light_program(ch, prog);
+
+    /* Initialize controller */
+    err = sb_show_controller_init(&ctrl, &screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    /* First query at t=5000 ms */
+    err = sb_show_controller_update_time_msec(&ctrl, 5000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    out = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_NOT_NULL(out);
+    /* Expect position/velocity/lights present for this fixture */
+    TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out, SB_CONTROL_OUTPUT_POSITION));
+    TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out, SB_CONTROL_OUTPUT_VELOCITY));
+    TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out, SB_CONTROL_OUTPUT_LIGHTS));
+    /* internal cached timestamp should be 5000 */
+    TEST_ASSERT_EQUAL_UINT32(5000u, ctrl.output_time_msec);
+
+    /* Query again at the same timestamp: cache should be valid and timestamp unchanged */
+    err = sb_show_controller_update_time_msec(&ctrl, 5000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL_UINT32(5000u, ctrl.output_time_msec);
+
+    /* Invalidate cached output */
+    sb_show_controller_invalidate_output(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, ctrl.output_time_msec);
+
+    /* Query again after invalidation: controller should recompute and set timestamp */
+    err = sb_show_controller_update_time_msec(&ctrl, 5000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL_UINT32(5000u, ctrl.output_time_msec);
+    out = sb_show_controller_get_current_output(&ctrl);
+    TEST_ASSERT_NOT_NULL(out);
+    TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out, SB_CONTROL_OUTPUT_POSITION));
+    TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out, SB_CONTROL_OUTPUT_VELOCITY));
+    TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out, SB_CONTROL_OUTPUT_LIGHTS));
+
+    /* Cleanup */
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
+    SB_DECREF(traj);
+    SB_DECREF(prog);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -634,6 +721,7 @@ int main(void)
     RUN_TEST(test_show_controller_play_fixture_time_axis_2x);
     RUN_TEST(test_show_controller_forward_left_back_slowdown);
     RUN_TEST(test_show_controller_play_fixture_with_yaw_control);
+    RUN_TEST(test_show_controller_invalidate_cached_output);
     RUN_TEST(test_show_controller_get_current_chapter);
 
     return UNITY_END();
