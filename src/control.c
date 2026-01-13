@@ -17,16 +17,10 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "skybrush/basic_types.h"
-#include "skybrush/colors.h"
-#include "skybrush/error.h"
-#include "skybrush/events.h"
-#include "skybrush/screenplay.h"
-#include "skybrush/trajectory.h"
 #include <math.h>
 #include <skybrush/control.h>
+#include <skybrush/error.h>
 #include <skybrush/memory.h>
-#include <stddef.h>
 #include <string.h>
 
 /**

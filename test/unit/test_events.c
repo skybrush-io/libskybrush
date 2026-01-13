@@ -19,8 +19,8 @@
 
 #include <skybrush/events.h>
 #include <skybrush/formats/binary.h>
+#include <skybrush/refcount.h>
 
-#include "skybrush/refcount.h"
 #include "unity.h"
 
 sb_event_list_t* events;

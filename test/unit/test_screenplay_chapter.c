@@ -17,8 +17,6 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "skybrush/refcount.h"
-#include "unity.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,6 +24,8 @@
 
 #include <skybrush/screenplay.h>
 #include <skybrush/time_axis.h>
+
+#include "unity.h"
 
 void setUp(void)
 {

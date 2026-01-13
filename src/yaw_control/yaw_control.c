@@ -29,12 +29,10 @@
 
 #include <skybrush/formats/binary.h>
 #include <skybrush/memory.h>
-#include <skybrush/refcount.h>
 #include <skybrush/utils.h>
 #include <skybrush/yaw_control.h>
 
 #include "../parsing.h"
-#include "skybrush/buffer.h"
 
 #define SIZE_OF_DELTA (sizeof(uint16_t) + sizeof(int16_t))
 #define OFFSET_OF_DELTA(index) (ctrl->header_length + (index) * SIZE_OF_DELTA)

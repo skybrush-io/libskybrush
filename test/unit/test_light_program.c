@@ -19,8 +19,8 @@
 
 #include <skybrush/formats/binary.h>
 #include <skybrush/lights.h>
+#include <skybrush/refcount.h>
 
-#include "skybrush/refcount.h"
 #include "unity.h"
 #include "utils.h"
 

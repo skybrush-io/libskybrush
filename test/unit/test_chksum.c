@@ -18,9 +18,9 @@
  */
 
 #include <skybrush/formats/binary.h>
+#include <skybrush/refcount.h>
 #include <skybrush/trajectory.h>
 
-#include "skybrush/refcount.h"
 #include "unity.h"
 
 sb_trajectory_t* trajectory;

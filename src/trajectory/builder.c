@@ -21,12 +21,12 @@
 #include <math.h>
 #include <string.h>
 
+#include <skybrush/buffer.h>
 #include <skybrush/trajectory.h>
 #include <skybrush/utils.h>
 
 #include "../parsing.h"
 #include "./builder.h"
-#include "skybrush/buffer.h"
 
 #define HEADER_LENGTH 9
 #define MAX_DURATION_MSEC 60000

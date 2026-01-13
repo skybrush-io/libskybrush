@@ -17,11 +17,11 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <skybrush/error.h>
 #include <skybrush/formats/binary.h>
+#include <skybrush/refcount.h>
 #include <skybrush/yaw_control.h>
 
-#include "skybrush/error.h"
-#include "skybrush/refcount.h"
 #include "unity.h"
 
 sb_yaw_control_t* ctrl;

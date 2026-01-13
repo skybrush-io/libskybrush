@@ -29,7 +29,6 @@
 #include <string.h>
 
 #include "../parsing.h"
-#include "skybrush/refcount.h"
 
 static int sb_i_event_cmp_timestamps(const void* first, const void* second);
 

@@ -17,8 +17,8 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "skybrush/error.h"
 #include <math.h>
+#include <skybrush/error.h>
 #include <skybrush/refcount.h>
 #include <skybrush/screenplay.h>
 #include <skybrush/time_axis.h>

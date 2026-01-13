@@ -24,10 +24,10 @@
 #include <skybrush/formats/binary.h>
 #include <skybrush/lights.h>
 #include <skybrush/memory.h>
+#include <skybrush/refcount.h>
 
 #include "bytecode_array.hpp"
 #include "bytecode_player.h"
-#include "skybrush/refcount.h"
 
 static void sb_i_light_program_destroy(sb_light_program_t* program);
 static sb_error_t sb_i_light_program_update_from_bytes(sb_light_program_t* program, uint8_t* buf, size_t nbytes, sb_bool_t owned);

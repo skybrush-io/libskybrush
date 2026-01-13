@@ -18,10 +18,10 @@
  */
 
 #include <skybrush/formats/binary.h>
+#include <skybrush/refcount.h>
 #include <skybrush/rth_plan.h>
+#include <skybrush/trajectory.h>
 
-#include "skybrush/refcount.h"
-#include "skybrush/trajectory.h"
 #include "unity.h"
 
 sb_rth_plan_t plan;

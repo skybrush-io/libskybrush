@@ -20,11 +20,10 @@
 #ifndef SKYBRUSH_YAW_CONTROL_H
 #define SKYBRUSH_YAW_CONTROL_H
 
-#include "skybrush/refcount.h"
 #include <skybrush/buffer.h>
-
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
+#include <skybrush/refcount.h>
 
 __BEGIN_DECLS
 
