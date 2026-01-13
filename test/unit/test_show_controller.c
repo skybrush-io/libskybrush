@@ -163,12 +163,9 @@ void test_show_controller_chapter_transition_switches_players(void)
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj_loaded = sb_trajectory_new());
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj_loaded, fileno(fp)));
-    fclose(fp);
-
-    fp = fopen("fixtures/test.skyb", "rb");
-    TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj_loaded, fileno(fp)));
+    rewind(fp);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
 
@@ -240,10 +237,7 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
-    fclose(fp);
-
-    fp = fopen("fixtures/test.skyb", "rb");
-    TEST_ASSERT_NOT_NULL(fp);
+    rewind(fp);
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
@@ -320,10 +314,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
-    fclose(fp);
-
-    fp = fopen("fixtures/test.skyb", "rb");
-    TEST_ASSERT_NOT_NULL(fp);
+    rewind(fp);
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
@@ -387,7 +378,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     SB_DECREF(prog);
 }
 
-/* New test: forward_left_back fixture played with a time axis that runs at real-time
+/* forward_left_back fixture played with a time axis that runs at real-time
  * for 25 seconds and then slows down linearly to a standstill over the next 5 seconds.
  *
  * We verify positions and velocities at representative wall-clock times before and
@@ -418,10 +409,7 @@ void test_show_controller_forward_left_back_slowdown(void)
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
-    fclose(fp);
-
-    fp = fopen("fixtures/forward_left_back.skyb", "rb");
-    TEST_ASSERT_NOT_NULL(fp);
+    rewind(fp);
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
@@ -573,7 +561,6 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     SB_DECREF(yaw);
 }
 
-/* New unit test: verify sb_show_controller_get_current_chapter() behaviour */
 void test_show_controller_get_current_chapter(void)
 {
     sb_show_controller_t ctrl;
@@ -622,9 +609,7 @@ void test_show_controller_get_current_chapter(void)
     sb_screenplay_destroy(&screenplay);
 }
 
-/* New unit test: smoke test invalidate cached output
- *
- * Steps:
+/* Steps:
  *  - construct a show controller with a chapter loaded from fixtures/test.skyb
  *  - query the show controller at t=5000 ms (within fixture range)
  *  - query it again at same timestamp
@@ -656,10 +641,7 @@ void test_show_controller_invalidate_cached_output(void)
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
-    fclose(fp);
-
-    fp = fopen("fixtures/test.skyb", "rb");
-    TEST_ASSERT_NOT_NULL(fp);
+    rewind(fp);
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
