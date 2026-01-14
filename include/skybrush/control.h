@@ -131,6 +131,12 @@ typedef struct sb_show_controller_s {
      * if the control output is not valid.
      */
     uint32_t output_time_msec;
+
+    /**
+     * The warped time in seconds corresponding to the current output; only valid
+     * if \c output_time_msec is valid.
+     */
+    float output_warped_time_sec;
 } sb_show_controller_t;
 
 sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* screenplay);
@@ -141,7 +147,7 @@ sb_screenplay_chapter_t* sb_show_controller_get_current_chapter(
 const sb_control_output_t* sb_show_controller_get_current_output(
     const sb_show_controller_t* controller);
 sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* controller, uint32_t time_msec);
-const sb_event_t* sb_event_list_player_get_next_event(sb_event_list_player_t* player);
+const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl);
 
 void sb_show_controller_invalidate_output(sb_show_controller_t* controller);
 

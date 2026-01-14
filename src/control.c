@@ -283,7 +283,7 @@ void sb_show_controller_destroy(sb_show_controller_t* ctrl)
 /**
  * @brief Returns the current chapter of the show controller.
  *
- * @param controller  pointer to the show controller to query
+ * @param ctrl  pointer to the show controller to query
  * @return pointer to the current chapter
  */
 sb_screenplay_chapter_t* sb_show_controller_get_current_chapter(const sb_show_controller_t* ctrl)
@@ -294,7 +294,7 @@ sb_screenplay_chapter_t* sb_show_controller_get_current_chapter(const sb_show_co
 /**
  * @brief Returns the current control output of the show controller.
  *
- * @param controller  pointer to the show controller to query
+ * @param ctrl  pointer to the show controller to query
  * @return pointer to the current control output
  */
 const sb_control_output_t* sb_show_controller_get_current_output(const sb_show_controller_t* ctrl)
@@ -308,11 +308,9 @@ const sb_control_output_t* sb_show_controller_get_current_output(const sb_show_c
  * When the specified time is out of bounds, we return a control output that commands
  * zero velocity and zero yaw rate, with no position, yaw, or light commands.
  *
- * @param screenplay        the screenplay to query
- * @param time_msec         the time in milliseconds from the start of the screenplay
- * @param out_control_output  pointer to a variable that will be set to the control output
- *                            at the specified time
- * @return \c SB_SUCCESS if the control output was retrieved successfully,
+ * @param ctrl       pointer to the show controller to update
+ * @param time_msec  the time in milliseconds from the start of the screenplay
+ * @return \c SB_SUCCESS if the control output was updated successfully,
  *         \c SB_EINVAL if the time is out of bounds
  */
 sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint32_t time_msec)
@@ -338,8 +336,13 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
 
     /* time_msec is now the wall clock time within the current chapter */
 
+    /* invalidate the cached output_time_msec and warped_output_time_sec fields in
+     * case we bail out with an error below */
+    sb_show_controller_invalidate_output(ctrl);
+
     if (chapter == NULL) {
         /* Time is out of bounds */
+        warped_time_sec = 0.0f;
         *out = ctrl->default_output;
     } else {
         /* Update control output from trajectory if available */
@@ -386,9 +389,30 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
         }
     }
 
+    /* Output calculated successfully; we can now update the timestamp */
     ctrl->output_time_msec = time_msec;
+    ctrl->output_warped_time_sec = warped_time_sec;
 
     return SB_SUCCESS;
+}
+
+/**
+ * @brief Returns the next event from the show up to and including the current time.
+ *
+ * This function must be called in a loop until it returns \c NULL to retrieve all events
+ * that are due at the current time.
+ *
+ * @param ctrl  pointer to the show controller to query
+ * @return pointer to the next event, or \c NULL if there are no more events
+ */
+const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl)
+{
+    if (ctrl->event_list_player) {
+        return sb_event_list_player_get_next_event_not_later_than(
+            ctrl->event_list_player, ctrl->output_warped_time_sec);
+    } else {
+        return NULL;
+    }
 }
 
 /**
@@ -400,9 +424,10 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
  *
  * @param controller  pointer to the show controller to modify
  */
-void sb_show_controller_invalidate_output(sb_show_controller_t* controller)
+void sb_show_controller_invalidate_output(sb_show_controller_t* ctrl)
 {
-    controller->output_time_msec = UINT32_MAX;
+    ctrl->output_time_msec = UINT32_MAX;
+    ctrl->output_warped_time_sec = 0.0f;
 }
 
 static sb_error_t sb_i_show_controller_set_current_chapter(
