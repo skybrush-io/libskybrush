@@ -261,8 +261,7 @@ sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* 
     sb_control_output_set_velocity(&ctrl->default_output, zero);
     sb_control_output_set_yaw_rate(&ctrl->default_output, 0.0f);
 
-    ctrl->output = ctrl->default_output;
-    ctrl->output_time_msec = UINT32_MAX;
+    sb_show_controller_invalidate_output(ctrl);
 
     return SB_SUCCESS;
 }
@@ -324,7 +323,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     float warped_rate;
     float yaw;
 
-    if (time_msec == ctrl->output_time_msec) {
+    if (ctrl->output_time_msec != UINT32_MAX && time_msec == ctrl->output_time_msec) {
         /* Output is already up to date */
         return SB_SUCCESS;
     }
@@ -426,6 +425,7 @@ const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl)
  */
 void sb_show_controller_invalidate_output(sb_show_controller_t* ctrl)
 {
+    ctrl->output = ctrl->default_output;
     ctrl->output_time_msec = UINT32_MAX;
     ctrl->output_warped_time_sec = 0.0f;
 }
