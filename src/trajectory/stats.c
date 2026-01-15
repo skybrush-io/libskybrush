@@ -351,8 +351,12 @@ cleanup:
  *
  * A trajectory segment is considered to descend vertically if the distance between
  * the start and the end point of the segment along the X and Y axes are both
- * less than the given threshold, and the Z coordinate of the end point is less
- * than the Z coordinate of the start point.
+ * less than the given threshold, the Z coordinate of the end point is not more
+ * than the Z coordinate of the start point, and the segment moves "more" vertically
+ * than horizontally.
+ *
+ * The last condition is required to avoid classifying horizontal segments (where start.z == end.z)
+ * as vertical when the horizontal movement is small enough to fall below the threshold.
  *
  * \param segment    the trajectory segment to check
  * \param threshold  the distance threshold
@@ -360,11 +364,17 @@ cleanup:
 static sb_bool_t sb_i_is_segment_descending_vertically(
     const sb_trajectory_segment_t* segment, float threshold)
 {
-    return (
-        /* clang-format off */
-        fabsf(segment->start.x - segment->end.x) <= threshold &&
-        fabsf(segment->start.y - segment->end.y) <= threshold &&
-        segment->start.z >= segment->end.z
-        /* clang-format on */
-    );
+    float startZ = segment->start.z;
+    float endZ = segment->end.z;
+    float dx, dy, dz;
+
+    if (startZ < endZ) {
+        return 0;
+    }
+
+    dx = fabsf(segment->start.x - segment->end.x);
+    dy = fabsf(segment->start.y - segment->end.y);
+    dz = startZ - endZ; /* Note: dz is positive or zero here */
+
+    return dx <= threshold && dy <= threshold && dz >= dx && dz >= dy;
 }
