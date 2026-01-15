@@ -220,14 +220,19 @@ sb_error_t sb_screenplay_remove_last_chapter(sb_screenplay_t* screenplay)
 sb_error_t sb_screenplay_update_from_binary_file_in_memory(sb_screenplay_t* screenplay, uint8_t* show_data, size_t length)
 {
     sb_screenplay_chapter_t* chapter = NULL;
+    sb_error_t retval = SB_SUCCESS;
 
     sb_screenplay_clear(screenplay);
     if (show_data && length > 0) {
         SB_CHECK(sb_screenplay_append_new_chapter(screenplay, &chapter));
-        SB_CHECK(sb_screenplay_chapter_update_from_binary_file_in_memory(chapter, show_data, length));
+
+        retval = sb_screenplay_chapter_update_from_binary_file_in_memory(chapter, show_data, length);
+        if (retval != SB_SUCCESS) {
+            sb_screenplay_clear(screenplay);
+        }
     }
 
-    return SB_SUCCESS;
+    return retval;
 }
 
 /* ************************************************************************** */
