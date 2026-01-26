@@ -38,15 +38,15 @@ void test_screenplay_init_sets_defaults_and_allocates(void)
     /* Initialize the screenplay */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
-    /* chapters storage must be allocated */
-    TEST_ASSERT_NOT_NULL(screenplay.chapters);
+    /* scenes storage must be allocated */
+    TEST_ASSERT_NOT_NULL(screenplay.scenes);
 
     /* size must be zero, capacity at least 1 */
     TEST_ASSERT_EQUAL(0u, sb_screenplay_size(&screenplay));
     TEST_ASSERT_TRUE(sb_screenplay_capacity(&screenplay) >= 1u);
 
-    /* getting chapter pointer must return NULL for empty screenplay */
-    TEST_ASSERT_NULL(sb_screenplay_get_chapter_ptr(&screenplay, 0));
+    /* getting scene pointer must return NULL for empty screenplay */
+    TEST_ASSERT_NULL(sb_screenplay_get_scene_ptr(&screenplay, 0));
 
     /* Clean up */
     sb_screenplay_destroy(&screenplay);
@@ -55,175 +55,175 @@ void test_screenplay_init_sets_defaults_and_allocates(void)
     TEST_ASSERT_EQUAL(0u, sb_screenplay_size(&screenplay));
     TEST_ASSERT_EQUAL(0u, sb_screenplay_capacity(&screenplay));
 
-    /* get chapter should still return NULL (num_chapters is zero) */
-    TEST_ASSERT_NULL(sb_screenplay_get_chapter_ptr(&screenplay, 0));
+    /* get scene should still return NULL (num_scenes is zero) */
+    TEST_ASSERT_NULL(sb_screenplay_get_scene_ptr(&screenplay, 0));
 }
 
-void test_sb_screenplay_get_chapter_ptr_at_time_msec_empty(void)
+void test_sb_screenplay_get_scene_ptr_at_time_msec_empty(void)
 {
     sb_screenplay_t screenplay;
     sb_error_t err;
     uint32_t time_msec = 12345u;
-    sb_screenplay_chapter_t* ptr;
-    ssize_t chapter_index;
+    sb_screenplay_scene_t* ptr;
+    ssize_t scene_index;
 
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
     /* Empty screenplay -> must return NULL and set time_msec to 0 */
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, NULL);
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, NULL);
     TEST_ASSERT_NULL(ptr);
     TEST_ASSERT_EQUAL_UINT32(0u, time_msec);
 
-    /* Test again with chapter index */
-    chapter_index = 42;
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, &chapter_index);
+    /* Test again with scene index */
+    scene_index = 42;
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, &scene_index);
     TEST_ASSERT_NULL(ptr);
     TEST_ASSERT_EQUAL_UINT32(0u, time_msec);
-    TEST_ASSERT_EQUAL(-1, chapter_index);
+    TEST_ASSERT_EQUAL(-1, scene_index);
 
     sb_screenplay_destroy(&screenplay);
 }
 
-void test_sb_screenplay_get_chapter_ptr_at_time_msec_infinite_first(void)
+void test_sb_screenplay_get_scene_ptr_at_time_msec_infinite_first(void)
 {
     sb_screenplay_t screenplay;
     uint32_t time_msec = 5000u;
-    sb_screenplay_chapter_t* ptr;
-    ssize_t chapter_index;
+    sb_screenplay_scene_t* ptr;
+    ssize_t scene_index;
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
-    /* Append a single chapter (default is infinite duration) */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, NULL));
+    /* Append a single scene (default is infinite duration) */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, NULL));
 
-    /* Call with arbitrary time -> must return first chapter and leave time unchanged */
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, NULL);
+    /* Call with arbitrary time -> must return first scene and leave time unchanged */
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, NULL);
     TEST_ASSERT_NOT_NULL(ptr);
-    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_chapter_ptr(&screenplay, 0), ptr);
+    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_scene_ptr(&screenplay, 0), ptr);
     TEST_ASSERT_EQUAL_UINT32(5000u, time_msec);
 
-    /* Test again with chapter index */
-    chapter_index = 42;
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, &chapter_index);
+    /* Test again with scene index */
+    scene_index = 42;
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, &scene_index);
     TEST_ASSERT_NOT_NULL(ptr);
-    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_chapter_ptr(&screenplay, 0), ptr);
+    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_scene_ptr(&screenplay, 0), ptr);
     TEST_ASSERT_EQUAL_UINT32(5000u, time_msec);
-    TEST_ASSERT_EQUAL(0, chapter_index);
+    TEST_ASSERT_EQUAL(0, scene_index);
 
     sb_screenplay_destroy(&screenplay);
 }
 
-void test_sb_screenplay_get_chapter_ptr_at_time_msec_finite_offsets_and_overflow(void)
+void test_sb_screenplay_get_scene_ptr_at_time_msec_finite_offsets_and_overflow(void)
 {
     sb_screenplay_t screenplay;
     uint32_t time_msec;
-    sb_screenplay_chapter_t* ptr;
-    ssize_t chapter_index;
+    sb_screenplay_scene_t* ptr;
+    ssize_t scene_index;
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
-    /* Append three chapters and set durations: 1000, 2000, 3000 (all finite) */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
-    sb_screenplay_chapter_set_duration_msec(ptr, 1000u);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
-    sb_screenplay_chapter_set_duration_msec(ptr, 2000u);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
-    sb_screenplay_chapter_set_duration_msec(ptr, 3000u);
+    /* Append three scenes and set durations: 1000, 2000, 3000 (all finite) */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ptr));
+    sb_screenplay_scene_set_duration_msec(ptr, 1000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ptr));
+    sb_screenplay_scene_set_duration_msec(ptr, 2000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ptr));
+    sb_screenplay_scene_set_duration_msec(ptr, 3000u);
 
-    /* time within first chapter */
+    /* time within first scene */
     time_msec = 500u;
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, &chapter_index);
-    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_chapter_ptr(&screenplay, 0), ptr);
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, &scene_index);
+    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_scene_ptr(&screenplay, 0), ptr);
     TEST_ASSERT_EQUAL_UINT32(500u, time_msec);
-    TEST_ASSERT_EQUAL(0, chapter_index);
+    TEST_ASSERT_EQUAL(0, scene_index);
 
-    /* time exactly at end of first chapter and start of second */
+    /* time exactly at end of first scene and start of second */
     time_msec = 1000u;
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, &chapter_index);
-    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_chapter_ptr(&screenplay, 1), ptr);
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, &scene_index);
+    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_scene_ptr(&screenplay, 1), ptr);
     TEST_ASSERT_EQUAL_UINT32(0u, time_msec);
-    TEST_ASSERT_EQUAL(1, chapter_index);
+    TEST_ASSERT_EQUAL(1, scene_index);
 
-    /* time within second chapter (1500 -> second chapter offset 500) */
+    /* time within second scene (1500 -> second scene offset 500) */
     time_msec = 1500u;
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, &chapter_index);
-    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_chapter_ptr(&screenplay, 1), ptr);
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, &scene_index);
+    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_scene_ptr(&screenplay, 1), ptr);
     TEST_ASSERT_EQUAL_UINT32(500u, time_msec);
-    TEST_ASSERT_EQUAL(1, chapter_index);
+    TEST_ASSERT_EQUAL(1, scene_index);
 
-    /* time exactly at end of all chapters -> must return NULL and set time to 0 */
+    /* time exactly at end of all scenes -> must return NULL and set time to 0 */
     time_msec = 6000u; /* 1000 + 2000 + 3000 */
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, &chapter_index);
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, &scene_index);
     TEST_ASSERT_NULL(ptr);
     TEST_ASSERT_EQUAL_UINT32(0u, time_msec);
-    TEST_ASSERT_EQUAL(-1, chapter_index);
+    TEST_ASSERT_EQUAL(-1, scene_index);
 
     /* time beyond total duration -> NULL and time 0 */
     time_msec = 7000u;
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, &chapter_index);
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, &scene_index);
     TEST_ASSERT_NULL(ptr);
     TEST_ASSERT_EQUAL_UINT32(0u, time_msec);
-    TEST_ASSERT_EQUAL(-1, chapter_index);
+    TEST_ASSERT_EQUAL(-1, scene_index);
 
     sb_screenplay_destroy(&screenplay);
 }
 
-void test_sb_screenplay_get_chapter_ptr_at_time_msec_with_infinite_later_chapter(void)
+void test_sb_screenplay_get_scene_ptr_at_time_msec_with_infinite_later_scene(void)
 {
     sb_screenplay_t screenplay;
     uint32_t time_msec;
-    sb_screenplay_chapter_t* ptr;
-    ssize_t chapter_index;
+    sb_screenplay_scene_t* ptr;
+    ssize_t scene_index;
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
-    /* Append three chapters and set durations: 1000, 2000, infinite */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
-    sb_screenplay_chapter_set_duration_msec(ptr, 1000u);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
-    sb_screenplay_chapter_set_duration_msec(ptr, 2000u);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
-    /* chapter 2 (index 2) remains infinite by default */
+    /* Append three scenes and set durations: 1000, 2000, infinite */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ptr));
+    sb_screenplay_scene_set_duration_msec(ptr, 1000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ptr));
+    sb_screenplay_scene_set_duration_msec(ptr, 2000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ptr));
+    /* scene 2 (index 2) remains infinite by default */
 
-    /* time that falls into the infinite third chapter: 1000+2000+500 -> should return third with offset 500 */
+    /* time that falls into the infinite third scene: 1000+2000+500 -> should return third with offset 500 */
     time_msec = 3500u;
-    ptr = sb_screenplay_get_chapter_ptr_at_time_msec(&screenplay, &time_msec, &chapter_index);
-    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_chapter_ptr(&screenplay, 2), ptr);
+    ptr = sb_screenplay_get_scene_ptr_at_time_msec(&screenplay, &time_msec, &scene_index);
+    TEST_ASSERT_EQUAL_PTR(sb_screenplay_get_scene_ptr(&screenplay, 2), ptr);
     TEST_ASSERT_EQUAL_UINT32(500u, time_msec);
-    TEST_ASSERT_EQUAL(2, chapter_index);
+    TEST_ASSERT_EQUAL(2, scene_index);
 
     sb_screenplay_destroy(&screenplay);
 }
 
-/* New tests for removing the last chapter, including empty-case behavior */
-void test_sb_screenplay_remove_last_chapter(void)
+/* New tests for removing the last scene, including empty-case behavior */
+void test_sb_screenplay_remove_last_scene(void)
 {
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* ptr;
+    sb_screenplay_scene_t* ptr;
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
     /* Removing from an empty screenplay should return SB_EEMPTY and leave size 0 */
-    TEST_ASSERT_EQUAL(SB_EEMPTY, sb_screenplay_remove_last_chapter(&screenplay));
+    TEST_ASSERT_EQUAL(SB_EEMPTY, sb_screenplay_remove_last_scene(&screenplay));
     TEST_ASSERT_EQUAL(0u, sb_screenplay_size(&screenplay));
 
-    /* Append two chapters */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
+    /* Append two scenes */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ptr));
     TEST_ASSERT_EQUAL(1u, sb_screenplay_size(&screenplay));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ptr));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ptr));
     TEST_ASSERT_EQUAL(2u, sb_screenplay_size(&screenplay));
 
-    /* Remove last chapter -> success and size decrements */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_remove_last_chapter(&screenplay));
+    /* Remove last scene -> success and size decrements */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_remove_last_scene(&screenplay));
     TEST_ASSERT_EQUAL(1u, sb_screenplay_size(&screenplay));
 
-    /* Remove last chapter again -> success and size becomes zero */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_remove_last_chapter(&screenplay));
+    /* Remove last scene again -> success and size becomes zero */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_remove_last_scene(&screenplay));
     TEST_ASSERT_EQUAL(0u, sb_screenplay_size(&screenplay));
 
     /* Removing now should return SB_EEMPTY again */
-    TEST_ASSERT_EQUAL(SB_EEMPTY, sb_screenplay_remove_last_chapter(&screenplay));
+    TEST_ASSERT_EQUAL(SB_EEMPTY, sb_screenplay_remove_last_scene(&screenplay));
     TEST_ASSERT_EQUAL(0u, sb_screenplay_size(&screenplay));
 
     sb_screenplay_destroy(&screenplay);
@@ -231,12 +231,12 @@ void test_sb_screenplay_remove_last_chapter(void)
 
 /* Test updating a screenplay from a binary show file that is loaded
  * entirely in memory. The test keeps the buffer alive until the screenplay is
- * destroyed because the chapter (and its trajectory) may reference the buffer.
+ * destroyed because the scene (and its trajectory) may reference the buffer.
  */
 void test_screenplay_update_from_binary_file_in_memory(void)
 {
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* chapter;
+    sb_screenplay_scene_t* scene;
     FILE* fp;
     size_t num_bytes;
     uint8_t* buf = NULL;
@@ -266,23 +266,23 @@ void test_screenplay_update_from_binary_file_in_memory(void)
     /* update screenplay from in-memory binary show */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_update_from_binary_file_in_memory(&screenplay, buf, num_bytes));
 
-    /* check chapter count */
+    /* check scene count */
     TEST_ASSERT_EQUAL(1, sb_screenplay_size(&screenplay));
 
-    chapter = sb_screenplay_get_chapter_ptr(&screenplay, 0);
-    TEST_ASSERT_NOT_NULL(chapter);
+    scene = sb_screenplay_get_scene_ptr(&screenplay, 0);
+    TEST_ASSERT_NOT_NULL(scene);
 
     /* trajectory, light program and yaw control data must be loaded */
-    TEST_ASSERT_NOT_NULL(sb_screenplay_chapter_get_trajectory(chapter));
-    TEST_ASSERT_NOT_NULL(sb_screenplay_chapter_get_light_program(chapter));
-    TEST_ASSERT_NOT_NULL(sb_screenplay_chapter_get_yaw_control(chapter));
+    TEST_ASSERT_NOT_NULL(sb_screenplay_scene_get_trajectory(scene));
+    TEST_ASSERT_NOT_NULL(sb_screenplay_scene_get_light_program(scene));
+    TEST_ASSERT_NOT_NULL(sb_screenplay_scene_get_yaw_control(scene));
 
-    /* no events in file so no event list must be associated to the chapter */
-    TEST_ASSERT_NULL(sb_screenplay_chapter_get_events(chapter));
+    /* no events in file so no event list must be associated to the scene */
+    TEST_ASSERT_NULL(sb_screenplay_scene_get_events(scene));
 
     /* duration must be infinite and time axis must be reset */
-    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_chapter_get_duration_msec(chapter));
-    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(sb_screenplay_chapter_get_time_axis(chapter)));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_scene_get_duration_msec(scene));
+    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(sb_screenplay_scene_get_time_axis(scene)));
 
     /* update screenplay from null data */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_update_from_binary_file_in_memory(&screenplay, 0, 0));
@@ -299,11 +299,11 @@ int main(void)
     UNITY_BEGIN();
 
     RUN_TEST(test_screenplay_init_sets_defaults_and_allocates);
-    RUN_TEST(test_sb_screenplay_get_chapter_ptr_at_time_msec_empty);
-    RUN_TEST(test_sb_screenplay_get_chapter_ptr_at_time_msec_infinite_first);
-    RUN_TEST(test_sb_screenplay_get_chapter_ptr_at_time_msec_finite_offsets_and_overflow);
-    RUN_TEST(test_sb_screenplay_get_chapter_ptr_at_time_msec_with_infinite_later_chapter);
-    RUN_TEST(test_sb_screenplay_remove_last_chapter);
+    RUN_TEST(test_sb_screenplay_get_scene_ptr_at_time_msec_empty);
+    RUN_TEST(test_sb_screenplay_get_scene_ptr_at_time_msec_infinite_first);
+    RUN_TEST(test_sb_screenplay_get_scene_ptr_at_time_msec_finite_offsets_and_overflow);
+    RUN_TEST(test_sb_screenplay_get_scene_ptr_at_time_msec_with_infinite_later_scene);
+    RUN_TEST(test_sb_screenplay_remove_last_scene);
     RUN_TEST(test_screenplay_update_from_binary_file_in_memory);
 
     return UNITY_END();

@@ -241,13 +241,13 @@ void sb_control_output_time_invalidate(sb_control_output_time_t* time)
 {
     memset(time, 0, sizeof(sb_control_output_time_t));
     time->time_msec = UINT32_MAX;
-    time->time_in_chapter_msec = UINT32_MAX;
+    time->time_in_scene_msec = UINT32_MAX;
 }
 
 /* ************************************************************************* */
 
-static sb_error_t sb_i_show_controller_set_current_chapter(
-    sb_show_controller_t* ctrl, sb_screenplay_chapter_t* chapter);
+static sb_error_t sb_i_show_controller_set_current_scene(
+    sb_show_controller_t* ctrl, sb_screenplay_scene_t* scene);
 
 /**
  * @brief Initializes a show controller with the given screenplay.
@@ -282,20 +282,20 @@ sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* 
  */
 void sb_show_controller_destroy(sb_show_controller_t* ctrl)
 {
-    sb_i_show_controller_set_current_chapter(ctrl, NULL);
+    sb_i_show_controller_set_current_scene(ctrl, NULL);
     sb_control_output_clear(&ctrl->output);
     sb_control_output_time_invalidate(&ctrl->output_time);
 }
 
 /**
- * @brief Returns the current chapter of the show controller.
+ * @brief Returns the current scene of the show controller.
  *
  * @param ctrl  pointer to the show controller to query
- * @return pointer to the current chapter
+ * @return pointer to the current scene
  */
-sb_screenplay_chapter_t* sb_show_controller_get_current_chapter(const sb_show_controller_t* ctrl)
+sb_screenplay_scene_t* sb_show_controller_get_current_scene(const sb_show_controller_t* ctrl)
 {
-    return ctrl->current_chapter;
+    return ctrl->current_scene;
 }
 
 /**
@@ -346,9 +346,9 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     sb_vector3_with_yaw_t vec_with_yaw;
     sb_vector3_t vec;
     sb_rgb_color_t color;
-    sb_screenplay_chapter_t* chapter;
+    sb_screenplay_scene_t* scene;
     sb_control_output_t* out = &ctrl->output;
-    ssize_t chapter_index;
+    ssize_t scene_index;
     uint32_t time_msec_orig;
     float warped_time_sec;
     float warped_rate;
@@ -362,22 +362,22 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     sb_control_output_clear(out);
 
     time_msec_orig = time_msec;
-    chapter = ctrl->screenplay ? sb_screenplay_get_chapter_ptr_at_time_msec(ctrl->screenplay, &time_msec, &chapter_index) : NULL;
-    sb_i_show_controller_set_current_chapter(ctrl, chapter);
+    scene = ctrl->screenplay ? sb_screenplay_get_scene_ptr_at_time_msec(ctrl->screenplay, &time_msec, &scene_index) : NULL;
+    sb_i_show_controller_set_current_scene(ctrl, scene);
 
-    /* time_in_chapter_msec is now up-to-date */
+    /* time_in_scene_msec is now up-to-date */
 
     /* invalidate the cached output_time_msec and warped_output_time_sec fields in
      * case we bail out with an error below */
     sb_show_controller_invalidate_output(ctrl);
 
-    if (chapter == NULL) {
+    if (scene == NULL) {
         /* Time is out of bounds */
         warped_time_sec = 0.0f;
         *out = ctrl->default_output;
     } else {
         /* Update control output from trajectory if available */
-        warped_time_sec = sb_time_axis_map_ex(&chapter->time_axis, time_msec_orig, &warped_rate);
+        warped_time_sec = sb_time_axis_map_ex(&scene->time_axis, time_msec_orig, &warped_rate);
 
         sb_control_output_clear(out);
 
@@ -422,9 +422,9 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
 
     /* Output calculated successfully; we can now update the timestamp */
     ctrl->output_time.time_msec = time_msec;
-    ctrl->output_time.chapter = chapter_index;
-    ctrl->output_time.time_in_chapter_msec = time_msec_orig;
-    ctrl->output_time.warped_time_in_chapter_sec = warped_time_sec;
+    ctrl->output_time.scene = scene_index;
+    ctrl->output_time.time_in_scene_msec = time_msec_orig;
+    ctrl->output_time.warped_time_in_scene_sec = warped_time_sec;
 
     return SB_SUCCESS;
 }
@@ -442,7 +442,7 @@ const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl)
 {
     if (ctrl->event_list_player) {
         return sb_event_list_player_get_next_event_not_later_than(
-            ctrl->event_list_player, ctrl->output_time.warped_time_in_chapter_sec);
+            ctrl->event_list_player, ctrl->output_time.warped_time_in_scene_sec);
     } else {
         return NULL;
     }
@@ -452,7 +452,7 @@ const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl)
  * @brief Invalidates the current control output of the show controller.
  *
  * This function must be called whenever the screenplay is modified in a way that may
- * potentially invalidate the current output, e.g., when chapters are added, removed,
+ * potentially invalidate the current output, e.g., when scenes are added, removed,
  * or modified.
  *
  * @param controller  pointer to the show controller to modify
@@ -463,10 +463,10 @@ void sb_show_controller_invalidate_output(sb_show_controller_t* ctrl)
     sb_control_output_time_invalidate(&ctrl->output_time);
 }
 
-static sb_error_t sb_i_show_controller_set_current_chapter(
-    sb_show_controller_t* ctrl, sb_screenplay_chapter_t* chapter)
+static sb_error_t sb_i_show_controller_set_current_scene(
+    sb_show_controller_t* ctrl, sb_screenplay_scene_t* scene)
 {
-    if (chapter == ctrl->current_chapter) {
+    if (scene == ctrl->current_scene) {
         return SB_SUCCESS;
     }
 
@@ -490,39 +490,39 @@ static sb_error_t sb_i_show_controller_set_current_chapter(
         sb_free(ctrl->event_list_player);
     }
 
-    ctrl->current_chapter = chapter;
+    ctrl->current_scene = scene;
 
-    if (chapter) {
-        if (chapter->trajectory) {
+    if (scene) {
+        if (scene->trajectory) {
             ctrl->trajectory_player = sb_calloc(sb_trajectory_player_t, 1);
             if (ctrl->trajectory_player == NULL) {
                 return SB_ENOMEM; /* LCOV_EXCL_LINE */
             }
-            SB_CHECK(sb_trajectory_player_init(ctrl->trajectory_player, chapter->trajectory));
+            SB_CHECK(sb_trajectory_player_init(ctrl->trajectory_player, scene->trajectory));
         }
 
-        if (chapter->light_program) {
+        if (scene->light_program) {
             ctrl->light_player = sb_calloc(sb_light_player_t, 1);
             if (ctrl->light_player == NULL) {
                 return SB_ENOMEM; /* LCOV_EXCL_LINE */
             }
-            SB_CHECK(sb_light_player_init(ctrl->light_player, chapter->light_program));
+            SB_CHECK(sb_light_player_init(ctrl->light_player, scene->light_program));
         }
 
-        if (chapter->yaw_control) {
+        if (scene->yaw_control) {
             ctrl->yaw_player = sb_calloc(sb_yaw_player_t, 1);
             if (ctrl->yaw_player == NULL) {
                 return SB_ENOMEM; /* LCOV_EXCL_LINE */
             }
-            SB_CHECK(sb_yaw_player_init(ctrl->yaw_player, chapter->yaw_control));
+            SB_CHECK(sb_yaw_player_init(ctrl->yaw_player, scene->yaw_control));
         }
 
-        if (chapter->events) {
+        if (scene->events) {
             ctrl->event_list_player = sb_calloc(sb_event_list_player_t, 1);
             if (ctrl->event_list_player == NULL) {
                 return SB_ENOMEM; /* LCOV_EXCL_LINE */
             }
-            SB_CHECK(sb_event_list_player_init(ctrl->event_list_player, chapter->events));
+            SB_CHECK(sb_event_list_player_init(ctrl->event_list_player, scene->events));
         }
     }
 

@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `sb_screenplay_t` and `sb_screenplay_chapter_t` to manage a complex
+- Added `sb_screenplay_t` and `sb_screenplay_scene_t` to manage a complex
   sequence of combined trajectory, light program, yaw and event list objects,
   with a varying setup of time axis objects.
 

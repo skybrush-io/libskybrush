@@ -93,19 +93,19 @@ void sb_control_output_set_yaw_rate(sb_control_output_t* output, float yaw_rate)
  * Structure holding information about the \em time that a control output belongs to.
  *
  * The structure contains the original input time in milliseconds in wall clock time,
- * the chapter index, the time in milliseconds in wall clock time \em "within the chapter",
- * and the warped time in seconds within the chapter.
+ * the scene index, the time in milliseconds in wall clock time \em "within the scene",
+ * and the warped time in seconds within the scene.
  *
- * The chapter index will be -1 if the time is out of bounds (after the end
- * of the screenplay). In this case, both \c time_in_chapter_msec and
- * \c warped_time_in_chapter_sec will pretend that there is an infinite chapter after
+ * The scene index will be -1 if the time is out of bounds (after the end
+ * of the screenplay). In this case, both \c time_in_scene_msec and
+ * \c warped_time_in_scene_sec will pretend that there is an infinite scene after
  * the last one and these timestamps will be relative to that.
  */
 typedef struct sb_control_output_time_s {
     uint32_t time_msec;
-    ssize_t chapter;
-    uint32_t time_in_chapter_msec;
-    float warped_time_in_chapter_sec;
+    ssize_t scene;
+    uint32_t time_in_scene_msec;
+    float warped_time_in_scene_sec;
 } sb_control_output_time_t;
 
 void sb_control_output_time_invalidate(sb_control_output_time_t* ctrl);
@@ -118,26 +118,26 @@ void sb_control_output_time_invalidate(sb_control_output_time_t* ctrl);
  *
  * A show controller \em owns a trajectory player, a light program player, a yaw
  * control player, and an event player to handle the respective components of the
- * screenplay. The players are updated automatically when the current chapter in
+ * screenplay. The players are updated automatically when the current scene in
  * the screenplay changes.
  */
 typedef struct sb_show_controller_s {
     /** The screenplay being played */
     sb_screenplay_t* screenplay;
 
-    /** The current chapter of the screenplay being played */
-    sb_screenplay_chapter_t* current_chapter;
+    /** The current scene of the screenplay being played */
+    sb_screenplay_scene_t* current_scene;
 
-    /** The trajectory player; \c NULL if the current chapter has no trajectory */
+    /** The trajectory player; \c NULL if the current scene has no trajectory */
     sb_trajectory_player_t* trajectory_player;
 
-    /** The light program player; \c NULL if the current chapter has no light program */
+    /** The light program player; \c NULL if the current scene has no light program */
     sb_light_player_t* light_player;
 
-    /** The yaw control player; \c NULL if the current chapter has no yaw control track */
+    /** The yaw control player; \c NULL if the current scene has no yaw control track */
     sb_yaw_player_t* yaw_player;
 
-    /** The event list player; \c NULL if the current chapter has no events */
+    /** The event list player; \c NULL if the current scene has no events */
     sb_event_list_player_t* event_list_player;
 
     /**
@@ -156,7 +156,7 @@ typedef struct sb_show_controller_s {
 sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* screenplay);
 void sb_show_controller_destroy(sb_show_controller_t* controller);
 
-sb_screenplay_chapter_t* sb_show_controller_get_current_chapter(const sb_show_controller_t* controller);
+sb_screenplay_scene_t* sb_show_controller_get_current_scene(const sb_show_controller_t* controller);
 const sb_control_output_t* sb_show_controller_get_current_output(const sb_show_controller_t* controller);
 sb_control_output_time_t sb_show_controller_get_current_output_time(const sb_show_controller_t* controller);
 sb_bool_t sb_show_controller_is_output_valid(const sb_show_controller_t* controller);

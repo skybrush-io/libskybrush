@@ -69,9 +69,9 @@ void test_show_controller_init_sets_defaults_and_get_current_output(void)
     TEST_ASSERT_FALSE(sb_show_controller_is_output_valid(&ctrl));
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_msec);
-    TEST_ASSERT_EQUAL_UINT32(0, output_time.chapter);
-    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_in_chapter_msec);
-    TEST_ASSERT_EQUAL_FLOAT(0, output_time.warped_time_in_chapter_sec);
+    TEST_ASSERT_EQUAL_UINT32(0, output_time.scene);
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_in_scene_msec);
+    TEST_ASSERT_EQUAL_FLOAT(0, output_time.warped_time_in_scene_sec);
 
     /* Destroy should clear and zero the controller */
     sb_show_controller_destroy(&ctrl);
@@ -111,29 +111,29 @@ void test_show_controller_update_time_with_empty_screenplay_produces_no_componen
 {
     sb_show_controller_t ctrl;
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* chapter = NULL;
+    sb_screenplay_scene_t* scene = NULL;
     sb_error_t err;
 
-    /* Initialize an empty screenplay (no chapters) */
+    /* Initialize an empty screenplay (no scenes) */
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
-    /* Append a chapter but do not set trajectory/light/yaw -> chapter present but no players */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &chapter));
-    TEST_ASSERT_NOT_NULL(chapter);
+    /* Append a scene but do not set trajectory/light/yaw -> scene present but no players */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene));
+    TEST_ASSERT_NOT_NULL(scene);
 
     /* Initialize controller with this screenplay */
     err = sb_show_controller_init(&ctrl, &screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
-    /* Update time within the (first) chapter: resulting output should be cleared (no components) */
+    /* Update time within the (first) scene: resulting output should be cleared (no components) */
     err = sb_show_controller_update_time_msec(&ctrl, 0u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
     const sb_control_output_t* out = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out);
 
-    /* Because the chapter has no trajectory/light/yaw players, output must be empty */
+    /* Because the scene has no trajectory/light/yaw players, output must be empty */
     TEST_ASSERT_EQUAL_UINT8(SB_CONTROL_OUTPUT_NONE, out->mask);
 
     /* Clean up */
@@ -141,11 +141,11 @@ void test_show_controller_update_time_with_empty_screenplay_produces_no_componen
     sb_screenplay_destroy(&screenplay);
 }
 
-void test_show_controller_chapter_transition_switches_players(void)
+void test_show_controller_scene_transition_switches_players(void)
 {
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* ch0 = NULL;
-    sb_screenplay_chapter_t* ch1 = NULL;
+    sb_screenplay_scene_t* ch0 = NULL;
+    sb_screenplay_scene_t* ch1 = NULL;
     sb_trajectory_t* traj_empty;
     sb_trajectory_t* traj_loaded;
     sb_light_program_t* prog;
@@ -153,22 +153,22 @@ void test_show_controller_chapter_transition_switches_players(void)
     sb_error_t err;
     FILE* fp;
 
-    /* Initialize screenplay and two chapters */
+    /* Initialize screenplay and two scenes */
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch0));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch1));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch1));
     TEST_ASSERT_NOT_NULL(ch0);
     TEST_ASSERT_NOT_NULL(ch1);
 
-    /* Prepare an empty trajectory for chapter 0 (no outputs expected) */
+    /* Prepare an empty trajectory for scene 0 (no outputs expected) */
     TEST_ASSERT_NOT_NULL(traj_empty = sb_trajectory_new());
-    sb_screenplay_chapter_set_trajectory(ch0, traj_empty);
-    /* finite duration 1000 ms for first chapter */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_set_duration_msec(ch0, 1000u));
+    sb_screenplay_scene_set_trajectory(ch0, traj_empty);
+    /* finite duration 1000 ms for first scene */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_msec(ch0, 1000u));
 
-    /* For chapter 1 load real trajectory and light program from fixture */
+    /* For scene 1 load real trajectory and light program from fixture */
     fp = fopen("fixtures/test.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj_loaded = sb_trajectory_new());
@@ -178,36 +178,36 @@ void test_show_controller_chapter_transition_switches_players(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
 
-    sb_screenplay_chapter_set_trajectory(ch1, traj_loaded);
-    sb_screenplay_chapter_set_light_program(ch1, prog);
+    sb_screenplay_scene_set_trajectory(ch1, traj_loaded);
+    sb_screenplay_scene_set_light_program(ch1, prog);
 
     /* Initialize controller with this screenplay */
     err = sb_show_controller_init(&ctrl, &screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
-    /* Update time within first chapter (500 ms) -> should select chapter 0 */
+    /* Update time within first scene (500 ms) -> should select scene 0 */
     err = sb_show_controller_update_time_msec(&ctrl, 500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL_PTR(ch0, ctrl.current_chapter);
+    TEST_ASSERT_EQUAL_PTR(ch0, ctrl.current_scene);
 
     const sb_control_output_t* out0 = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out0);
-    /* chapter 0 has an empty trajectory and no light -> output should have position
+    /* scene 0 has an empty trajectory and no light -> output should have position
      * and velocity outputs with zero vectors, but no lights
      */
     TEST_ASSERT_EQUAL_UINT8(SB_CONTROL_OUTPUT_POSITION | SB_CONTROL_OUTPUT_VELOCITY, out0->mask);
     TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 0.0f, out0->position);
     TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 0.0f, out0->velocity);
 
-    /* Update time that falls into second chapter (1500 ms -> 500 ms into chapter 1) */
+    /* Update time that falls into second scene (1500 ms -> 500 ms into scene 1) */
     err = sb_show_controller_update_time_msec(&ctrl, 1500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL_PTR(ch1, ctrl.current_chapter);
+    TEST_ASSERT_EQUAL_PTR(ch1, ctrl.current_scene);
 
     const sb_control_output_t* out1 = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out1);
 
-    /* chapter 1 has a trajectory and a light program -> expect position/velocity/lights */
+    /* scene 1 has a trajectory and a light program -> expect position/velocity/lights */
     TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out1, SB_CONTROL_OUTPUT_POSITION));
     TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out1, SB_CONTROL_OUTPUT_VELOCITY));
     TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out1, SB_CONTROL_OUTPUT_LIGHTS));
@@ -221,10 +221,10 @@ void test_show_controller_chapter_transition_switches_players(void)
     SB_DECREF(prog);
 }
 
-void test_show_controller_play_fixture_single_chapter(void)
+void test_show_controller_play_fixture_single_scene(void)
 {
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* ch = NULL;
+    sb_screenplay_scene_t* ch = NULL;
     sb_trajectory_t* traj;
     sb_light_program_t* prog;
     sb_show_controller_t ctrl;
@@ -236,10 +236,10 @@ void test_show_controller_play_fixture_single_chapter(void)
     sb_error_t err;
     FILE* fp;
 
-    /* Initialize screenplay and single chapter */
+    /* Initialize screenplay and single scene */
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch));
     TEST_ASSERT_NOT_NULL(ch);
 
     /* Load trajectory and light program from fixture */
@@ -252,8 +252,8 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
 
-    sb_screenplay_chapter_set_trajectory(ch, traj);
-    sb_screenplay_chapter_set_light_program(ch, prog);
+    sb_screenplay_scene_set_trajectory(ch, traj);
+    sb_screenplay_scene_set_light_program(ch, prog);
 
     /* Initialize controller */
     err = sb_show_controller_init(&ctrl, &screenplay);
@@ -274,9 +274,9 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(0u, output_time.time_msec);
-    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter);
-    TEST_ASSERT_EQUAL_UINT32(0u, output_time.time_in_chapter_msec);
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, output_time.warped_time_in_chapter_sec);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.scene);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.time_in_scene_msec);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, output_time.warped_time_in_scene_sec);
 
     /* Query at t=5000 ms (5s) -> expect position {0,0,5000}, velocity {0,0,1000}, color {255,127,127} */
     err = sb_show_controller_update_time_msec(&ctrl, 5000u);
@@ -293,9 +293,9 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_msec);
-    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter);
-    TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_in_chapter_msec);
-    TEST_ASSERT_EQUAL_FLOAT(5.0f, output_time.warped_time_in_chapter_sec);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.scene);
+    TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_in_scene_msec);
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, output_time.warped_time_in_scene_sec);
 
     /* Query at t=15000 ms (15s) -> expect position {5000,0,10000}, velocity {1000,0,0}, color {255,0,0} */
     err = sb_show_controller_update_time_msec(&ctrl, 15000u);
@@ -312,9 +312,9 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(15000u, output_time.time_msec);
-    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter);
-    TEST_ASSERT_EQUAL_UINT32(15000u, output_time.time_in_chapter_msec);
-    TEST_ASSERT_EQUAL_FLOAT(15.0f, output_time.warped_time_in_chapter_sec);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.scene);
+    TEST_ASSERT_EQUAL_UINT32(15000u, output_time.time_in_scene_msec);
+    TEST_ASSERT_EQUAL_FLOAT(15.0f, output_time.warped_time_in_scene_sec);
 
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
@@ -326,7 +326,7 @@ void test_show_controller_play_fixture_single_chapter(void)
 void test_show_controller_play_fixture_time_axis_2x(void)
 {
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* ch = NULL;
+    sb_screenplay_scene_t* ch = NULL;
     sb_trajectory_t* traj;
     sb_light_program_t* prog;
     sb_show_controller_t ctrl;
@@ -337,10 +337,10 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     sb_error_t err;
     FILE* fp;
 
-    /* Initialize screenplay and single chapter */
+    /* Initialize screenplay and single scene */
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch));
     TEST_ASSERT_NOT_NULL(ch);
 
     /* Load trajectory and light program from fixture */
@@ -353,13 +353,13 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
 
-    sb_screenplay_chapter_set_trajectory(ch, traj);
-    sb_screenplay_chapter_set_light_program(ch, prog);
+    sb_screenplay_scene_set_trajectory(ch, traj);
+    sb_screenplay_scene_set_light_program(ch, prog);
 
-    /* Alter the chapter time axis to run at 2x real-time for the duration of the
+    /* Alter the scene time axis to run at 2x real-time for the duration of the
      * fixture so warped_time = 2 * wall_clock_time.
      */
-    sb_time_axis_t* axis = sb_screenplay_chapter_get_time_axis(ch);
+    sb_time_axis_t* axis = sb_screenplay_scene_get_time_axis(ch);
     sb_time_segment_t seg = sb_time_segment_make_constant_rate(60000, 2.0f);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, seg));
 
@@ -422,7 +422,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
 void test_show_controller_forward_left_back_slowdown(void)
 {
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* ch = NULL;
+    sb_screenplay_scene_t* ch = NULL;
     sb_trajectory_t* traj;
     sb_light_program_t* prog;
     sb_show_controller_t ctrl;
@@ -432,10 +432,10 @@ void test_show_controller_forward_left_back_slowdown(void)
     sb_error_t err;
     FILE* fp;
 
-    /* Initialize screenplay and chapter */
+    /* Initialize screenplay and scene */
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch));
     TEST_ASSERT_NOT_NULL(ch);
 
     /* Load the forward_left_back fixture (trajectory + light program) */
@@ -448,11 +448,11 @@ void test_show_controller_forward_left_back_slowdown(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
 
-    sb_screenplay_chapter_set_trajectory(ch, traj);
-    sb_screenplay_chapter_set_light_program(ch, prog);
+    sb_screenplay_scene_set_trajectory(ch, traj);
+    sb_screenplay_scene_set_light_program(ch, prog);
 
     /* Set time axis: 25s at rate=1.0 (normal), then slowdown from realtime to 0 over 5s */
-    sb_time_axis_t* axis = sb_screenplay_chapter_get_time_axis(ch);
+    sb_time_axis_t* axis = sb_screenplay_scene_get_time_axis(ch);
     TEST_ASSERT_NOT_NULL(axis);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_constant_rate(25000, 1.0f)));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_slowdown_from_realtime(5000)));
@@ -509,7 +509,7 @@ void test_show_controller_forward_left_back_slowdown(void)
 }
 
 /*
- * Integration test: verify that when a chapter has a yaw control object the
+ * Integration test: verify that when a scene has a yaw control object the
  * show controller exposes yaw and yaw rate components and produces values
  * matching the yaw player (fixture: fixtures/test.skyb).
  *
@@ -519,7 +519,7 @@ void test_show_controller_forward_left_back_slowdown(void)
 void test_show_controller_play_fixture_with_yaw_control(void)
 {
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* ch = NULL;
+    sb_screenplay_scene_t* ch = NULL;
     sb_yaw_control_t* yaw;
     sb_show_controller_t ctrl;
     const sb_control_output_t* out;
@@ -528,10 +528,10 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     float yaw_val;
     float yaw_rate;
 
-    /* Initialize screenplay and single chapter */
+    /* Initialize screenplay and single scene */
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch));
     TEST_ASSERT_NOT_NULL(ch);
 
     /* Load yaw control from fixture */
@@ -541,8 +541,8 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_update_from_binary_file(yaw, fileno(fp)));
     fclose(fp);
 
-    /* Attach yaw control to chapter (no trajectory / lights needed for this test) */
-    sb_screenplay_chapter_set_yaw_control(ch, yaw);
+    /* Attach yaw control to scene (no trajectory / lights needed for this test) */
+    sb_screenplay_scene_set_yaw_control(ch, yaw);
 
     /* Initialize controller with this screenplay */
     err = sb_show_controller_init(&ctrl, &screenplay);
@@ -595,48 +595,48 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     SB_DECREF(yaw);
 }
 
-void test_show_controller_get_current_chapter(void)
+void test_show_controller_get_current_scene(void)
 {
     sb_show_controller_t ctrl;
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* ch0 = NULL;
-    sb_screenplay_chapter_t* ch1 = NULL;
+    sb_screenplay_scene_t* ch0 = NULL;
+    sb_screenplay_scene_t* ch1 = NULL;
     sb_error_t err;
 
-    /* Initialize a screenplay with two chapters */
+    /* Initialize a screenplay with two scenes */
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch0));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch1));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch1));
     TEST_ASSERT_NOT_NULL(ch0);
     TEST_ASSERT_NOT_NULL(ch1);
 
-    /* Give each chapter a finite duration of 1000 ms so the screenplay spans 0..2000 ms */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_set_duration_msec(ch0, 1000u));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_chapter_set_duration_msec(ch1, 1000u));
+    /* Give each scene a finite duration of 1000 ms so the screenplay spans 0..2000 ms */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_msec(ch0, 1000u));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_msec(ch1, 1000u));
 
     /* Initialize controller with the screenplay */
     err = sb_show_controller_init(&ctrl, &screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
-    /* Before any update, current chapter should be NULL (not yet established) */
-    TEST_ASSERT_NULL(sb_show_controller_get_current_chapter(&ctrl));
+    /* Before any update, current scene should be NULL (not yet established) */
+    TEST_ASSERT_NULL(sb_show_controller_get_current_scene(&ctrl));
 
-    /* Update time within first chapter -> get_current_chapter should return ch0 */
+    /* Update time within first scene -> get_current_scene should return ch0 */
     err = sb_show_controller_update_time_msec(&ctrl, 500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL_PTR(ch0, sb_show_controller_get_current_chapter(&ctrl));
+    TEST_ASSERT_EQUAL_PTR(ch0, sb_show_controller_get_current_scene(&ctrl));
 
-    /* Update time within second chapter -> get_current_chapter should return ch1 */
+    /* Update time within second scene -> get_current_scene should return ch1 */
     err = sb_show_controller_update_time_msec(&ctrl, 1500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL_PTR(ch1, sb_show_controller_get_current_chapter(&ctrl));
+    TEST_ASSERT_EQUAL_PTR(ch1, sb_show_controller_get_current_scene(&ctrl));
 
-    /* Update time out of bounds -> no current chapter */
+    /* Update time out of bounds -> no current scene */
     err = sb_show_controller_update_time_msec(&ctrl, 3000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_NULL(sb_show_controller_get_current_chapter(&ctrl));
+    TEST_ASSERT_NULL(sb_show_controller_get_current_scene(&ctrl));
 
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
@@ -644,7 +644,7 @@ void test_show_controller_get_current_chapter(void)
 }
 
 /* Steps:
- *  - construct a show controller with a chapter loaded from fixtures/test.skyb
+ *  - construct a show controller with a scene loaded from fixtures/test.skyb
  *  - query the show controller at t=5000 ms (within fixture range)
  *  - query it again at same timestamp
  *  - invalidate the show controller
@@ -656,7 +656,7 @@ void test_show_controller_get_current_chapter(void)
 void test_show_controller_invalidate_cached_output(void)
 {
     sb_screenplay_t screenplay;
-    sb_screenplay_chapter_t* ch = NULL;
+    sb_screenplay_scene_t* ch = NULL;
     sb_trajectory_t* traj;
     sb_light_program_t* prog;
     sb_show_controller_t ctrl;
@@ -665,10 +665,10 @@ void test_show_controller_invalidate_cached_output(void)
     sb_error_t err;
     FILE* fp;
 
-    /* Initialize screenplay and single chapter */
+    /* Initialize screenplay and single scene */
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_chapter(&screenplay, &ch));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch));
     TEST_ASSERT_NOT_NULL(ch);
 
     /* Load trajectory and light program from fixture */
@@ -681,8 +681,8 @@ void test_show_controller_invalidate_cached_output(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(prog, fileno(fp)));
     fclose(fp);
 
-    sb_screenplay_chapter_set_trajectory(ch, traj);
-    sb_screenplay_chapter_set_light_program(ch, prog);
+    sb_screenplay_scene_set_trajectory(ch, traj);
+    sb_screenplay_scene_set_light_program(ch, prog);
 
     /* Initialize controller */
     err = sb_show_controller_init(&ctrl, &screenplay);
@@ -737,13 +737,13 @@ int main(void)
     RUN_TEST(test_show_controller_init_sets_defaults_and_get_current_output);
     RUN_TEST(test_show_controller_update_time_without_screenplay_returns_default);
     RUN_TEST(test_show_controller_update_time_with_empty_screenplay_produces_no_components);
-    RUN_TEST(test_show_controller_chapter_transition_switches_players);
-    RUN_TEST(test_show_controller_play_fixture_single_chapter);
+    RUN_TEST(test_show_controller_scene_transition_switches_players);
+    RUN_TEST(test_show_controller_play_fixture_single_scene);
     RUN_TEST(test_show_controller_play_fixture_time_axis_2x);
     RUN_TEST(test_show_controller_forward_left_back_slowdown);
     RUN_TEST(test_show_controller_play_fixture_with_yaw_control);
     RUN_TEST(test_show_controller_invalidate_cached_output);
-    RUN_TEST(test_show_controller_get_current_chapter);
+    RUN_TEST(test_show_controller_get_current_scene);
 
     return UNITY_END();
 }

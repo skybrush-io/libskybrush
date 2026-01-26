@@ -22,7 +22,7 @@ add_library(
 
     rth_plan/rth_plan.c
 
-    screenplay/chapter.c
+    screenplay/scene.c
     screenplay/screenplay.c
     screenplay/time_axis.c
 
