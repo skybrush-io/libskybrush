@@ -69,7 +69,7 @@ void test_show_controller_init_sets_defaults_and_get_current_output(void)
     TEST_ASSERT_FALSE(sb_show_controller_is_output_valid(&ctrl));
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_msec);
-    TEST_ASSERT_EQUAL_UINT32(0, output_time.chapter_index);
+    TEST_ASSERT_EQUAL_UINT32(0, output_time.chapter);
     TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_in_chapter_msec);
     TEST_ASSERT_EQUAL_FLOAT(0, output_time.warped_time_in_chapter_sec);
 
@@ -274,7 +274,7 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(0u, output_time.time_msec);
-    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter_index);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter);
     TEST_ASSERT_EQUAL_UINT32(0u, output_time.time_in_chapter_msec);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, output_time.warped_time_in_chapter_sec);
 
@@ -293,7 +293,7 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_msec);
-    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter_index);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter);
     TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_in_chapter_msec);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, output_time.warped_time_in_chapter_sec);
 
@@ -312,7 +312,7 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(15000u, output_time.time_msec);
-    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter_index);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter);
     TEST_ASSERT_EQUAL_UINT32(15000u, output_time.time_in_chapter_msec);
     TEST_ASSERT_EQUAL_FLOAT(15.0f, output_time.warped_time_in_chapter_sec);
 

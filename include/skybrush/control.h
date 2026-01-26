@@ -95,10 +95,15 @@ void sb_control_output_set_yaw_rate(sb_control_output_t* output, float yaw_rate)
  * The structure contains the original input time in milliseconds in wall clock time,
  * the chapter index, the time in milliseconds in wall clock time \em "within the chapter",
  * and the warped time in seconds within the chapter.
+ *
+ * The chapter index will be -1 if the time is out of bounds (after the end
+ * of the screenplay). In this case, both \c time_in_chapter_msec and
+ * \c warped_time_in_chapter_sec will pretend that there is an infinite chapter after
+ * the last one and these timestamps will be relative to that.
  */
 typedef struct sb_control_output_time_s {
     uint32_t time_msec;
-    size_t chapter_index;
+    ssize_t chapter;
     uint32_t time_in_chapter_msec;
     float warped_time_in_chapter_sec;
 } sb_control_output_time_t;

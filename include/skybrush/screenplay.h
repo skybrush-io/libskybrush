@@ -142,8 +142,8 @@ size_t sb_screenplay_size(const sb_screenplay_t* screenplay);
 
 sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr(
     sb_screenplay_t* screenplay, size_t index);
-sb_screenplay_chapter_t* sb_screenplay_get_current_chapter_ptr(
-    sb_screenplay_t* screenplay, uint32_t* time_msec);
+sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr_at_time_msec(
+    sb_screenplay_t* screenplay, uint32_t* time_msec, ssize_t* chapter_index);
 
 void sb_screenplay_clear(sb_screenplay_t* screenplay);
 sb_error_t sb_screenplay_append_new_chapter(

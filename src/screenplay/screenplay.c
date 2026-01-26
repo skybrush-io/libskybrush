@@ -136,23 +136,32 @@ sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr(
  *        start of the screenplay. It will be updated to contain the time offset
  *        within the returned chapter. Its value will be zero upon returning when the
  *        returned chapter is \c NULL.
+ * @param chapter_index  optional pointer to a variable that will be set to the index of the
+ *        returned chapter within the screenplay. Can be \c NULL if the index is not needed.
+ *        Will be set to -1 if no chapter is active at the given time.
  * @return a pointer to the chapter that is active at the given time, or \c NULL
  *         if no chapter is active at that time
  */
-sb_screenplay_chapter_t* sb_screenplay_get_current_chapter_ptr(
-    sb_screenplay_t* screenplay, uint32_t* time_msec)
+sb_screenplay_chapter_t* sb_screenplay_get_chapter_ptr_at_time_msec(
+    sb_screenplay_t* screenplay, uint32_t* time_msec, ssize_t* chapter_index)
 {
-    for (size_t i = 0; i < screenplay->num_chapters; i++) {
+    for (ssize_t i = 0; i < screenplay->num_chapters; i++) {
         sb_screenplay_chapter_t* chapter = &screenplay->chapters[i];
         uint32_t chapter_duration_msec = sb_screenplay_chapter_get_duration_msec(chapter);
 
         if (chapter_duration_msec == UINT32_MAX) {
             /* Infinite duration chapter -> always active */
+            if (chapter_index) {
+                *chapter_index = i;
+            }
             return chapter;
         }
 
         if (*time_msec < chapter_duration_msec) {
             /* Current chapter found */
+            if (chapter_index) {
+                *chapter_index = i;
+            }
             return chapter;
         }
 
@@ -160,6 +169,10 @@ sb_screenplay_chapter_t* sb_screenplay_get_current_chapter_ptr(
     }
 
     *time_msec = 0;
+    if (chapter_index) {
+        *chapter_index = -1;
+    }
+
     return NULL;
 }
 

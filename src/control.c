@@ -348,7 +348,8 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     sb_rgb_color_t color;
     sb_screenplay_chapter_t* chapter;
     sb_control_output_t* out = &ctrl->output;
-    uint32_t time_in_chapter_msec;
+    ssize_t chapter_index;
+    uint32_t time_msec_orig;
     float warped_time_sec;
     float warped_rate;
     float yaw;
@@ -360,8 +361,8 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
 
     sb_control_output_clear(out);
 
-    time_in_chapter_msec = time_msec;
-    chapter = ctrl->screenplay ? sb_screenplay_get_current_chapter_ptr(ctrl->screenplay, &time_in_chapter_msec) : NULL;
+    time_msec_orig = time_msec;
+    chapter = ctrl->screenplay ? sb_screenplay_get_chapter_ptr_at_time_msec(ctrl->screenplay, &time_msec, &chapter_index) : NULL;
     sb_i_show_controller_set_current_chapter(ctrl, chapter);
 
     /* time_in_chapter_msec is now up-to-date */
@@ -376,7 +377,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
         *out = ctrl->default_output;
     } else {
         /* Update control output from trajectory if available */
-        warped_time_sec = sb_time_axis_map_ex(&chapter->time_axis, time_in_chapter_msec, &warped_rate);
+        warped_time_sec = sb_time_axis_map_ex(&chapter->time_axis, time_msec_orig, &warped_rate);
 
         sb_control_output_clear(out);
 
@@ -421,8 +422,8 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
 
     /* Output calculated successfully; we can now update the timestamp */
     ctrl->output_time.time_msec = time_msec;
-    /* TODO(ntamas): chapter_index */
-    ctrl->output_time.time_in_chapter_msec = time_in_chapter_msec;
+    ctrl->output_time.chapter = chapter_index;
+    ctrl->output_time.time_in_chapter_msec = time_msec_orig;
     ctrl->output_time.warped_time_in_chapter_sec = warped_time_sec;
 
     return SB_SUCCESS;
