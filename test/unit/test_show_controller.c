@@ -41,6 +41,7 @@ void test_show_controller_init_sets_defaults_and_get_current_output(void)
 {
     sb_show_controller_t ctrl;
     sb_error_t err;
+    sb_control_output_time_t output_time;
 
     /* Initialize controller with no screenplay */
     err = sb_show_controller_init(&ctrl, NULL);
@@ -66,7 +67,11 @@ void test_show_controller_init_sets_defaults_and_get_current_output(void)
 
     /* Timestamps should be reported as not valid */
     TEST_ASSERT_FALSE(sb_show_controller_is_output_valid(&ctrl));
-    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_show_controller_get_current_output_time_msec(&ctrl));
+    output_time = sb_show_controller_get_current_output_time(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_msec);
+    TEST_ASSERT_EQUAL_UINT32(0, output_time.chapter_index);
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_in_chapter_msec);
+    TEST_ASSERT_EQUAL_FLOAT(0, output_time.warped_time_in_chapter_sec);
 
     /* Destroy should clear and zero the controller */
     sb_show_controller_destroy(&ctrl);
@@ -227,6 +232,7 @@ void test_show_controller_play_fixture_single_chapter(void)
     sb_vector3_t vel;
     sb_rgb_color_t color;
     const sb_control_output_t* cur;
+    sb_control_output_time_t output_time;
     sb_error_t err;
     FILE* fp;
 
@@ -266,8 +272,11 @@ void test_show_controller_play_fixture_single_chapter(void)
 
     /* Timestamps should be reported correctly */
     TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
-    TEST_ASSERT_EQUAL_UINT32(0u, sb_show_controller_get_current_output_time_msec(&ctrl));
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, sb_show_controller_get_current_output_warped_time_sec(&ctrl));
+    output_time = sb_show_controller_get_current_output_time(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.time_msec);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter_index);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.time_in_chapter_msec);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, output_time.warped_time_in_chapter_sec);
 
     /* Query at t=5000 ms (5s) -> expect position {0,0,5000}, velocity {0,0,1000}, color {255,127,127} */
     err = sb_show_controller_update_time_msec(&ctrl, 5000u);
@@ -282,8 +291,11 @@ void test_show_controller_play_fixture_single_chapter(void)
 
     /* Timestamps should be reported correctly */
     TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
-    TEST_ASSERT_EQUAL_UINT32(5000u, sb_show_controller_get_current_output_time_msec(&ctrl));
-    TEST_ASSERT_EQUAL_FLOAT(5.0f, sb_show_controller_get_current_output_warped_time_sec(&ctrl));
+    output_time = sb_show_controller_get_current_output_time(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_msec);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter_index);
+    TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_in_chapter_msec);
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, output_time.warped_time_in_chapter_sec);
 
     /* Query at t=15000 ms (15s) -> expect position {5000,0,10000}, velocity {1000,0,0}, color {255,0,0} */
     err = sb_show_controller_update_time_msec(&ctrl, 15000u);
@@ -298,8 +310,11 @@ void test_show_controller_play_fixture_single_chapter(void)
 
     /* Timestamps should be reported correctly */
     TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
-    TEST_ASSERT_EQUAL_UINT32(15000u, sb_show_controller_get_current_output_time_msec(&ctrl));
-    TEST_ASSERT_EQUAL_FLOAT(15.0f, sb_show_controller_get_current_output_warped_time_sec(&ctrl));
+    output_time = sb_show_controller_get_current_output_time(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32(15000u, output_time.time_msec);
+    TEST_ASSERT_EQUAL_UINT32(0u, output_time.chapter_index);
+    TEST_ASSERT_EQUAL_UINT32(15000u, output_time.time_in_chapter_msec);
+    TEST_ASSERT_EQUAL_FLOAT(15.0f, output_time.warped_time_in_chapter_sec);
 
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
@@ -646,6 +661,7 @@ void test_show_controller_invalidate_cached_output(void)
     sb_light_program_t* prog;
     sb_show_controller_t ctrl;
     const sb_control_output_t* out;
+    sb_control_output_time_t output_time;
     sb_error_t err;
     FILE* fp;
 
@@ -682,21 +698,25 @@ void test_show_controller_invalidate_cached_output(void)
     TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out, SB_CONTROL_OUTPUT_VELOCITY));
     TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out, SB_CONTROL_OUTPUT_LIGHTS));
     /* internal cached timestamp should be 5000 */
-    TEST_ASSERT_EQUAL_UINT32(5000u, ctrl.output_time_msec);
+    output_time = sb_show_controller_get_current_output_time(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_msec);
 
     /* Query again at the same timestamp: cache should be valid and timestamp unchanged */
     err = sb_show_controller_update_time_msec(&ctrl, 5000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL_UINT32(5000u, ctrl.output_time_msec);
+    output_time = sb_show_controller_get_current_output_time(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_msec);
 
     /* Invalidate cached output */
     sb_show_controller_invalidate_output(&ctrl);
-    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, ctrl.output_time_msec);
+    output_time = sb_show_controller_get_current_output_time(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_msec);
 
     /* Query again after invalidation: controller should recompute and set timestamp */
     err = sb_show_controller_update_time_msec(&ctrl, 5000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL_UINT32(5000u, ctrl.output_time_msec);
+    output_time = sb_show_controller_get_current_output_time(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_msec);
     out = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out);
     TEST_ASSERT_TRUE(sb_control_output_has_any_component_in(out, SB_CONTROL_OUTPUT_POSITION));

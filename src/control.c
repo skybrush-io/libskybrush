@@ -237,6 +237,15 @@ void sb_control_output_set_yaw_rate(sb_control_output_t* output, float yaw_rate)
 
 /* ************************************************************************* */
 
+void sb_control_output_time_invalidate(sb_control_output_time_t* time)
+{
+    memset(time, 0, sizeof(sb_control_output_time_t));
+    time->time_msec = UINT32_MAX;
+    time->time_in_chapter_msec = UINT32_MAX;
+}
+
+/* ************************************************************************* */
+
 static sb_error_t sb_i_show_controller_set_current_chapter(
     sb_show_controller_t* ctrl, sb_screenplay_chapter_t* chapter);
 
@@ -275,8 +284,7 @@ void sb_show_controller_destroy(sb_show_controller_t* ctrl)
 {
     sb_i_show_controller_set_current_chapter(ctrl, NULL);
     sb_control_output_clear(&ctrl->output);
-    memset(ctrl, 0, sizeof(sb_show_controller_t));
-    ctrl->output_time_msec = UINT32_MAX;
+    sb_control_output_time_invalidate(&ctrl->output_time);
 }
 
 /**
@@ -302,25 +310,13 @@ const sb_control_output_t* sb_show_controller_get_current_output(const sb_show_c
 }
 
 /**
- * @brief Returns the timestamp of the current control output of the show controller in wall clock time.
+ * @brief Returns the time that the current control output of the show controller belongs to.
  *
  * @param controller  pointer to the show controller to query
- * @return timestamp in milliseconds
  */
-uint32_t sb_show_controller_get_current_output_time_msec(const sb_show_controller_t* controller)
+sb_control_output_time_t sb_show_controller_get_current_output_time(const sb_show_controller_t* controller)
 {
-    return controller->output_time_msec;
-}
-
-/**
- * @brief Returns the warped time of the current control output of the show controller.
- *
- * @param controller  pointer to the show controller to query
- * @return warped time in seconds
- */
-float sb_show_controller_get_current_output_warped_time_sec(const sb_show_controller_t* controller)
-{
-    return controller->output_warped_time_sec;
+    return controller->output_time;
 }
 
 /**
@@ -331,7 +327,7 @@ float sb_show_controller_get_current_output_warped_time_sec(const sb_show_contro
  */
 sb_bool_t sb_show_controller_is_output_valid(const sb_show_controller_t* controller)
 {
-    return controller->output_time_msec != UINT32_MAX;
+    return controller->output_time.time_msec != UINT32_MAX;
 }
 
 /**
@@ -352,21 +348,23 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     sb_rgb_color_t color;
     sb_screenplay_chapter_t* chapter;
     sb_control_output_t* out = &ctrl->output;
+    uint32_t time_in_chapter_msec;
     float warped_time_sec;
     float warped_rate;
     float yaw;
 
-    if (ctrl->output_time_msec != UINT32_MAX && time_msec == ctrl->output_time_msec) {
+    if (ctrl->output_time.time_msec != UINT32_MAX && time_msec == ctrl->output_time.time_msec) {
         /* Output is already up to date */
         return SB_SUCCESS;
     }
 
     sb_control_output_clear(out);
 
-    chapter = ctrl->screenplay ? sb_screenplay_get_current_chapter_ptr(ctrl->screenplay, &time_msec) : NULL;
+    time_in_chapter_msec = time_msec;
+    chapter = ctrl->screenplay ? sb_screenplay_get_current_chapter_ptr(ctrl->screenplay, &time_in_chapter_msec) : NULL;
     sb_i_show_controller_set_current_chapter(ctrl, chapter);
 
-    /* time_msec is now the wall clock time within the current chapter */
+    /* time_in_chapter_msec is now up-to-date */
 
     /* invalidate the cached output_time_msec and warped_output_time_sec fields in
      * case we bail out with an error below */
@@ -378,7 +376,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
         *out = ctrl->default_output;
     } else {
         /* Update control output from trajectory if available */
-        warped_time_sec = sb_time_axis_map_ex(&chapter->time_axis, time_msec, &warped_rate);
+        warped_time_sec = sb_time_axis_map_ex(&chapter->time_axis, time_in_chapter_msec, &warped_rate);
 
         sb_control_output_clear(out);
 
@@ -422,8 +420,10 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     }
 
     /* Output calculated successfully; we can now update the timestamp */
-    ctrl->output_time_msec = time_msec;
-    ctrl->output_warped_time_sec = warped_time_sec;
+    ctrl->output_time.time_msec = time_msec;
+    /* TODO(ntamas): chapter_index */
+    ctrl->output_time.time_in_chapter_msec = time_in_chapter_msec;
+    ctrl->output_time.warped_time_in_chapter_sec = warped_time_sec;
 
     return SB_SUCCESS;
 }
@@ -441,7 +441,7 @@ const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl)
 {
     if (ctrl->event_list_player) {
         return sb_event_list_player_get_next_event_not_later_than(
-            ctrl->event_list_player, ctrl->output_warped_time_sec);
+            ctrl->event_list_player, ctrl->output_time.warped_time_in_chapter_sec);
     } else {
         return NULL;
     }
@@ -459,8 +459,7 @@ const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl)
 void sb_show_controller_invalidate_output(sb_show_controller_t* ctrl)
 {
     ctrl->output = ctrl->default_output;
-    ctrl->output_time_msec = UINT32_MAX;
-    ctrl->output_warped_time_sec = 0.0f;
+    sb_control_output_time_invalidate(&ctrl->output_time);
 }
 
 static sb_error_t sb_i_show_controller_set_current_chapter(
