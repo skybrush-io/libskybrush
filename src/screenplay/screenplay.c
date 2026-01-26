@@ -18,6 +18,7 @@
  */
 
 #include <assert.h>
+#include <limits.h>
 #include <skybrush/refcount.h>
 #include <skybrush/screenplay.h>
 
@@ -145,7 +146,7 @@ sb_screenplay_scene_t* sb_screenplay_get_scene_ptr(
 sb_screenplay_scene_t* sb_screenplay_get_scene_ptr_at_time_msec(
     sb_screenplay_t* screenplay, uint32_t* time_msec, ssize_t* scene_index)
 {
-    for (ssize_t i = 0; i < screenplay->num_scenes; i++) {
+    for (size_t i = 0; i < screenplay->num_scenes; i++) {
         sb_screenplay_scene_t* scene = &screenplay->scenes[i];
         uint32_t scene_duration_msec = sb_screenplay_scene_get_duration_msec(scene);
 
@@ -160,7 +161,7 @@ sb_screenplay_scene_t* sb_screenplay_get_scene_ptr_at_time_msec(
         if (*time_msec < scene_duration_msec) {
             /* Current scene found */
             if (scene_index) {
-                *scene_index = i;
+                *scene_index = i < SSIZE_MAX ? ((ssize_t)i) : -1;
             }
             return scene;
         }
