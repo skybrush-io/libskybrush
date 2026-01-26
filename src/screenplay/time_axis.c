@@ -224,6 +224,23 @@ void sb_time_axis_destroy(sb_time_axis_t* axis)
 }
 
 /**
+ * @brief Swaps the contents of two time axis structures.
+ *
+ * This can be used to safely replace the time axis of a show segment with another one
+ * such that the segment is never left in an invalid state. To achieve this, one should
+ * prepare the new time axis separately, and then swap it with the existing one.
+ *
+ * @param axis Pointer to the first time axis structure.
+ * @param other Pointer to the second time axis structure.
+ */
+void sb_time_axis_swap(sb_time_axis_t* axis, sb_time_axis_t* other)
+{
+    sb_time_axis_t temp = *axis;
+    *axis = *other;
+    *other = temp;
+}
+
+/**
  * @brief Returns the number of segments in the time axis.
  *
  * @param axis Pointer to the time axis structure.

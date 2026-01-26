@@ -122,6 +122,8 @@ typedef struct sb_time_axis_s {
 sb_error_t sb_time_axis_init(sb_time_axis_t* axis);
 void sb_time_axis_destroy(sb_time_axis_t* axis);
 
+void sb_time_axis_swap(sb_time_axis_t* axis, sb_time_axis_t* other);
+
 size_t sb_time_axis_capacity(const sb_time_axis_t* axis);
 const sb_time_segment_t* sb_time_axis_get_segment(
     const sb_time_axis_t* axis, size_t index);

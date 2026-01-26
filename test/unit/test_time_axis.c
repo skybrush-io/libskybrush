@@ -513,6 +513,55 @@ void test_remove_segment_invalid_index(void)
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_time_axis_remove_segment_at(&axis, 0));
 }
 
+void test_time_axis_swap_exchanges_contents(void)
+{
+    sb_time_axis_t axis_a;
+    sb_time_axis_t axis_b;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_init(&axis_a));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_init(&axis_b));
+
+    sb_time_segment_t seg_a = sb_time_segment_make_constant_rate(1000, 1.5f);
+    sb_time_segment_t seg_b = sb_time_segment_make_spinup_to_realtime(2500);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis_a, seg_a));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis_b, seg_b));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_set_origin_sec(&axis_a, 1.5f));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_set_origin_sec(&axis_b, 3.0f));
+
+    sb_time_segment_t* stor_a = axis_a.stor_begin;
+    sb_time_segment_t* stor_b = axis_b.stor_begin;
+
+    sb_time_axis_swap(&axis_a, &axis_b);
+
+    TEST_ASSERT_EQUAL_PTR(stor_b, axis_a.stor_begin);
+    TEST_ASSERT_EQUAL_PTR(stor_a, axis_b.stor_begin);
+
+    TEST_ASSERT_EQUAL(1, sb_time_axis_num_segments(&axis_a));
+    TEST_ASSERT_EQUAL(1, sb_time_axis_num_segments(&axis_b));
+
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 3.0f, sb_time_axis_get_origin_sec(&axis_a));
+    TEST_ASSERT_FLOAT_WITHIN(EPS, 1.5f, sb_time_axis_get_origin_sec(&axis_b));
+
+    const sb_time_segment_t* seg_a_swapped = sb_time_axis_get_segment(&axis_a, 0);
+    const sb_time_segment_t* seg_b_swapped = sb_time_axis_get_segment(&axis_b, 0);
+
+    TEST_ASSERT_NOT_NULL(seg_a_swapped);
+    TEST_ASSERT_NOT_NULL(seg_b_swapped);
+
+    TEST_ASSERT_FLOAT_WITHIN(EPS, seg_b.duration_msec, seg_a_swapped->duration_msec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, seg_b.initial_rate, seg_a_swapped->initial_rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, seg_b.final_rate, seg_a_swapped->final_rate);
+
+    TEST_ASSERT_FLOAT_WITHIN(EPS, seg_a.duration_msec, seg_b_swapped->duration_msec);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, seg_a.initial_rate, seg_b_swapped->initial_rate);
+    TEST_ASSERT_FLOAT_WITHIN(EPS, seg_a.final_rate, seg_b_swapped->final_rate);
+
+    sb_time_axis_destroy(&axis_a);
+    sb_time_axis_destroy(&axis_b);
+}
+
 /* Tests that exercise non-zero origin handling.
  *
  * The origin shifts the mapping such that warped time zero corresponds to
@@ -596,6 +645,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_insert_segment_invalid_index);
     RUN_TEST(test_remove_segment_at_positions);
     RUN_TEST(test_remove_segment_invalid_index);
+    RUN_TEST(test_time_axis_swap_exchanges_contents);
 
     /* segment retrieval */
     RUN_TEST(test_get_segment_returns_ptr_and_values);
