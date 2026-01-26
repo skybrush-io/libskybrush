@@ -302,6 +302,39 @@ const sb_control_output_t* sb_show_controller_get_current_output(const sb_show_c
 }
 
 /**
+ * @brief Returns the timestamp of the current control output of the show controller in wall clock time.
+ *
+ * @param controller  pointer to the show controller to query
+ * @return timestamp in milliseconds
+ */
+uint32_t sb_show_controller_get_current_output_time_msec(const sb_show_controller_t* controller)
+{
+    return controller->output_time_msec;
+}
+
+/**
+ * @brief Returns the warped time of the current control output of the show controller.
+ *
+ * @param controller  pointer to the show controller to query
+ * @return warped time in seconds
+ */
+float sb_show_controller_get_current_output_warped_time_sec(const sb_show_controller_t* controller)
+{
+    return controller->output_warped_time_sec;
+}
+
+/**
+ * @brief Checks whether the current control output of the show controller is valid.
+ *
+ * @param controller  pointer to the show controller to query
+ * @return \c SB_TRUE if the current control output is valid, \c SB_FALSE otherwise
+ */
+sb_bool_t sb_show_controller_is_output_valid(const sb_show_controller_t* controller)
+{
+    return controller->output_time_msec != UINT32_MAX;
+}
+
+/**
  * @brief Updates the control output to the desired output at a specific time in the screenplay.
  *
  * When the specified time is out of bounds, we return a control output that commands

@@ -64,6 +64,10 @@ void test_show_controller_init_sets_defaults_and_get_current_output(void)
     TEST_ASSERT_EQUAL_FLOAT(0.0f, out->velocity.z);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, out->velocity.yaw);
 
+    /* Timestamps should be reported as not valid */
+    TEST_ASSERT_FALSE(sb_show_controller_is_output_valid(&ctrl));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_show_controller_get_current_output_time_msec(&ctrl));
+
     /* Destroy should clear and zero the controller */
     sb_show_controller_destroy(&ctrl);
     TEST_ASSERT_NULL(ctrl.screenplay);
@@ -260,6 +264,11 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_TRUE(sb_control_output_get_color_if_set(cur, &color));
     TEST_ASSERT_EQUAL_COLOR_RGB(255, 255, 255, color);
 
+    /* Timestamps should be reported correctly */
+    TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
+    TEST_ASSERT_EQUAL_UINT32(0u, sb_show_controller_get_current_output_time_msec(&ctrl));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, sb_show_controller_get_current_output_warped_time_sec(&ctrl));
+
     /* Query at t=5000 ms (5s) -> expect position {0,0,5000}, velocity {0,0,1000}, color {255,127,127} */
     err = sb_show_controller_update_time_msec(&ctrl, 5000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
@@ -271,6 +280,11 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_TRUE(sb_control_output_get_color_if_set(cur, &color));
     TEST_ASSERT_EQUAL_COLOR_RGB(255, 127, 127, color);
 
+    /* Timestamps should be reported correctly */
+    TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
+    TEST_ASSERT_EQUAL_UINT32(5000u, sb_show_controller_get_current_output_time_msec(&ctrl));
+    TEST_ASSERT_EQUAL_FLOAT(5.0f, sb_show_controller_get_current_output_warped_time_sec(&ctrl));
+
     /* Query at t=15000 ms (15s) -> expect position {5000,0,10000}, velocity {1000,0,0}, color {255,0,0} */
     err = sb_show_controller_update_time_msec(&ctrl, 15000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
@@ -281,6 +295,11 @@ void test_show_controller_play_fixture_single_chapter(void)
     TEST_ASSERT_EQUAL_VECTOR3_XYZ(1000.0f, 0.0f, 0.0f, vel);
     TEST_ASSERT_TRUE(sb_control_output_get_color_if_set(cur, &color));
     TEST_ASSERT_EQUAL_COLOR_RGB(255, 0, 0, color);
+
+    /* Timestamps should be reported correctly */
+    TEST_ASSERT_TRUE(sb_show_controller_is_output_valid(&ctrl));
+    TEST_ASSERT_EQUAL_UINT32(15000u, sb_show_controller_get_current_output_time_msec(&ctrl));
+    TEST_ASSERT_EQUAL_FLOAT(15.0f, sb_show_controller_get_current_output_warped_time_sec(&ctrl));
 
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
