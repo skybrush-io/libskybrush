@@ -291,7 +291,7 @@ const sb_time_segment_t* sb_time_axis_get_segment(const sb_time_axis_t* axis, si
  * @param axis Pointer to the time axis structure.
  * @return Origin of the time axis, in milliseconds.
  */
-uint32_t sb_time_axis_get_origin_msec(const sb_time_axis_t* axis)
+int32_t sb_time_axis_get_origin_msec(const sb_time_axis_t* axis)
 {
     return axis->origin_msec;
 }
@@ -317,7 +317,7 @@ float sb_time_axis_get_origin_sec(const sb_time_axis_t* axis)
  * @param axis Pointer to the time axis structure.
  * @param origin_sec Origin of the time axis, in milliseconds.
  */
-void sb_time_axis_set_origin_msec(sb_time_axis_t* axis, uint32_t origin_msec)
+void sb_time_axis_set_origin_msec(sb_time_axis_t* axis, int32_t origin_msec)
 {
     axis->origin_msec = origin_msec;
 }
@@ -332,7 +332,7 @@ void sb_time_axis_set_origin_msec(sb_time_axis_t* axis, uint32_t origin_msec)
  */
 sb_error_t sb_time_axis_set_origin_sec(sb_time_axis_t* axis, float origin_sec)
 {
-    if (!isfinite(origin_sec) || origin_sec < 0 || origin_sec > UINT32_MAX / 1000.0f) {
+    if (!isfinite(origin_sec) || origin_sec < 0 || origin_sec > INT32_MAX / 1000.0f) {
         return SB_EINVAL;
     }
 
@@ -422,7 +422,7 @@ sb_error_t sb_time_axis_remove_segment_at(sb_time_axis_t* axis, size_t index)
  * @param wall_clock_time_msec Wall clock time in milliseconds.
  * @return Corresponding warped time in seconds.
  */
-float sb_time_axis_map(const sb_time_axis_t* axis, uint32_t wall_clock_time_msec)
+float sb_time_axis_map(const sb_time_axis_t* axis, int32_t wall_clock_time_msec)
 {
     return sb_time_axis_map_ex(axis, wall_clock_time_msec, NULL);
 }
@@ -443,7 +443,7 @@ float sb_time_axis_map(const sb_time_axis_t* axis, uint32_t wall_clock_time_msec
  *        of the last segment, if we are at the end of the time axis).
  * @return Corresponding warped time in seconds.
  */
-float sb_time_axis_map_ex(const sb_time_axis_t* axis, uint32_t wall_clock_time_msec, float* out_rate)
+float sb_time_axis_map_ex(const sb_time_axis_t* axis, int32_t wall_clock_time_msec, float* out_rate)
 {
     float accumulated_warped_time_sec = 0.0f;
     float warped_time_in_segment_sec;

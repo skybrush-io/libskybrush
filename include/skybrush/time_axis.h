@@ -110,9 +110,10 @@ float sb_time_segment_get_duration_in_warped_time_sec(const sb_time_segment_t* s
 typedef struct sb_time_axis_s {
     /**
      * Origin of the time axis, in milliseconds. This is the wall clock time
-     * corresponding to warped time zero.
+     * corresponding to warped time zero. May be negative if the origin is before
+     * the epoch of the wall clock time.
      */
-    uint32_t origin_msec;
+    int32_t origin_msec;
 
     sb_time_segment_t* stor_begin; /**< Pointer to the first time segment */
     sb_time_segment_t* end; /**< Pointer to one past the last used time segment */
@@ -129,9 +130,9 @@ const sb_time_segment_t* sb_time_axis_get_segment(
     const sb_time_axis_t* axis, size_t index);
 size_t sb_time_axis_num_segments(const sb_time_axis_t* axis);
 
-uint32_t sb_time_axis_get_origin_msec(const sb_time_axis_t* axis);
+int32_t sb_time_axis_get_origin_msec(const sb_time_axis_t* axis);
 float sb_time_axis_get_origin_sec(const sb_time_axis_t* axis);
-void sb_time_axis_set_origin_msec(sb_time_axis_t* axis, uint32_t origin_msec);
+void sb_time_axis_set_origin_msec(sb_time_axis_t* axis, int32_t origin_msec);
 sb_error_t sb_time_axis_set_origin_sec(sb_time_axis_t* axis, float origin_sec);
 
 void sb_time_axis_clear(sb_time_axis_t* axis);
@@ -142,8 +143,8 @@ sb_error_t sb_time_axis_insert_segment_at(
 sb_error_t sb_time_axis_remove_segment_at(
     sb_time_axis_t* axis, size_t index);
 
-float sb_time_axis_map(const sb_time_axis_t* axis, uint32_t wall_clock_time_msec);
-float sb_time_axis_map_ex(const sb_time_axis_t* axis, uint32_t wall_clock_time_msec, float* out_rate);
+float sb_time_axis_map(const sb_time_axis_t* axis, int32_t wall_clock_time_msec);
+float sb_time_axis_map_ex(const sb_time_axis_t* axis, int32_t wall_clock_time_msec, float* out_rate);
 
 __END_DECLS
 

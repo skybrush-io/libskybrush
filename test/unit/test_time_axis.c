@@ -241,7 +241,7 @@ void test_time_axis_map_linear_changing_rate(void)
     sb_time_segment_t s = sb_time_segment_make(2000, 1.0f, 3.0f);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, s));
 
-    uint32_t t_msec = 1000;
+    int32_t t_msec = 1000;
     float t = t_msec / 1000.0f;
     float observed = sb_time_axis_map(&axis, t_msec);
     float expected = 1.0f * t + 0.5f * t * t; /* = 1 + 0.5 = 1.5 */
@@ -369,7 +369,7 @@ void test_time_axis_map_ex_three_segment_scenario(void)
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
 
     /* Infinity: out_rate should be final rate of the last segment (1.0) */
-    sb_time_axis_map_ex(&axis, UINT32_MAX, &rate);
+    sb_time_axis_map_ex(&axis, INT32_MAX, &rate);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 1.0f, rate);
 }
 

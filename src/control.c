@@ -338,8 +338,6 @@ sb_bool_t sb_show_controller_is_output_valid(const sb_show_controller_t* control
  *
  * @param ctrl       pointer to the show controller to update
  * @param time_msec  the time in milliseconds from the start of the screenplay
- * @return \c SB_SUCCESS if the control output was updated successfully,
- *         \c SB_EINVAL if the time is out of bounds
  */
 sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint32_t time_msec)
 {
@@ -349,7 +347,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     sb_screenplay_scene_t* scene;
     sb_control_output_t* out = &ctrl->output;
     ssize_t scene_index;
-    uint32_t time_msec_orig;
+    int32_t time_msec_orig;
     float warped_time_sec;
     float warped_rate;
     float yaw;
@@ -360,6 +358,11 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     }
 
     sb_control_output_clear(out);
+
+    if (time_msec > INT32_MAX) {
+        /* Out of bounds because we can only submit an int32_t to sb_time_axis_map_ex() */
+        return SB_SUCCESS;
+    }
 
     time_msec_orig = time_msec;
     scene = ctrl->screenplay ? sb_screenplay_get_scene_ptr_at_time_msec(ctrl->screenplay, &time_msec, &scene_index) : NULL;
