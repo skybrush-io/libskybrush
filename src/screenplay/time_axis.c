@@ -492,7 +492,7 @@ float sb_time_axis_map_ex(const sb_time_axis_t* axis, int32_t wall_clock_time_ms
                 /* Linearly changing rate segment */
                 float delta_rate = seg->final_rate - seg->initial_rate;
                 float relative_t = wall_clock_time_msec_unsigned / ((float)seg_wall_clock_duration_msec);
-                warped_time_in_segment_sec = (seg->initial_rate + delta_rate / 2.0f * relative_t) * wall_clock_time_msec / 1000.0f;
+                warped_time_in_segment_sec = (seg->initial_rate + delta_rate / 2.0f * relative_t) * wall_clock_time_msec_unsigned / 1000.0f;
                 if (out_rate) {
                     *out_rate = seg->initial_rate + delta_rate * relative_t;
                 }
