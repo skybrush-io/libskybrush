@@ -345,6 +345,93 @@ void test_screenplay_scene_reset(void)
     SB_DECREF_STATIC(&events);
 }
 
+void test_screenplay_scene_update_contents_from_updates_refs(void)
+{
+    sb_screenplay_scene_t src;
+    sb_screenplay_scene_t dst;
+    sb_trajectory_t src_traj;
+    sb_light_program_t src_prog;
+    sb_yaw_control_t src_yaw;
+    sb_event_list_t src_events;
+    sb_trajectory_t dst_traj;
+    sb_light_program_t dst_prog;
+    sb_yaw_control_t dst_yaw;
+    sb_event_list_t dst_events;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&src));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&dst));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&src_traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init(&src_prog));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init(&src_yaw));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_init(&src_events, 0));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&dst_traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init(&dst_prog));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init(&dst_yaw));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_init(&dst_events, 0));
+
+    sb_screenplay_scene_set_trajectory(&src, &src_traj);
+    sb_screenplay_scene_set_light_program(&src, &src_prog);
+    sb_screenplay_scene_set_yaw_control(&src, &src_yaw);
+    sb_screenplay_scene_set_events(&src, &src_events);
+
+    sb_screenplay_scene_set_trajectory(&dst, &dst_traj);
+    sb_screenplay_scene_set_light_program(&dst, &dst_prog);
+    sb_screenplay_scene_set_yaw_control(&dst, &dst_yaw);
+    sb_screenplay_scene_set_events(&dst, &dst_events);
+
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&src_traj));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&src_prog));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&src_yaw));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&src_events));
+
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&dst_traj));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&dst_prog));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&dst_yaw));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&dst_events));
+
+    sb_screenplay_scene_update_contents_from(&dst, &src);
+
+    TEST_ASSERT_EQUAL_PTR(&src_traj, sb_screenplay_scene_get_trajectory(&dst));
+    TEST_ASSERT_EQUAL_PTR(&src_prog, sb_screenplay_scene_get_light_program(&dst));
+    TEST_ASSERT_EQUAL_PTR(&src_yaw, sb_screenplay_scene_get_yaw_control(&dst));
+    TEST_ASSERT_EQUAL_PTR(&src_events, sb_screenplay_scene_get_events(&dst));
+
+    TEST_ASSERT_EQUAL(3, SB_REFCNT(&src_traj));
+    TEST_ASSERT_EQUAL(3, SB_REFCNT(&src_prog));
+    TEST_ASSERT_EQUAL(3, SB_REFCNT(&src_yaw));
+    TEST_ASSERT_EQUAL(3, SB_REFCNT(&src_events));
+
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&dst_traj));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&dst_prog));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&dst_yaw));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&dst_events));
+
+    SB_DECREF_STATIC(&dst);
+    SB_DECREF_STATIC(&src);
+
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&src_traj));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&src_prog));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&src_yaw));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&src_events));
+
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&dst_traj));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&dst_prog));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&dst_yaw));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&dst_events));
+
+    SB_DECREF_STATIC(&src_traj);
+    SB_DECREF_STATIC(&src_prog);
+    SB_DECREF_STATIC(&src_yaw);
+    SB_DECREF_STATIC(&src_events);
+
+    SB_DECREF_STATIC(&dst_traj);
+    SB_DECREF_STATIC(&dst_prog);
+    SB_DECREF_STATIC(&dst_yaw);
+    SB_DECREF_STATIC(&dst_events);
+}
+
 /* Test updating a screenplay scene from a binary show file that is loaded
  * entirely in memory. The test keeps the buffer alive until the scene is
  * destroyed because the scene (and its trajectory) may reference the buffer.
@@ -426,6 +513,7 @@ int main(void)
     RUN_TEST(test_screenplay_scene_set_duration_sec_too_large_is_invalid_and_preserves_old);
     RUN_TEST(test_screenplay_scene_set_duration_sec_rounds_to_uint32_max_is_invalid_and_preserves_old);
     RUN_TEST(test_screenplay_scene_reset);
+    RUN_TEST(test_screenplay_scene_update_contents_from_updates_refs);
     RUN_TEST(test_screenplay_scene_update_from_binary_file_in_memory);
 
     return UNITY_END();

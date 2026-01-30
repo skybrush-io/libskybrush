@@ -225,6 +225,24 @@ sb_error_t sb_screenplay_remove_last_scene(sb_screenplay_t* screenplay)
 }
 
 /**
+ * @brief Updates the \em contents of a scene from another scene.
+ *
+ * This function copies all contents from the source scene to the destination scene,
+ * except the reference counts and the fields related to the duration or the time axis.
+ *
+ * @param scene  the destination scene to update
+ * @param src    the source scene to copy from
+ */
+void sb_screenplay_scene_update_contents_from(
+    sb_screenplay_scene_t* scene, sb_screenplay_scene_t* src)
+{
+    sb_screenplay_scene_set_trajectory(scene, sb_screenplay_scene_get_trajectory(src));
+    sb_screenplay_scene_set_light_program(scene, sb_screenplay_scene_get_light_program(src));
+    sb_screenplay_scene_set_yaw_control(scene, sb_screenplay_scene_get_yaw_control(src));
+    sb_screenplay_scene_set_events(scene, sb_screenplay_scene_get_events(src));
+}
+
+/**
  * @brief Updates the screenplay from binary show file data in memory.
  *
  * This function clears the existing scenes in the screenplay and creates a new

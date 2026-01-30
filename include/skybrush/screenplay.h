@@ -111,6 +111,8 @@ void sb_screenplay_scene_set_events(
     sb_screenplay_scene_t* scene, sb_event_list_t* events);
 
 void sb_screenplay_scene_reset(sb_screenplay_scene_t* scene);
+void sb_screenplay_scene_update_contents_from(
+    sb_screenplay_scene_t* scene, sb_screenplay_scene_t* src);
 sb_error_t sb_screenplay_scene_update_from_binary_file_in_memory(
     sb_screenplay_scene_t* scene, uint8_t* show_data, size_t length);
 
