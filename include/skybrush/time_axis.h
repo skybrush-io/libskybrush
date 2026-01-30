@@ -135,6 +135,9 @@ float sb_time_axis_get_origin_sec(const sb_time_axis_t* axis);
 void sb_time_axis_set_origin_msec(sb_time_axis_t* axis, int32_t origin_msec);
 sb_error_t sb_time_axis_set_origin_sec(sb_time_axis_t* axis, float origin_sec);
 
+uint32_t sb_time_axis_get_total_duration_msec(const sb_time_axis_t* axis);
+float sb_time_axis_get_total_duration_sec(const sb_time_axis_t* axis);
+
 void sb_time_axis_clear(sb_time_axis_t* axis);
 sb_error_t sb_time_axis_append_segment(
     sb_time_axis_t* axis, sb_time_segment_t segment);

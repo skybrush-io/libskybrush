@@ -341,6 +341,51 @@ sb_error_t sb_time_axis_set_origin_sec(sb_time_axis_t* axis, float origin_sec)
 }
 
 /**
+ * @brief Returns the total duration of the time axis in wall clock time, in milliseconds.
+ *
+ * @param axis Pointer to the time axis structure.
+ * @return Total duration of the time axis in wall clock time, in milliseconds.
+ *         \c UINT32_MAX if the duration is infinite or in case of an overflow.
+ */
+uint32_t sb_time_axis_get_total_duration_msec(const sb_time_axis_t* axis)
+{
+    ASSERT_PRECONDITIONS();
+
+    uint32_t total_duration_msec = 0;
+    size_t num_segments = sb_time_axis_num_segments(axis);
+
+    for (size_t i = 0; i < num_segments; i++) {
+        const sb_time_segment_t* seg = &axis->stor_begin[i];
+        if (seg->duration_msec == UINT32_MAX) {
+            return UINT32_MAX; /* Infinite duration */
+        }
+
+        /* Check for overflow */
+        if (UINT32_MAX - total_duration_msec < seg->duration_msec) {
+            return UINT32_MAX; /* Overflow */
+        }
+
+        total_duration_msec += seg->duration_msec;
+    }
+
+    return total_duration_msec;
+}
+
+/**
+ * @brief Returns the total duration of the time axis in wall clock time, in seconds.
+ *
+ * @param axis Pointer to the time axis structure.
+ * @return Total duration of the time axis in wall clock time, in seconds.
+ *         \c INFINITY if the duration is infinite or the number of milliseconds would
+ *         overflow an \c uint32_t .
+ */
+float sb_time_axis_get_total_duration_sec(const sb_time_axis_t* axis)
+{
+    uint32_t total_duration_msec = sb_time_axis_get_total_duration_msec(axis);
+    return total_duration_msec == UINT32_MAX ? INFINITY : total_duration_msec / 1000.0f;
+}
+
+/**
  * @brief Clears all segments from the time axis.
  *
  * @param axis Pointer to the time axis structure.

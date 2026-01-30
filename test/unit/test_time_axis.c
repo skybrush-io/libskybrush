@@ -18,6 +18,7 @@
  */
 
 #include <float.h>
+#include <math.h>
 #include <skybrush/time_axis.h>
 
 #include "unity.h"
@@ -187,6 +188,37 @@ void test_time_segment_warped_duration_realtime_cases(void)
 
     observed = sb_time_segment_get_duration_in_wall_clock_time_sec(&s);
     TEST_ASSERT_FLOAT_WITHIN(EPS, 4.0f, observed);
+}
+
+void test_time_axis_get_total_duration_variants(void)
+{
+    /* empty axis */
+    TEST_ASSERT_EQUAL_UINT32(0u, sb_time_axis_get_total_duration_msec(&axis));
+    TEST_ASSERT_EQUAL(0.0f, sb_time_axis_get_total_duration_sec(&axis));
+
+    /* normal sum */
+    sb_time_segment_t a = sb_time_segment_make_realtime(1000);
+    sb_time_segment_t b = sb_time_segment_make_realtime(2500);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, a));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, b));
+    TEST_ASSERT_EQUAL_UINT32(3500u, sb_time_axis_get_total_duration_msec(&axis));
+    TEST_ASSERT_EQUAL(3.5f, sb_time_axis_get_total_duration_sec(&axis));
+
+    /* infinite duration segment */
+    sb_time_axis_clear(&axis);
+    sb_time_segment_t inf = sb_time_segment_make_realtime(UINT32_MAX);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, inf));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_time_axis_get_total_duration_msec(&axis));
+    TEST_ASSERT_TRUE(isinf(sb_time_axis_get_total_duration_sec(&axis)));
+
+    /* overflow in sum */
+    sb_time_axis_clear(&axis);
+    sb_time_segment_t near_max = sb_time_segment_make_realtime(UINT32_MAX - 10u);
+    sb_time_segment_t overflow = sb_time_segment_make_realtime(20u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, near_max));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, overflow));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_time_axis_get_total_duration_msec(&axis));
+    TEST_ASSERT_TRUE(isinf(sb_time_axis_get_total_duration_sec(&axis)));
 }
 
 /* Tests for sb_time_axis_map() */
@@ -655,6 +687,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_time_segment_warped_duration_constant);
     RUN_TEST(test_time_segment_warped_duration_spinup_and_slowdown);
     RUN_TEST(test_time_segment_warped_duration_realtime_cases);
+    RUN_TEST(test_time_axis_get_total_duration_variants);
 
     /* sb_time_axis_map tests */
     RUN_TEST(test_time_axis_map_single_constant_segment);
