@@ -206,6 +206,18 @@ sb_error_t sb_screenplay_append_new_scene(sb_screenplay_t* screenplay, sb_screen
 }
 
 /**
+ * @brief Clears the contents of a scene, releasing all associated resources.
+ *
+ * The time axis of the scene will be left intact.
+ *
+ * @param scene  the scene to clear
+ */
+void sb_screenplay_scene_clear_contents(sb_screenplay_scene_t* scene)
+{
+    sb_screenplay_scene_update_contents_from(scene, NULL);
+}
+
+/**
  * @brief Removes the last scene from the screenplay.
  *
  * @param screenplay  the screenplay to remove the scene from
@@ -231,15 +243,23 @@ sb_error_t sb_screenplay_remove_last_scene(sb_screenplay_t* screenplay)
  * except the reference counts and the fields related to the duration or the time axis.
  *
  * @param scene  the destination scene to update
- * @param src    the source scene to copy from
+ * @param src    the source scene to copy from. May be \c NULL to indicate an empty
+ *        scene with no contents.
  */
 void sb_screenplay_scene_update_contents_from(
     sb_screenplay_scene_t* scene, sb_screenplay_scene_t* src)
 {
-    sb_screenplay_scene_set_trajectory(scene, sb_screenplay_scene_get_trajectory(src));
-    sb_screenplay_scene_set_light_program(scene, sb_screenplay_scene_get_light_program(src));
-    sb_screenplay_scene_set_yaw_control(scene, sb_screenplay_scene_get_yaw_control(src));
-    sb_screenplay_scene_set_events(scene, sb_screenplay_scene_get_events(src));
+    if (src) {
+        sb_screenplay_scene_set_trajectory(scene, sb_screenplay_scene_get_trajectory(src));
+        sb_screenplay_scene_set_light_program(scene, sb_screenplay_scene_get_light_program(src));
+        sb_screenplay_scene_set_yaw_control(scene, sb_screenplay_scene_get_yaw_control(src));
+        sb_screenplay_scene_set_events(scene, sb_screenplay_scene_get_events(src));
+    } else {
+        sb_screenplay_scene_set_trajectory(scene, NULL);
+        sb_screenplay_scene_set_light_program(scene, NULL);
+        sb_screenplay_scene_set_yaw_control(scene, NULL);
+        sb_screenplay_scene_set_events(scene, NULL);
+    }
 }
 
 /**

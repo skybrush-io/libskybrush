@@ -110,6 +110,7 @@ void sb_screenplay_scene_set_yaw_control(
 void sb_screenplay_scene_set_events(
     sb_screenplay_scene_t* scene, sb_event_list_t* events);
 
+void sb_screenplay_scene_clear_contents(sb_screenplay_scene_t* scene);
 void sb_screenplay_scene_reset(sb_screenplay_scene_t* scene);
 void sb_screenplay_scene_update_contents_from(
     sb_screenplay_scene_t* scene, sb_screenplay_scene_t* src);

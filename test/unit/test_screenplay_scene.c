@@ -432,6 +432,61 @@ void test_screenplay_scene_update_contents_from_updates_refs(void)
     SB_DECREF_STATIC(&dst_events);
 }
 
+void test_screenplay_scene_clear_contents_preserves_duration_and_time_axis(void)
+{
+    sb_screenplay_scene_t scene;
+    sb_trajectory_t traj;
+    sb_light_program_t prog;
+    sb_yaw_control_t yaw;
+    sb_event_list_t events;
+    sb_time_axis_t* axis;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_init(&prog));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_init(&yaw));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_init(&events, 0));
+
+    sb_screenplay_scene_set_trajectory(&scene, &traj);
+    sb_screenplay_scene_set_light_program(&scene, &prog);
+    sb_screenplay_scene_set_yaw_control(&scene, &yaw);
+    sb_screenplay_scene_set_events(&scene, &events);
+
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&traj));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&prog));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&yaw));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(&events));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_msec(&scene, 4321u));
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_NOT_NULL(axis);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_constant_rate(1000u, 1.0f)));
+    TEST_ASSERT_EQUAL(1, sb_time_axis_num_segments(axis));
+
+    sb_screenplay_scene_clear_contents(&scene);
+
+    TEST_ASSERT_NULL(sb_screenplay_scene_get_trajectory(&scene));
+    TEST_ASSERT_NULL(sb_screenplay_scene_get_light_program(&scene));
+    TEST_ASSERT_NULL(sb_screenplay_scene_get_yaw_control(&scene));
+    TEST_ASSERT_NULL(sb_screenplay_scene_get_events(&scene));
+
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&traj));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&prog));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&yaw));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(&events));
+
+    TEST_ASSERT_EQUAL_UINT32(4321u, sb_screenplay_scene_get_duration_msec(&scene));
+    TEST_ASSERT_EQUAL(1, sb_time_axis_num_segments(axis));
+
+    SB_DECREF_STATIC(&scene);
+
+    SB_DECREF_STATIC(&traj);
+    SB_DECREF_STATIC(&prog);
+    SB_DECREF_STATIC(&yaw);
+    SB_DECREF_STATIC(&events);
+}
+
 /* Test updating a screenplay scene from a binary show file that is loaded
  * entirely in memory. The test keeps the buffer alive until the scene is
  * destroyed because the scene (and its trajectory) may reference the buffer.
@@ -514,6 +569,7 @@ int main(void)
     RUN_TEST(test_screenplay_scene_set_duration_sec_rounds_to_uint32_max_is_invalid_and_preserves_old);
     RUN_TEST(test_screenplay_scene_reset);
     RUN_TEST(test_screenplay_scene_update_contents_from_updates_refs);
+    RUN_TEST(test_screenplay_scene_clear_contents_preserves_duration_and_time_axis);
     RUN_TEST(test_screenplay_scene_update_from_binary_file_in_memory);
 
     return UNITY_END();
