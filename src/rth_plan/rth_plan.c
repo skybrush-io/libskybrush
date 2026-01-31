@@ -24,7 +24,6 @@
 
 #include <assert.h>
 #include <float.h>
-#include <math.h>
 #include <string.h>
 
 #include <skybrush/formats/binary.h>
@@ -444,9 +443,6 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
  *        trajectory; it is assumed to be the coordinate where the RTH plan
  *        expects the vehicle to be (since the RTH plan does not store the
  *        start coordinate).
- * @param start_time  the timestamp of the current position; the generated
- *        trajectory will contain a constant segment from time zero up to this
- *        start time.
  */
 sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_trajectory_t* trajectory,
