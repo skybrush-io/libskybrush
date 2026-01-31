@@ -161,7 +161,12 @@ sb_screenplay_scene_t* sb_screenplay_get_scene_ptr_at_time_msec(
         if (*time_msec < scene_duration_msec) {
             /* Current scene found */
             if (scene_index) {
-                *scene_index = i < SSIZE_MAX ? ((ssize_t)i) : -1;
+                /* We should use SSIZE_MAX here but it is not standard and therefore
+                 * it does not exist on some platforms. Use UINT16_MAX as a practical
+                 * limit for the number of scenes instead; SSIZE_MAX is supposed to be
+                 * larger than that.
+                 */
+                *scene_index = i < UINT16_MAX ? ((ssize_t)i) : -1;
             }
             return scene;
         }
