@@ -17,12 +17,15 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "skybrush/error.h"
+#include "skybrush/rth_plan.h"
 #include <assert.h>
 #include <limits.h>
 #include <skybrush/refcount.h>
 #include <skybrush/screenplay.h>
 
 static sb_error_t sb_i_screenplay_ensure_has_free_space(sb_screenplay_t* screenplay);
+static void sb_i_screenplay_set_rth_plan(sb_screenplay_t* screenplay, sb_rth_plan_t* rth_plan);
 
 /**
  * @brief Initializes a screenplay structure.
@@ -42,6 +45,8 @@ sb_error_t sb_screenplay_init(sb_screenplay_t* screenplay)
 
     screenplay->num_scenes = 0;
     screenplay->max_scenes = initial_capacity;
+
+    screenplay->rth_plan = NULL;
 
     return SB_SUCCESS;
 }
@@ -97,7 +102,7 @@ sb_bool_t sb_screenplay_is_empty(const sb_screenplay_t* screenplay)
 }
 
 /**
- * @brief Removes all scenes from the screenplay.
+ * @brief Removes all scenes from the screenplay and clears the RTH plan (if any).
  *
  * @param screenplay  the screenplay to clear
  */
@@ -106,6 +111,21 @@ void sb_screenplay_clear(sb_screenplay_t* screenplay)
     while (!sb_screenplay_is_empty(screenplay)) {
         sb_screenplay_remove_last_scene(screenplay); /* will succeed */
     }
+
+    sb_i_screenplay_set_rth_plan(screenplay, NULL);
+}
+
+/**
+ * @brief Returns a pointer to the RTH plan associated with the screenplay.
+ *
+ * You can modify the RTH plan via the provided pointer.
+ *
+ * @param screenplay  the screenplay to query
+ * @return a pointer to the RTH plan, or \c NULL if no RTH plan exists
+ */
+sb_rth_plan_t* sb_screenplay_get_rth_plan(sb_screenplay_t* screenplay)
+{
+    return screenplay->rth_plan;
 }
 
 /**
@@ -276,19 +296,48 @@ void sb_screenplay_scene_update_contents_from(
  */
 sb_error_t sb_screenplay_update_from_binary_file_in_memory(sb_screenplay_t* screenplay, uint8_t* show_data, size_t length)
 {
+    sb_rth_plan_t* rth_plan = NULL;
     sb_screenplay_scene_t* scene = NULL;
     sb_error_t retval = SB_SUCCESS;
 
+    rth_plan = sb_rth_plan_new();
+    if (rth_plan == NULL) {
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
+    }
+
     sb_screenplay_clear(screenplay);
+
     if (show_data && length > 0) {
-        SB_CHECK(sb_screenplay_append_new_scene(screenplay, &scene));
+        retval = sb_screenplay_append_new_scene(screenplay, &scene);
+        if (retval != SB_SUCCESS) {
+            goto exit;
+        }
 
         retval = sb_screenplay_scene_update_from_binary_file_in_memory(scene, show_data, length);
         if (retval != SB_SUCCESS) {
-            sb_screenplay_clear(screenplay);
+            goto exit;
         }
+
+        retval = sb_rth_plan_update_from_binary_file_in_memory(rth_plan, show_data, length);
+        if (retval == SB_ENOENT) {
+            /* No RTH plan in the show data */
+            SB_XDECREF(rth_plan);
+            retval = SB_SUCCESS;
+        } else if (retval != SB_SUCCESS) {
+            /* Some other error occurred */
+            goto exit;
+        }
+
+        /* RTH plan successfully updated */
+        sb_i_screenplay_set_rth_plan(screenplay, rth_plan);
     }
 
+exit:
+    if (retval != SB_SUCCESS) {
+        sb_screenplay_clear(screenplay);
+    }
+
+    SB_XDECREF(rth_plan);
     return retval;
 }
 
@@ -321,4 +370,17 @@ static sb_error_t sb_i_screenplay_ensure_has_free_space(sb_screenplay_t* screenp
     }
 
     return SB_SUCCESS;
+}
+
+/**
+ * @brief Sets the RTH plan associated with the screenplay.
+ *
+ * @param screenplay  the screenplay to update
+ * @param rth_plan    the RTH plan to associate with the screenplay; may be \c NULL
+ */
+static void sb_i_screenplay_set_rth_plan(sb_screenplay_t* screenplay, sb_rth_plan_t* rth_plan)
+{
+    SB_XINCREF(rth_plan);
+    SB_XDECREF(screenplay->rth_plan);
+    screenplay->rth_plan = rth_plan;
 }

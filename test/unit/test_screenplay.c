@@ -31,6 +31,33 @@ void tearDown(void)
     /* nothing to tear down */
 }
 
+static uint8_t* load_fixture_to_buffer(const char* fname, size_t* num_bytes)
+{
+    FILE* fp;
+    uint8_t* buf = NULL;
+
+    fp = fopen(fname, "rb");
+    if (fp == NULL) {
+        perror(fname);
+        abort();
+    }
+
+    buf = (uint8_t*)malloc(65536);
+    TEST_ASSERT_NOT_NULL(buf);
+
+    *num_bytes = fread(buf, sizeof(uint8_t), 65536, fp);
+    if (ferror(fp)) {
+        perror(NULL);
+        fclose(fp);
+        free(buf);
+        abort();
+    }
+
+    fclose(fp);
+
+    return buf;
+}
+
 void test_screenplay_init_sets_defaults_and_allocates(void)
 {
     sb_screenplay_t screenplay;
@@ -237,34 +264,20 @@ void test_screenplay_update_from_binary_file_in_memory(void)
 {
     sb_screenplay_t screenplay;
     sb_screenplay_scene_t* scene;
-    FILE* fp;
     size_t num_bytes;
     uint8_t* buf = NULL;
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
     /* open fixture and read into memory */
-    fp = fopen("fixtures/test.skyb", "rb");
-    if (fp == NULL) {
-        perror("fixtures/test.skyb");
-        abort();
-    }
-
-    buf = (uint8_t*)malloc(65536);
+    buf = load_fixture_to_buffer("fixtures/test.skyb", &num_bytes);
     TEST_ASSERT_NOT_NULL(buf);
-
-    num_bytes = fread(buf, sizeof(uint8_t), 65536, fp);
-    if (ferror(fp)) {
-        perror(NULL);
-        fclose(fp);
-        free(buf);
-        abort();
-    }
-
-    fclose(fp);
 
     /* update screenplay from in-memory binary show */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_update_from_binary_file_in_memory(&screenplay, buf, num_bytes));
+
+    /* no RTH plan in file so no RTH plan must be associated to the screenplay */
+    TEST_ASSERT_NULL(sb_screenplay_get_rth_plan(&screenplay));
 
     /* check scene count */
     TEST_ASSERT_EQUAL(1, sb_screenplay_size(&screenplay));
@@ -287,6 +300,36 @@ void test_screenplay_update_from_binary_file_in_memory(void)
     /* update screenplay from null data */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_update_from_binary_file_in_memory(&screenplay, 0, 0));
     TEST_ASSERT_TRUE(sb_screenplay_is_empty(&screenplay));
+    TEST_ASSERT_NULL(sb_screenplay_get_rth_plan(&screenplay));
+
+    /* cleanup: destroy screenplay while buffer is still valid, then free buffer */
+    sb_screenplay_destroy(&screenplay);
+
+    free(buf);
+}
+
+void test_screenplay_update_from_binary_file_in_memory_loads_rth_plan(void)
+{
+    sb_screenplay_t screenplay;
+    sb_rth_plan_t* rth_plan;
+    size_t num_bytes;
+    uint8_t* buf = NULL;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
+
+    /* open fixture and read into memory */
+    buf = load_fixture_to_buffer("fixtures/hover_3m_with_rth_plan.skyb", &num_bytes);
+    TEST_ASSERT_NOT_NULL(buf);
+
+    /* update screenplay from in-memory binary show */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_update_from_binary_file_in_memory(&screenplay, buf, num_bytes));
+
+    /* RTH plan must be loaded */
+    rth_plan = sb_screenplay_get_rth_plan(&screenplay);
+    TEST_ASSERT_NOT_NULL(rth_plan);
+    TEST_ASSERT_FALSE(sb_rth_plan_is_empty(rth_plan));
+    TEST_ASSERT_EQUAL(2, sb_rth_plan_get_num_points(rth_plan));
+    TEST_ASSERT_EQUAL(7, sb_rth_plan_get_num_entries(rth_plan));
 
     /* cleanup: destroy screenplay while buffer is still valid, then free buffer */
     sb_screenplay_destroy(&screenplay);
@@ -305,6 +348,7 @@ int main(void)
     RUN_TEST(test_sb_screenplay_get_scene_ptr_at_time_msec_with_infinite_later_scene);
     RUN_TEST(test_sb_screenplay_remove_last_scene);
     RUN_TEST(test_screenplay_update_from_binary_file_in_memory);
+    RUN_TEST(test_screenplay_update_from_binary_file_in_memory_loads_rth_plan);
 
     return UNITY_END();
 }

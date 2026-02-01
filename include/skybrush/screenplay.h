@@ -31,6 +31,7 @@
 #include <skybrush/events.h>
 #include <skybrush/lights.h>
 #include <skybrush/refcount.h>
+#include <skybrush/rth_plan.h>
 #include <skybrush/time_axis.h>
 #include <skybrush/trajectory.h>
 #include <skybrush/yaw_control.h>
@@ -129,11 +130,19 @@ sb_error_t sb_screenplay_scene_update_from_binary_file_in_memory(
  *
  * A screenplay can be evaluated by a show controller (\ref sb_show_controller_t)
  * to obtain the control outputs at any given point in time.
+ *
+ * Optionally, a screenplay may also hold a coordinated RTH (return-to-home) plan.
  */
 typedef struct sb_screenplay_s {
     sb_screenplay_scene_t* scenes; /**< The list of scenes */
     size_t num_scenes; /**< The current number of scenes in the list */
     size_t max_scenes; /**< The maximum number of scenes that the list can hold */
+
+    /**
+     * Optional coordinated RTH plan corresponding to the screenplay; \c NULL if no RTH
+     * plan exists.
+     */
+    sb_rth_plan_t* rth_plan;
 } sb_screenplay_t;
 
 sb_error_t sb_screenplay_init(sb_screenplay_t* screenplay);
@@ -143,6 +152,7 @@ size_t sb_screenplay_capacity(const sb_screenplay_t* screenplay);
 sb_bool_t sb_screenplay_is_empty(const sb_screenplay_t* screenplay);
 size_t sb_screenplay_size(const sb_screenplay_t* screenplay);
 
+sb_rth_plan_t* sb_screenplay_get_rth_plan(sb_screenplay_t* screenplay);
 sb_screenplay_scene_t* sb_screenplay_get_scene_ptr(
     sb_screenplay_t* screenplay, size_t index);
 sb_screenplay_scene_t* sb_screenplay_get_scene_ptr_at_time_msec(
