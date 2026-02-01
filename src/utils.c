@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -165,6 +165,23 @@ sb_error_t sb_scale_update_altitude(uint8_t* scale, float altitude)
  * @return error code if the scale cannot be increased any further
  */
 sb_error_t sb_scale_update_vector2(uint8_t* scale, sb_vector2_t point)
+{
+    return sb_i_scale_update(scale, point.x, point.y, 0.0f);
+}
+
+/**
+ * @brief Helper function to pick an appropriate scale for a trajectory (3D variant).
+ *
+ * The input of the function is a pointer to a current scale value and a new
+ * point that is to be entered into a trajectory. The function updates the
+ * current scale value in place to a larger value if the new point cannot be
+ * stored with the current scale.
+ *
+ * @param  scale  pointer to the current scale value to update
+ * @param  point  the point to store in a trajectory or RTH plan
+ * @return error code if the scale cannot be increased any further
+ */
+sb_error_t sb_scale_update_vector3(uint8_t* scale, sb_vector3_t point)
 {
     return sb_i_scale_update(scale, point.x, point.y, 0.0f);
 }

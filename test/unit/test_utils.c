@@ -124,7 +124,63 @@ void test_get_travel_time(void)
     TEST_ASSERT_EQUAL_FLOAT(2 * sqrtf(2), sb_get_travel_time_for_distance(2, 2, 1));
 }
 
-void test_scale_update(void)
+void test_scale_update_vector3(void)
+{
+    uint8_t scale = 0;
+    sb_vector3_t vec = { 0, 0, 0 };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_scale_update_vector3(&scale, vec));
+    TEST_ASSERT_EQUAL_UINT8(1, scale);
+
+    vec.x = 10;
+    vec.y = 20;
+    vec.z = 30;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_scale_update_vector3(&scale, vec));
+    TEST_ASSERT_EQUAL_UINT8(1, scale);
+
+    vec.x = 100;
+    vec.y = 200;
+    vec.z = -300;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_scale_update_vector3(&scale, vec));
+    TEST_ASSERT_EQUAL_UINT8(1, scale);
+
+    vec.x = 511;
+    vec.y = 511;
+    vec.z = -511;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_scale_update_vector3(&scale, vec));
+    TEST_ASSERT_EQUAL_UINT8(1, scale);
+
+    vec.x = 40000;
+    vec.y = -30000;
+    vec.z = 20000;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_scale_update_vector3(&scale, vec));
+    TEST_ASSERT_EQUAL_UINT8(2, scale);
+
+    vec.x = 65534;
+    vec.y = -65334;
+    vec.z = 65534;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_scale_update_vector3(&scale, vec));
+    TEST_ASSERT_EQUAL_UINT8(2, scale);
+
+    vec.x = 65534;
+    vec.y = -65535;
+    vec.z = 65534;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_scale_update_vector3(&scale, vec));
+    TEST_ASSERT_EQUAL_UINT8(3, scale);
+
+    vec.x = -4161409;
+    vec.y = 4161409;
+    vec.z = 4161409;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_scale_update_vector3(&scale, vec));
+    TEST_ASSERT_EQUAL_UINT8(127, scale);
+
+    vec.x = -4161410;
+    vec.y = 4161409;
+    vec.z = 4161409;
+    TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_scale_update_vector3(&scale, vec));
+}
+
+void test_scale_update_vector3_with_yaw(void)
 {
     uint8_t scale = 0;
     sb_vector3_with_yaw_t vec = { 0, 0, 0, 0 };
@@ -275,7 +331,8 @@ int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_scale_update);
+    RUN_TEST(test_scale_update_vector3);
+    RUN_TEST(test_scale_update_vector3_with_yaw);
     RUN_TEST(test_get_cubic_bezier_from_velocity_constraints);
     RUN_TEST(test_get_travel_time);
     RUN_TEST(test_bezier_cut_at);

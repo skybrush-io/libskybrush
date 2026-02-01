@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -43,6 +43,7 @@ float sb_get_travel_time_for_distance(float distance, float speed, float acceler
 void sb_interval_expand(sb_interval_t* interval, float offset);
 sb_error_t sb_scale_update_altitude(uint8_t* scale, float altitude);
 sb_error_t sb_scale_update_vector2(uint8_t* scale, sb_vector2_t point);
+sb_error_t sb_scale_update_vector3(uint8_t* scale, sb_vector3_t point);
 sb_error_t sb_scale_update_vector3_with_yaw(uint8_t* scale, sb_vector3_with_yaw_t point);
 sb_error_t sb_uint32_msec_duration_from_float_seconds(uint32_t* result_msec, float duration_sec);
 __END_DECLS
