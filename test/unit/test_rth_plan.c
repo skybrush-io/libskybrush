@@ -24,44 +24,50 @@
 
 #include "unity.h"
 
-sb_rth_plan_t plan;
+sb_rth_plan_t* plan;
 
-void loadFixture(const char* fname);
+sb_error_t loadFixture(const char* fname);
 void closeFixture(void);
 
 void setUp(void)
 {
+    plan = sb_rth_plan_new();
     loadFixture("fixtures/hover_3m_with_rth_plan.skyb");
 }
 
 void tearDown(void)
 {
     closeFixture();
+    SB_XDECREF(plan);
 }
 
-void loadFixture(const char* fname)
+sb_error_t loadFixture(const char* fname)
 {
     FILE* fp;
     int fd;
+    sb_error_t retval;
 
     fp = fopen(fname, "rb");
     if (fp == 0) {
+        perror(fname);
         abort();
     }
 
     fd = fileno(fp);
     if (fd < 0) {
+        perror(NULL);
         abort();
     }
 
-    sb_rth_plan_init_from_binary_file(&plan, fd);
+    retval = sb_rth_plan_update_from_binary_file(plan, fd);
 
     fclose(fp);
+
+    return retval;
 }
 
 void closeFixture(void)
 {
-    sb_rth_plan_destroy(&plan);
 }
 
 void test_rth_plan_is_really_empty(void)
@@ -70,11 +76,11 @@ void test_rth_plan_is_really_empty(void)
     int i, n = sizeof(t) / sizeof(t[0]);
     sb_rth_plan_entry_t entry;
 
-    TEST_ASSERT(sb_rth_plan_is_empty(&plan));
-    TEST_ASSERT_EQUAL(0, sb_rth_plan_get_num_points(&plan));
+    TEST_ASSERT(sb_rth_plan_is_empty(plan));
+    TEST_ASSERT_EQUAL(0, sb_rth_plan_get_num_points(plan));
 
     for (i = 0; i < n; i++) {
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t[i], &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t[i], &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
@@ -82,10 +88,13 @@ void test_rth_plan_is_really_empty(void)
     }
 }
 
-void test_init_empty(void)
+void test_new(void)
 {
     closeFixture(); /* was created in setUp() */
-    sb_rth_plan_init_empty(&plan);
+
+    SB_XDECREF(plan);
+    plan = sb_rth_plan_new();
+
     test_rth_plan_is_really_empty();
 }
 
@@ -93,33 +102,33 @@ void test_get_points(void)
 {
     sb_vector2_t vec;
 
-    TEST_ASSERT_EQUAL(2, sb_rth_plan_get_num_points(&plan));
+    TEST_ASSERT_EQUAL(2, sb_rth_plan_get_num_points(plan));
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_get_point(&plan, 0, &vec));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_get_point(plan, 0, &vec));
     TEST_ASSERT_EQUAL_FLOAT(30000, vec.x);
     TEST_ASSERT_EQUAL_FLOAT(40000, vec.y);
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_get_point(&plan, 1, &vec));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_get_point(plan, 1, &vec));
     TEST_ASSERT_EQUAL_FLOAT(-40000, vec.x);
     TEST_ASSERT_EQUAL_FLOAT(-30000, vec.y);
 
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_rth_plan_get_point(&plan, 2, &vec));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_rth_plan_get_point(plan, 2, &vec));
     TEST_ASSERT_EQUAL_FLOAT(-40000, vec.x);
     TEST_ASSERT_EQUAL_FLOAT(-30000, vec.y);
 
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_rth_plan_get_point(&plan, 5234, &vec));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_rth_plan_get_point(plan, 5234, &vec));
     TEST_ASSERT_EQUAL_FLOAT(-40000, vec.x);
     TEST_ASSERT_EQUAL_FLOAT(-30000, vec.y);
 }
 
 void test_get_num_entries(void)
 {
-    TEST_ASSERT_EQUAL(7, sb_rth_plan_get_num_entries(&plan));
+    TEST_ASSERT_EQUAL(7, sb_rth_plan_get_num_entries(plan));
 }
 
 void test_is_empty(void)
 {
-    TEST_ASSERT(!sb_rth_plan_is_empty(&plan));
+    TEST_ASSERT(!sb_rth_plan_is_empty(plan));
 }
 
 void test_evaluate_at(void)
@@ -146,7 +155,7 @@ void test_evaluate_at(void)
     for (int i = -20; i <= 0; i++) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(t, entry.time_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
@@ -160,7 +169,7 @@ void test_evaluate_at(void)
     /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
      * to T=15 (inclusive). Execution starts at T=15 */
     for (int i = 2; i <= 150; i += 2) {
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
@@ -176,7 +185,7 @@ void test_evaluate_at(void)
     /* Command is "go to (-40m, -30m) in 50s with pre-delay=2s" from T=15
      * (exclusive) to T=45 (inclusive). Execution starts at T=45 */
     for (int i = 155; i <= 450; i += 5) {
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(-40000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(-30000, entry.target.y);
@@ -194,7 +203,7 @@ void test_evaluate_at(void)
     for (int i = 455; i <= 800; i += 5) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
@@ -212,7 +221,7 @@ void test_evaluate_at(void)
     for (int i = 805; i <= 900; i += 5) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_WITH_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
@@ -229,7 +238,7 @@ void test_evaluate_at(void)
     for (int i = 905; i <= 1150; i += 10) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(0, entry.target.x);
         TEST_ASSERT_EQUAL(0, entry.target.y);
@@ -247,7 +256,7 @@ void test_evaluate_at(void)
     for (int i = 1160; i <= 1200; i += 10) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(0, entry.target.x);
         TEST_ASSERT_EQUAL(0, entry.target.y);
@@ -261,7 +270,7 @@ void test_evaluate_at(void)
     }
 
     /* Test positive infinity */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, INFINITY, &entry));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, INFINITY, &entry));
     TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
     TEST_ASSERT_EQUAL(0, entry.target.x);
     TEST_ASSERT_EQUAL(0, entry.target.y);
@@ -274,7 +283,7 @@ void test_evaluate_at(void)
     TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
 
     /* Test negative infinity */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, -INFINITY, &entry));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, -INFINITY, &entry));
     TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
     TEST_ASSERT_EQUAL(0, entry.target.x);
     TEST_ASSERT_EQUAL(0, entry.target.y);
@@ -317,11 +326,11 @@ void test_plan_duration_too_large(void)
     };
 
     closeFixture(); /* was created in setUp() */
-    sb_rth_plan_init_from_binary_file_in_memory(&plan, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_update_from_binary_file_in_memory(plan, buf, sizeof(buf)));
 
     /* Command is "land" until T=0 */
     for (int i = -20; i <= 0; i++) {
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
@@ -331,7 +340,7 @@ void test_plan_duration_too_large(void)
     /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
      * to T=3 (inclusive) */
     for (int i = 2; i <= 30; i += 2) {
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, i / 10.0f, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
@@ -342,7 +351,7 @@ void test_plan_duration_too_large(void)
 
     /* Next command is invalid */
     for (int i = 40; i < 400; i += 10) {
-        TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
+        TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_rth_plan_evaluate_at(plan, i / 10.0f, &entry));
     }
 }
 
@@ -406,7 +415,7 @@ void test_convert_to_trajectory(void)
     for (int i = -20; i <= 0; i++) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_msec(trajectory));
@@ -418,7 +427,7 @@ void test_convert_to_trajectory(void)
     for (int i = 2; i <= 150; i += 2) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         t = 15;
@@ -449,7 +458,7 @@ void test_convert_to_trajectory(void)
     for (int i = 155; i <= 450; i += 5) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         t = 45;
@@ -480,7 +489,7 @@ void test_convert_to_trajectory(void)
     for (int i = 455; i <= 800; i += 5) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
 
         entry.time_sec = t;
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
@@ -512,7 +521,7 @@ void test_convert_to_trajectory(void)
     for (int i = 805; i <= 900; i += 5) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
 
         entry.time_sec = t;
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
@@ -550,7 +559,7 @@ void test_convert_to_trajectory(void)
     for (int i = 910; i <= 1150; i += 10) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         t = 115;
@@ -562,7 +571,7 @@ void test_convert_to_trajectory(void)
     for (int i = 1160; i <= 1200; i += 10) {
         t = i / 10.0f;
 
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         TEST_ASSERT_EQUAL(t * 1000, sb_trajectory_get_total_duration_msec(trajectory));
@@ -577,7 +586,7 @@ int main(int argc, char* argv[])
     UNITY_BEGIN();
 
     /* basic tests with hover_3m_with_rth_plan.skyb */
-    RUN_TEST(test_init_empty);
+    RUN_TEST(test_new);
     RUN_TEST(test_get_points);
     RUN_TEST(test_get_num_entries);
     RUN_TEST(test_is_empty);

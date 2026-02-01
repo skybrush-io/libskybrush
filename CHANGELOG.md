@@ -49,6 +49,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   you should call `SB_DECREF()` on the event list instead when you want to
   release it. Event lists without active references are automatically freed.
 
+- `sb_rth_plan_t` is now reference-counted. Use `sb_rth_plan_new()` to allocate
+  a new RTH plan on the heap or `sb_rth_plan_init()` to initialize an RTH plan
+  that is allocated on the stack. `sb_rth_plan_destroy()` is removed;
+  you should call `SB_DECREF()` on the RTH plan instead when you want to
+  release it. RTH plans without active references are automatically freed.
+
 - `sb_trajectory_replace_end_to_land_at()` now takes an `sb_vector3_t` to specify the
   desired landing coordinate instead of an `sb_vector3_with_yaw_t`.
 

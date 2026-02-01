@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <float.h>
+#include <stddef.h>
 #include <string.h>
 
 #include <skybrush/formats/binary.h>
@@ -32,6 +33,7 @@
 #include <skybrush/utils.h>
 
 #include "../parsing.h"
+#include "skybrush/buffer.h"
 
 /**
  * @def MAX_DURATION
@@ -46,182 +48,52 @@
 #define OFFSET_OF_ENTRY_TABLE (OFFSET_OF_POINT(plan->num_points))
 #define OFFSET_OF_FIRST_ENTRY (OFFSET_OF_ENTRY_TABLE + sizeof(uint16_t))
 
-/**
- * @brief Returns whether the given RTH action has an associated duration.
- */
 static sb_bool_t sb_i_rth_action_has_duration(sb_rth_action_t action);
-
-/**
- * @brief Returns whether the given RTH action has an associated pre-neck phase.
- */
 static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action);
-
-/**
- * @brief Returns whether the given RTH action has an associated target coordinate.
- */
 static sb_bool_t sb_i_rth_action_has_target(sb_rth_action_t action);
-
-/**
- * @brief Returns whether the given RTH action has an associated target altitude.
- */
 static sb_bool_t sb_i_rth_action_has_target_altitude(sb_rth_action_t action);
 
-sb_error_t sb_i_rth_plan_init_from_parser(sb_rth_plan_t* plan, sb_binary_file_parser_t* parser);
-
-/**
- * Parses a coordinate from the memory block that defines the RTH plan,
- * scaling it up with the appropriate scaling factor as needed.
- *
- * The offset is automatically advanced after reading the coordinate.
- */
+static void sb_i_rth_plan_destroy(sb_rth_plan_t* plan);
 static float sb_i_rth_plan_parse_coordinate(const sb_rth_plan_t* plan, size_t* offset);
-
-/**
- * Parses a duration from the memory block that defines the RTH plan, returning
- * an error code if it is too large.
- *
- * The offset is automatically advanced after reading the duration.
- */
 static sb_error_t sb_i_rth_plan_parse_duration(const sb_rth_plan_t* plan, size_t* offset, float* duration);
-
-/**
- * Parses the header of the memory block that defines the RTH plan.
- */
 static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan);
+static sb_error_t sb_i_rth_plan_update_from_bytes(sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes, sb_bool_t owned);
+static sb_error_t sb_i_rth_plan_update_from_parser(sb_rth_plan_t* plan, sb_binary_file_parser_t* parser);
 
 /**
- * Instructs the RTH plan object to take ownership of its inner memory buffer.
+ * \brief Allocates a new RTH plan object on the heap and initializes it.
+ *
+ * \return the new RTH plan, or \c NULL if memory allocation failed
  */
-static void sb_i_rth_plan_take_ownership(sb_rth_plan_t* plan);
-
-/**
- * Destroys an RTH plan object and releases all memory that it owns.
- */
-void sb_rth_plan_destroy(sb_rth_plan_t* plan)
+sb_rth_plan_t* sb_rth_plan_new(void)
 {
-    if (plan->owner) {
-        sb_free(plan->buffer);
+    sb_rth_plan_t* obj = sb_calloc(sb_rth_plan_t, 1);
+
+    if (obj) {
+        if (sb_rth_plan_init(obj)) {
+            sb_free(obj);
+        }
     }
 
-    plan->buffer = 0;
-    plan->buffer_length = 0;
-    plan->owner = 0;
-
-    plan->header_length = 0;
-    plan->num_points = 0;
-    plan->scale = 1;
+    return obj;
 }
 
 /**
- * Initializes an RTH plan object from the contents of a Skybrush file in
- * binary format.
+ * Initializes an already allocated RTH plan object.
+ *
+ * You must call this function on an uninitialized RTH plan before using it.
+ * \ref sb_rth_plan_new() takes care of the initialization for you if you
+ * allocate the RTH plan on the heap.
  *
  * \param plan  the RTH plan to initialize
- * \param fd  handle to the low-level file object to initialize the plan from
- *
- * \return \c SB_SUCCESS if the object was initialized successfully,
- *         \c SB_ENOENT if the file did not contain a trajectory block,
- *         \c SB_EREAD for read errors
+ * \return \c SB_SUCCESS if the RTH plan was initialized successfully,
+ *         \c SB_ENOMEM if memory allocation failed
  */
-sb_error_t sb_rth_plan_init_from_binary_file(sb_rth_plan_t* plan, int fd)
+sb_error_t sb_rth_plan_init(sb_rth_plan_t* plan)
 {
-    sb_binary_file_parser_t parser;
-    sb_error_t retval;
+    SB_REF_INIT(plan, sb_i_rth_plan_destroy);
 
-    SB_CHECK(sb_binary_file_parser_init_from_file(&parser, fd));
-    retval = sb_i_rth_plan_init_from_parser(plan, &parser);
-    sb_binary_file_parser_destroy(&parser);
-
-    return retval;
-}
-
-/**
- * Initializes an RTH plan object from the contents of a Skybrush file in
- * binary format, already loaded into memory.
- *
- * \param plan  the RTH plan to initialize
- * \param buf   the buffer holding the loaded Skybrush file in binary format
- * \param nbytes  the length of the buffer
- *
- * \return \c SB_SUCCESS if the object was initialized successfully,
- *         \c SB_ENOENT if the memory block did not contain a trajectory
- */
-sb_error_t sb_rth_plan_init_from_binary_file_in_memory(
-    sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes)
-{
-    sb_binary_file_parser_t parser;
-    sb_error_t retval;
-
-    SB_CHECK(sb_binary_file_parser_init_from_buffer(&parser, buf, nbytes));
-    retval = sb_i_rth_plan_init_from_parser(plan, &parser);
-    sb_binary_file_parser_destroy(&parser);
-
-    return retval;
-}
-
-sb_error_t sb_i_rth_plan_init_from_parser(sb_rth_plan_t* plan, sb_binary_file_parser_t* parser)
-{
-    sb_error_t retval;
-    sb_binary_block_t block;
-    uint8_t* buf;
-
-    SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_RTH_PLAN));
-
-    block = sb_binary_file_get_current_block(parser);
-
-    buf = sb_calloc(uint8_t, block.length);
-    if (buf == 0) {
-        return SB_ENOMEM; /* LCOV_EXCL_LINE */
-    }
-
-    retval = sb_binary_file_read_current_block(parser, buf);
-    if (retval != SB_SUCCESS) {
-        sb_free(buf);
-        return retval;
-    }
-
-    retval = sb_rth_plan_init_from_buffer(plan, buf, block.length);
-    if (retval != SB_SUCCESS) {
-        sb_free(buf);
-        return retval;
-    }
-
-    sb_i_rth_plan_take_ownership(plan);
-
-    return SB_SUCCESS;
-}
-
-/**
- * Initializes an RTH plan object from the contents of a memory buffer.
- *
- * \param plan  the RTH plan to initialize
- * \param buf   the buffer holding the encoded RTH plan object
- * \param nbytes  the length of the buffer
- *
- * \return \c SB_SUCCESS if the object was initialized successfully,
- *         \c SB_ENOENT if the memory buffer did not contain a trajectory
- */
-sb_error_t sb_rth_plan_init_from_buffer(sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes)
-{
-    plan->buffer = buf;
-    plan->buffer_length = nbytes;
-    plan->owner = 0;
-
-    plan->header_length = sb_i_rth_plan_parse_header(plan);
-
-    return SB_SUCCESS;
-}
-
-/**
- * Initializes an empty RTH plan.
- *
- * \param plan  the RTH plan to initialize
- */
-sb_error_t sb_rth_plan_init_empty(sb_rth_plan_t* plan)
-{
-    plan->buffer = 0;
-    plan->buffer_length = 0;
-    plan->owner = 0;
+    SB_CHECK(sb_buffer_init(&plan->buffer, 0));
 
     plan->scale = 1;
     plan->header_length = 0;
@@ -239,7 +111,9 @@ sb_error_t sb_rth_plan_init_empty(sb_rth_plan_t* plan)
 size_t sb_rth_plan_get_num_entries(const sb_rth_plan_t* plan)
 {
     size_t offset = OFFSET_OF_ENTRY_TABLE;
-    return offset + 2 <= plan->buffer_length ? sb_parse_uint16(plan->buffer, &offset) : 0;
+    return offset + 2 <= sb_buffer_size(&plan->buffer)
+        ? sb_parse_uint16(SB_BUFFER(plan->buffer), &offset)
+        : 0;
 }
 
 /**
@@ -304,6 +178,8 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
     sb_bool_t found = 0;
     sb_rth_plan_entry_t entry;
     uint32_t point_index = 0;
+    uint8_t* buf = SB_BUFFER(plan->buffer);
+    size_t buf_length = sb_buffer_size(&plan->buffer);
 
     memset(&entry, 0, sizeof(entry));
     entry.action = SB_RTH_ACTION_LAND;
@@ -317,10 +193,10 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
         uint8_t flags, encoded_action;
         uint32_t time_diff_s;
 
-        flags = plan->buffer[offset++];
+        flags = buf[offset++];
 
         /* Parse time difference from previous entry to this one */
-        SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &time_diff_s));
+        SB_CHECK(sb_parse_varuint32(buf, buf_length, &offset, &time_diff_s));
 
         /* Overflow check */
         if (time_diff_s + time_s < time_s) {
@@ -360,7 +236,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
         if (encoded_action != SB_RTH_ACTION_SAME_AS_PREVIOUS) {
             /* If the action has a target, parse it */
             if (sb_i_rth_action_has_target(entry.action)) {
-                SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, &offset, &point_index));
+                SB_CHECK(sb_parse_varuint32(buf, buf_length, &offset, &point_index));
             } else {
                 point_index = 0;
             }
@@ -433,6 +309,83 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
     }
 
     return SB_SUCCESS;
+}
+
+/**
+ * Updates an RTH plan object from the contents of a Skybrush file in
+ * binary format.
+ *
+ * \param plan  the RTH plan to update
+ * \param fd  handle to the low-level file object to update the plan from
+ *
+ * \return \c SB_SUCCESS if the object was updated successfully,
+ *         \c SB_ENOENT if the file did not contain a trajectory block,
+ *         \c SB_EREAD for read errors
+ */
+sb_error_t sb_rth_plan_update_from_binary_file(sb_rth_plan_t* plan, int fd)
+{
+    sb_binary_file_parser_t parser;
+    sb_error_t retval;
+
+    SB_CHECK(sb_binary_file_parser_init_from_file(&parser, fd));
+    retval = sb_i_rth_plan_update_from_parser(plan, &parser);
+    sb_binary_file_parser_destroy(&parser);
+
+    return retval;
+}
+
+/**
+ * Updates an RTH plan object from the contents of a Skybrush file in
+ * binary format, already loaded into memory.
+ *
+ * \param plan  the RTH plan to update
+ * \param buf   the buffer holding the loaded Skybrush file in binary format
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was updated successfully,
+ *         \c SB_ENOENT if the memory block did not contain a trajectory
+ */
+sb_error_t sb_rth_plan_update_from_binary_file_in_memory(
+    sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes)
+{
+    sb_binary_file_parser_t parser;
+    sb_error_t retval;
+
+    SB_CHECK(sb_binary_file_parser_init_from_buffer(&parser, buf, nbytes));
+    retval = sb_i_rth_plan_update_from_parser(plan, &parser);
+    sb_binary_file_parser_destroy(&parser);
+
+    return retval;
+}
+
+/**
+ * Updates an RTH plan object from the contents of a memory buffer.
+ *
+ * \param plan  the RTH plan to update
+ * \param buf   the buffer holding the encoded RTH plan object
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was updated successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain an RTH plan
+ */
+sb_error_t sb_rth_plan_update_from_buffer(sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes)
+{
+    return sb_i_rth_plan_update_from_bytes(plan, buf, nbytes, /* owned = */ 0);
+}
+
+/**
+ * Updates an RTH plan object from the contents of a memory buffer, taking ownership.
+ *
+ * \param plan  the RTH plan to update
+ * \param buf   the buffer holding the encoded RTH plan object
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the object was updated successfully,
+ *         \c SB_ENOENT if the memory buffer did not contain an RTH plan
+ */
+sb_error_t sb_rth_plan_update_from_bytes(sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes)
+{
+    return sb_i_rth_plan_update_from_bytes(plan, buf, nbytes, /* owned = */ 1);
 }
 
 /**
@@ -550,6 +503,9 @@ cleanup:
 
 /* ************************************************************************** */
 
+/**
+ * @brief Returns whether the given RTH action has an associated duration.
+ */
 static sb_bool_t sb_i_rth_action_has_duration(sb_rth_action_t action)
 {
     /* Right now all actions that have a target also have a duration and vice
@@ -557,25 +513,51 @@ static sb_bool_t sb_i_rth_action_has_duration(sb_rth_action_t action)
     return sb_i_rth_action_has_target(action);
 }
 
+/**
+ * @brief Returns whether the given RTH action has an associated pre-neck phase.
+ */
 static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action)
 {
     return action == SB_RTH_ACTION_GO_TO_WITH_ALTITUDE;
 }
 
+/**
+ * @brief Returns whether the given RTH action has an associated target coordinate.
+ */
 static sb_bool_t sb_i_rth_action_has_target(sb_rth_action_t action)
 {
     return (
         action == SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE || action == SB_RTH_ACTION_GO_TO_WITH_ALTITUDE);
 }
 
+/**
+ * @brief Returns whether the given RTH action has an associated target altitude.
+ */
 static sb_bool_t sb_i_rth_action_has_target_altitude(sb_rth_action_t action)
 {
     return action == SB_RTH_ACTION_GO_TO_WITH_ALTITUDE;
 }
 
+/* ************************************************************************** */
+
+/**
+ * Destroys an RTH plan object and releases all memory that it owns.
+ */
+static void sb_i_rth_plan_destroy(sb_rth_plan_t* plan)
+{
+    sb_buffer_destroy(&plan->buffer);
+
+    plan->header_length = 0;
+    plan->num_points = 0;
+    plan->scale = 1;
+}
+
+/**
+ * Parses the header of the memory block that defines the RTH plan.
+ */
 static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan)
 {
-    uint8_t* buf = plan->buffer;
+    uint8_t* buf = SB_BUFFER(plan->buffer);
     size_t offset;
 
     assert(buf != 0);
@@ -588,25 +570,76 @@ static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan)
     return offset; /* size of the header */
 }
 
-static void sb_i_rth_plan_take_ownership(sb_rth_plan_t* plan)
-{
-    plan->owner = 1;
-}
-
+/**
+ * Parses a coordinate from the memory block that defines the RTH plan,
+ * scaling it up with the appropriate scaling factor as needed.
+ *
+ * The offset is automatically advanced after reading the coordinate.
+ */
 static float sb_i_rth_plan_parse_coordinate(const sb_rth_plan_t* plan, size_t* offset)
 {
-    return sb_parse_int16(plan->buffer, offset) * plan->scale;
+    uint8_t* buf = SB_BUFFER(plan->buffer);
+    return sb_parse_int16(buf, offset) * plan->scale;
 }
 
+/**
+ * Parses a duration from the memory block that defines the RTH plan, returning
+ * an error code if it is too large.
+ *
+ * The offset is automatically advanced after reading the duration.
+ */
 static sb_error_t sb_i_rth_plan_parse_duration(const sb_rth_plan_t* plan, size_t* offset, float* duration)
 {
+    uint8_t* buf = SB_BUFFER(plan->buffer);
+    size_t num_bytes = sb_buffer_size(&plan->buffer);
     uint32_t value;
 
-    SB_CHECK(sb_parse_varuint32(plan->buffer, plan->buffer_length, offset, &value));
+    SB_CHECK(sb_parse_varuint32(buf, num_bytes, offset, &value));
     if (value > MAX_DURATION) {
         return SB_EOVERFLOW;
     }
 
     *duration = value;
+    return SB_SUCCESS;
+}
+
+static sb_error_t sb_i_rth_plan_update_from_bytes(sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes, sb_bool_t owned)
+{
+    sb_buffer_t new_buffer;
+
+    if (owned) {
+        SB_CHECK(sb_buffer_init_from_bytes(&new_buffer, buf, nbytes));
+    } else {
+        sb_buffer_init_view(&new_buffer, buf, nbytes);
+    }
+
+    sb_buffer_destroy(&plan->buffer);
+    plan->buffer = new_buffer;
+
+    plan->header_length = sb_i_rth_plan_parse_header(plan);
+
+    return SB_SUCCESS;
+}
+
+static sb_error_t sb_i_rth_plan_update_from_parser(sb_rth_plan_t* plan, sb_binary_file_parser_t* parser)
+{
+    sb_error_t retval;
+    uint8_t* buf;
+    size_t size;
+    sb_bool_t owned;
+
+    SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_RTH_PLAN));
+    SB_CHECK(sb_binary_file_read_current_block_ex(parser, &buf, &size, &owned));
+
+    retval = sb_i_rth_plan_update_from_bytes(plan, buf, size, owned);
+    if (retval != SB_SUCCESS) {
+        if (owned) {
+            sb_free(buf);
+        }
+        return retval;
+    }
+
+    /* ownership of 'buf' taken by the RTH plan if needed */
+
     return SB_SUCCESS;
 }

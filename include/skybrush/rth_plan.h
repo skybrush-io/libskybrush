@@ -22,6 +22,7 @@
 
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
+#include <skybrush/refcount.h>
 #include <skybrush/trajectory.h>
 
 __BEGIN_DECLS
@@ -88,27 +89,27 @@ typedef struct sb_rth_plan_entry_s {
  * @brief Structure representing a return-to-home plan in a Skybrush mission.
  */
 typedef struct sb_rth_plan_s {
-    uint8_t* buffer; /**< Pointer to the buffer holding the RTH plan */
-    size_t buffer_length; /**< Number of bytes in the buffer */
-    sb_bool_t owner; /**< Whether the object owns the buffer */
-
+    SB_REFCOUNTED;
+    sb_buffer_t buffer; /**< Buffer holding the binary representation of the RTH plan */
     float scale; /**< Scaling factor for the coordinates */
     size_t header_length; /**< Number of bytes in the header of the buffer */
     size_t num_points; /**< Number of points in the RTH plan */
 } sb_rth_plan_t;
 
-sb_error_t sb_rth_plan_init_from_binary_file(sb_rth_plan_t* plan, int fd);
-sb_error_t sb_rth_plan_init_from_binary_file_in_memory(
-    sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes);
-sb_error_t sb_rth_plan_init_from_buffer(sb_rth_plan_t* plan,
-    uint8_t* buf, size_t nbytes);
-sb_error_t sb_rth_plan_init_empty(sb_rth_plan_t* plan);
-void sb_rth_plan_destroy(sb_rth_plan_t* plan);
+sb_rth_plan_t* sb_rth_plan_new(void);
+sb_error_t sb_rth_plan_init(sb_rth_plan_t* plan);
+
 size_t sb_rth_plan_get_num_entries(const sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_points(const sb_rth_plan_t* plan);
 sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vector2_t* point);
 sb_bool_t sb_rth_plan_is_empty(const sb_rth_plan_t* plan);
 sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth_plan_entry_t* result);
+
+sb_error_t sb_rth_plan_update_from_binary_file(sb_rth_plan_t* plan, int fd);
+sb_error_t sb_rth_plan_update_from_binary_file_in_memory(
+    sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes);
+sb_error_t sb_rth_plan_update_from_buffer(sb_rth_plan_t* plan,
+    uint8_t* buf, size_t nbytes);
 
 sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_trajectory_t* trajectory,
