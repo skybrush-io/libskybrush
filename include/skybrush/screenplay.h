@@ -164,6 +164,7 @@ sb_error_t sb_screenplay_append_new_scene(
 sb_error_t sb_screenplay_remove_last_scene(sb_screenplay_t* screenplay);
 sb_error_t sb_screenplay_update_from_binary_file_in_memory(
     sb_screenplay_t* screenplay, uint8_t* show_data, size_t length);
+void sb_screenplay_set_rth_plan(sb_screenplay_t* screenplay, sb_rth_plan_t* rth_plan);
 
 __END_DECLS
 

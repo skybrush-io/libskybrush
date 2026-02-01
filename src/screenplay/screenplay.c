@@ -25,7 +25,6 @@
 #include <skybrush/screenplay.h>
 
 static sb_error_t sb_i_screenplay_ensure_has_free_space(sb_screenplay_t* screenplay);
-static void sb_i_screenplay_set_rth_plan(sb_screenplay_t* screenplay, sb_rth_plan_t* rth_plan);
 
 /**
  * @brief Initializes a screenplay structure.
@@ -112,7 +111,7 @@ void sb_screenplay_clear(sb_screenplay_t* screenplay)
         sb_screenplay_remove_last_scene(screenplay); /* will succeed */
     }
 
-    sb_i_screenplay_set_rth_plan(screenplay, NULL);
+    sb_screenplay_set_rth_plan(screenplay, NULL);
 }
 
 /**
@@ -329,7 +328,7 @@ sb_error_t sb_screenplay_update_from_binary_file_in_memory(sb_screenplay_t* scre
         }
 
         /* RTH plan successfully updated */
-        sb_i_screenplay_set_rth_plan(screenplay, rth_plan);
+        sb_screenplay_set_rth_plan(screenplay, rth_plan);
     }
 
 exit:
@@ -378,7 +377,7 @@ static sb_error_t sb_i_screenplay_ensure_has_free_space(sb_screenplay_t* screenp
  * @param screenplay  the screenplay to update
  * @param rth_plan    the RTH plan to associate with the screenplay; may be \c NULL
  */
-static void sb_i_screenplay_set_rth_plan(sb_screenplay_t* screenplay, sb_rth_plan_t* rth_plan)
+void sb_screenplay_set_rth_plan(sb_screenplay_t* screenplay, sb_rth_plan_t* rth_plan)
 {
     SB_XINCREF(rth_plan);
     SB_XDECREF(screenplay->rth_plan);
