@@ -225,9 +225,11 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(30, entry.duration_sec);
     }
 
-    /* Command is "land" afterwards. Execution starts at T=105 */
-    for (int i = 1160; i <= 1200; i += 10) {
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, i / 10.0f, &entry));
+    /* Command is "land" afterwards. Execution starts at T=115 */
+    for (int i = 905; i <= 1150; i += 10) {
+        t = i / 10.0f;
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
         TEST_ASSERT_EQUAL(0, entry.target.x);
         TEST_ASSERT_EQUAL(0, entry.target.y);
@@ -239,6 +241,50 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
     }
+
+    /* We are now beyond the last time instant for which we have an RTH plan. In this
+     * case we get an entry that instructs to land immediately. */
+    for (int i = 1160; i <= 1200; i += 10) {
+        t = i / 10.0f;
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
+        TEST_ASSERT_EQUAL(0, entry.target.x);
+        TEST_ASSERT_EQUAL(0, entry.target.y);
+        TEST_ASSERT_EQUAL(t, entry.time_sec);
+        TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
+        TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
+        TEST_ASSERT_EQUAL(0, entry.duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.target_altitude);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+    }
+
+    /* Test positive infinity */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, INFINITY, &entry));
+    TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
+    TEST_ASSERT_EQUAL(0, entry.target.x);
+    TEST_ASSERT_EQUAL(0, entry.target.y);
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, entry.time_sec);
+    TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
+    TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
+    TEST_ASSERT_EQUAL(0, entry.duration_sec);
+    TEST_ASSERT_EQUAL(0, entry.target_altitude);
+    TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
+    TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+
+    /* Test negative infinity */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, -INFINITY, &entry));
+    TEST_ASSERT_EQUAL(SB_RTH_ACTION_LAND, entry.action);
+    TEST_ASSERT_EQUAL(0, entry.target.x);
+    TEST_ASSERT_EQUAL(0, entry.target.y);
+    TEST_ASSERT_EQUAL_FLOAT(-INFINITY, entry.time_sec);
+    TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
+    TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
+    TEST_ASSERT_EQUAL(0, entry.duration_sec);
+    TEST_ASSERT_EQUAL(0, entry.target_altitude);
+    TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
+    TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
 }
 
 void test_plan_duration_too_large(void)
@@ -501,13 +547,24 @@ void test_convert_to_trajectory(void)
     }
 
     /* Command is "land" afterwards, to be executed at T=115 */
-    for (int i = 910; i <= 1200; i += 10) {
+    for (int i = 910; i <= 1150; i += 10) {
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         t = 115;
+        TEST_ASSERT_EQUAL(t * 1000, sb_trajectory_get_total_duration_msec(trajectory));
+        assert_trajectory_is_constant(trajectory, 0.0f, t, start);
+    }
+
+    /* We are now beyond the last point */
+    for (int i = 1160; i <= 1200; i += 10) {
+        t = i / 10.0f;
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(&plan, t, &entry));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
+
         TEST_ASSERT_EQUAL(t * 1000, sb_trajectory_get_total_duration_msec(trajectory));
         assert_trajectory_is_constant(trajectory, 0.0f, t, start);
     }

@@ -409,8 +409,17 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
          * instant that the user is looking for. If it is not, continue the
          * iteration with the next entry */
         if (time_s >= time) {
+            found = 1;
             break;
         }
+    }
+
+    if (!found) {
+        /* Requested time was beyond the last point for which we had an RTH plan.
+         * In this case, we just land immediately. */
+        memset(&entry, 0, sizeof(entry));
+        entry.action = SB_RTH_ACTION_LAND;
+        entry.time_sec = time;
     }
 
     if (sb_i_rth_action_has_target(entry.action)) {
