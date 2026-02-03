@@ -108,11 +108,30 @@ void test_get_color_at(void)
     sb_light_player_destroy(&player);
 }
 
+void test_constant_color_program(void)
+{
+    sb_rgb_color_t expected = { 12, 34, 56 };
+    sb_rgb_color_t actual;
+    unsigned long t_ms[] = { 0, 500, 1000, 12345, 60000, 12345678 };
+    int i, n = sizeof(t_ms) / sizeof(t_ms[0]);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_set_constant_color(program, expected));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_player_init(&player, program));
+
+    for (i = 0; i < n; i++) {
+        actual = sb_light_player_get_color_at(&player, t_ms[i]);
+        TEST_ASSERT_EQUAL_COLOR(expected, actual);
+    }
+
+    sb_light_player_destroy(&player);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
     RUN_TEST(test_get_color_at);
+    RUN_TEST(test_constant_color_program);
 
     return UNITY_END();
 }

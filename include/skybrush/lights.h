@@ -49,6 +49,9 @@ sb_error_t sb_light_program_init(sb_light_program_t* program);
 
 void sb_light_program_clear(sb_light_program_t* program);
 
+sb_error_t sb_light_program_set_constant_color(
+    sb_light_program_t* program, sb_rgb_color_t color);
+
 sb_error_t sb_light_program_update_from_binary_file(sb_light_program_t* program, int fd);
 sb_error_t sb_light_program_update_from_binary_file_in_memory(
     sb_light_program_t* program, uint8_t* buf, size_t length);

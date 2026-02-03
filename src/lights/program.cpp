@@ -28,6 +28,7 @@
 
 #include "bytecode_array.hpp"
 #include "bytecode_player.h"
+#include "commands.h"
 
 static void sb_i_light_program_destroy(sb_light_program_t* program);
 static sb_error_t sb_i_light_program_update_from_bytes(sb_light_program_t* program, uint8_t* buf, size_t nbytes, sb_bool_t owned);
@@ -77,6 +78,31 @@ sb_error_t sb_light_program_init(sb_light_program_t* program)
 void sb_light_program_clear(sb_light_program_t* program)
 {
     sb_buffer_clear(&program->buffer);
+}
+
+/**
+ * Sets the light program to a constant color.
+ *
+ * \param program  the light program to set
+ * \param color    the constant color to set
+ *
+ * \return \c SB_SUCCESS if the object was updated successfully,
+ *         \c SB_ENOMEM if memory allocation failed
+ */
+sb_error_t sb_light_program_set_constant_color(sb_light_program_t* program, sb_rgb_color_t color)
+{
+    uint8_t* buf = sb_calloc(uint8_t, 5);
+    if (buf == 0) {
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
+    }
+
+    buf[0] = CMD_SET_COLOR;
+    buf[1] = color.red;
+    buf[2] = color.green;
+    buf[3] = color.blue;
+    buf[4] = CMD_END;
+
+    return sb_light_program_update_from_bytes(program, buf, 5);
 }
 
 /**
