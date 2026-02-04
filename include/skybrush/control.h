@@ -151,6 +151,12 @@ typedef struct sb_show_controller_s {
 
     /** The time belonging to the control output */
     sb_control_output_time_t output_time;
+
+    /**
+     * Whether the current control output corresponds to a time instant that is
+     * out of bounds (after the end of the screenplay).
+     */
+    sb_bool_t reached_end;
 } sb_show_controller_t;
 
 sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* screenplay);
@@ -159,6 +165,7 @@ void sb_show_controller_destroy(sb_show_controller_t* controller);
 sb_screenplay_scene_t* sb_show_controller_get_current_scene(const sb_show_controller_t* controller);
 const sb_control_output_t* sb_show_controller_get_current_output(const sb_show_controller_t* controller);
 sb_control_output_time_t sb_show_controller_get_current_output_time(const sb_show_controller_t* controller);
+sb_bool_t sb_show_controller_has_reached_end(const sb_show_controller_t* controller);
 sb_bool_t sb_show_controller_is_output_valid(const sb_show_controller_t* controller);
 sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* controller, uint32_t time_msec);
 const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl);

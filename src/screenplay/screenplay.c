@@ -204,7 +204,8 @@ sb_screenplay_scene_t* sb_screenplay_get_scene_ptr_at_time_msec(
 /**
  * @brief Appends a new scene to the end of the screenplay.
  *
- * The new scene is initialized with default values.
+ * The new scene is initialized with default values (infinite duration, no trajectory,
+ * no light program, no yaw control, no events).
  *
  * @param screenplay  the screenplay to append the scene to
  * @param out_scene  if not \c NULL, will be set to point to the newly added scene.

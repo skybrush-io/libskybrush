@@ -282,9 +282,9 @@ sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* 
  */
 void sb_show_controller_destroy(sb_show_controller_t* ctrl)
 {
+    sb_show_controller_invalidate_output(ctrl);
     sb_i_show_controller_set_current_scene(ctrl, NULL);
     sb_control_output_clear(&ctrl->output);
-    sb_control_output_time_invalidate(&ctrl->output_time);
 }
 
 /**
@@ -320,10 +320,21 @@ sb_control_output_time_t sb_show_controller_get_current_output_time(const sb_sho
 }
 
 /**
+ * @brief Checks whether the show controller has reached the end of the screenplay.
+ *
+ * @param controller  pointer to the show controller to query
+ * @return \c true if the show controller has reached the end, \c false otherwise
+ */
+sb_bool_t sb_show_controller_has_reached_end(const sb_show_controller_t* controller)
+{
+    return controller->reached_end;
+}
+
+/**
  * @brief Checks whether the current control output of the show controller is valid.
  *
  * @param controller  pointer to the show controller to query
- * @return \c SB_TRUE if the current control output is valid, \c SB_FALSE otherwise
+ * @return \c true if the current control output is valid, \c false otherwise
  */
 sb_bool_t sb_show_controller_is_output_valid(const sb_show_controller_t* controller)
 {
@@ -361,6 +372,9 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
 
     if (time_msec > INT32_MAX) {
         /* Out of bounds because we can only submit an int32_t to sb_time_axis_map_ex() */
+        warped_time_sec = 0.0f;
+        *out = ctrl->default_output;
+        ctrl->reached_end = 1;
         return SB_SUCCESS;
     }
 
@@ -378,6 +392,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
         /* Time is out of bounds */
         warped_time_sec = 0.0f;
         *out = ctrl->default_output;
+        ctrl->reached_end = 1;
     } else {
         /* Update control output from trajectory if available */
         warped_time_sec = sb_time_axis_map_ex(&scene->time_axis, time_msec_orig, &warped_rate);
@@ -464,6 +479,7 @@ void sb_show_controller_invalidate_output(sb_show_controller_t* ctrl)
 {
     ctrl->output = ctrl->default_output;
     sb_control_output_time_invalidate(&ctrl->output_time);
+    ctrl->reached_end = 0;
 }
 
 static sb_error_t sb_i_show_controller_set_current_scene(

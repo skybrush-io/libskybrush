@@ -73,6 +73,11 @@ void test_show_controller_init_sets_defaults_and_get_current_output(void)
     TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_in_scene_msec);
     TEST_ASSERT_EQUAL_FLOAT(0, output_time.warped_time_in_scene_sec);
 
+    /* No updates were called, output is not valid, hence we cannot say that we have
+     * reached the end of the (non-existing) screenplay
+     */
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
+
     /* Destroy should clear and zero the controller */
     sb_show_controller_destroy(&ctrl);
     TEST_ASSERT_NULL(ctrl.screenplay);
@@ -103,6 +108,7 @@ void test_show_controller_update_time_without_screenplay_returns_default(void)
     TEST_ASSERT_EQUAL_FLOAT(0.0f, out->velocity.y);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, out->velocity.z);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, out->velocity.yaw);
+    TEST_ASSERT_TRUE(sb_show_controller_has_reached_end(&ctrl));
 
     sb_show_controller_destroy(&ctrl);
 }
@@ -135,6 +141,9 @@ void test_show_controller_update_time_with_empty_screenplay_produces_no_componen
 
     /* Because the scene has no trajectory/light/yaw players, output must be empty */
     TEST_ASSERT_EQUAL_UINT8(SB_CONTROL_OUTPUT_NONE, out->mask);
+
+    /* End not reached because the scene is infinite */
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
 
     /* Clean up */
     sb_show_controller_destroy(&ctrl);
@@ -189,6 +198,7 @@ void test_show_controller_scene_transition_switches_players(void)
     err = sb_show_controller_update_time_msec(&ctrl, 500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
     TEST_ASSERT_EQUAL_PTR(ch0, ctrl.current_scene);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
 
     const sb_control_output_t* out0 = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out0);
@@ -203,6 +213,7 @@ void test_show_controller_scene_transition_switches_players(void)
     err = sb_show_controller_update_time_msec(&ctrl, 1500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
     TEST_ASSERT_EQUAL_PTR(ch1, ctrl.current_scene);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
 
     const sb_control_output_t* out1 = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out1);
@@ -262,6 +273,7 @@ void test_show_controller_play_fixture_single_scene(void)
     /* Query at t=0 ms -> expect position {0,0,0}, velocity {0,0,1000}, color {255,255,255} */
     err = sb_show_controller_update_time_msec(&ctrl, 0u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     cur = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
     TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 0.0f, pos);
@@ -281,6 +293,7 @@ void test_show_controller_play_fixture_single_scene(void)
     /* Query at t=5000 ms (5s) -> expect position {0,0,5000}, velocity {0,0,1000}, color {255,127,127} */
     err = sb_show_controller_update_time_msec(&ctrl, 5000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     cur = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
     TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 5000.0f, pos);
@@ -300,6 +313,7 @@ void test_show_controller_play_fixture_single_scene(void)
     /* Query at t=15000 ms (15s) -> expect position {5000,0,10000}, velocity {1000,0,0}, color {255,0,0} */
     err = sb_show_controller_update_time_msec(&ctrl, 15000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     cur = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
     TEST_ASSERT_EQUAL_VECTOR3_XYZ(5000.0f, 0.0f, 10000.0f, pos);
@@ -370,6 +384,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     /* Query at t=0 ms -> warped_time 0s -> expect position {0,0,0}, velocity doubled */
     err = sb_show_controller_update_time_msec(&ctrl, 0u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     cur = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
     TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 0.0f, pos);
@@ -384,6 +399,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
      */
     err = sb_show_controller_update_time_msec(&ctrl, 2500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     cur = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
     TEST_ASSERT_EQUAL_VECTOR3_XYZ(0.0f, 0.0f, 5000.0f, pos);
@@ -397,6 +413,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
      */
     err = sb_show_controller_update_time_msec(&ctrl, 7500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     cur = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
     TEST_ASSERT_EQUAL_VECTOR3_XYZ(5000.0f, 0.0f, 10000.0f, pos);
@@ -466,6 +483,7 @@ void test_show_controller_forward_left_back_slowdown(void)
      */
     err = sb_show_controller_update_time_msec(&ctrl, 25000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     cur = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
     TEST_ASSERT_TRUE(sb_control_output_get_velocity_if_set(cur, &vel));
@@ -481,6 +499,7 @@ void test_show_controller_forward_left_back_slowdown(void)
      */
     err = sb_show_controller_update_time_msec(&ctrl, 27500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     cur = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
     TEST_ASSERT_TRUE(sb_control_output_get_velocity_if_set(cur, &vel));
@@ -494,6 +513,7 @@ void test_show_controller_forward_left_back_slowdown(void)
      */
     err = sb_show_controller_update_time_msec(&ctrl, 30000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     cur = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(cur, &pos));
     /* velocity component may be set but should be zero due to final rate zero */
@@ -551,6 +571,7 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     /* --- t = 0 ms --- */
     err = sb_show_controller_update_time_msec(&ctrl, 0u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     out = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out);
 
@@ -568,6 +589,7 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     /* --- t = 1 ms --- */
     err = sb_show_controller_update_time_msec(&ctrl, 1u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     out = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out);
 
@@ -580,6 +602,7 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     /* --- t = 4 ms --- */
     err = sb_show_controller_update_time_msec(&ctrl, 4u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     out = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out);
 
@@ -627,16 +650,19 @@ void test_show_controller_get_current_scene(void)
     err = sb_show_controller_update_time_msec(&ctrl, 500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
     TEST_ASSERT_EQUAL_PTR(ch0, sb_show_controller_get_current_scene(&ctrl));
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
 
     /* Update time within second scene -> get_current_scene should return ch1 */
     err = sb_show_controller_update_time_msec(&ctrl, 1500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
     TEST_ASSERT_EQUAL_PTR(ch1, sb_show_controller_get_current_scene(&ctrl));
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
 
     /* Update time out of bounds -> no current scene */
     err = sb_show_controller_update_time_msec(&ctrl, 3000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
     TEST_ASSERT_NULL(sb_show_controller_get_current_scene(&ctrl));
+    TEST_ASSERT_TRUE(sb_show_controller_has_reached_end(&ctrl));
 
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);
@@ -691,6 +717,7 @@ void test_show_controller_invalidate_cached_output(void)
     /* First query at t=5000 ms */
     err = sb_show_controller_update_time_msec(&ctrl, 5000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     out = sb_show_controller_get_current_output(&ctrl);
     TEST_ASSERT_NOT_NULL(out);
     /* Expect position/velocity/lights present for this fixture */
@@ -711,10 +738,12 @@ void test_show_controller_invalidate_cached_output(void)
     sb_show_controller_invalidate_output(&ctrl);
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_msec);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
 
     /* Query again after invalidation: controller should recompute and set timestamp */
     err = sb_show_controller_update_time_msec(&ctrl, 5000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_msec);
     out = sb_show_controller_get_current_output(&ctrl);
