@@ -409,17 +409,18 @@ sb_error_t sb_rth_plan_update_from_bytes(sb_rth_plan_t* plan, uint8_t* buf, size
 sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_trajectory_t* trajectory,
     const sb_rth_plan_entry_t* entry,
-    sb_vector3_with_yaw_t start)
+    sb_vector3_t start)
 {
     sb_trajectory_builder_t builder;
-    sb_vector3_with_yaw_t target;
+    sb_vector3_with_yaw_t start_with_yaw;
+    sb_vector3_with_yaw_t target_with_yaw;
     uint8_t scale = 1;
     sb_error_t retval = SB_SUCCESS;
     uint32_t duration_msec;
     float start_time = entry->time_sec;
 
     /* Determine final scale for trajectory generation */
-    SB_CHECK(sb_scale_update_vector3_with_yaw(&scale, start));
+    SB_CHECK(sb_scale_update_vector3(&scale, start));
     if (sb_i_rth_action_has_neck(entry->action)) {
         SB_CHECK(sb_scale_update_altitude(&scale, start.z + entry->pre_neck_mm));
     }
@@ -434,25 +435,30 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         start_time = 0;
     }
 
+    start_with_yaw.x = start.x;
+    start_with_yaw.y = start.y;
+    start_with_yaw.z = start.z;
+    start_with_yaw.yaw = 0.0f;
+
     /* Start trajectory with holding still during pre-delay */
     SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
         &duration_msec,
         start_time + (entry->pre_delay_sec > 0 ? entry->pre_delay_sec : 0)));
 
     SB_CHECK(sb_trajectory_builder_init(&builder, scale, /* flags = */ 0));
-    SB_CHECK(sb_trajectory_builder_set_start_position(&builder, start));
+    SB_CHECK(sb_trajectory_builder_set_start_position(&builder, start_with_yaw));
 
     SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
 
     /* Initialize target from start */
-    target = start;
+    target_with_yaw = start_with_yaw;
 
     /* Add pre-neck */
     if (entry->pre_neck_mm || entry->pre_neck_duration_sec) {
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->pre_neck_duration_sec));
-        target.z += entry->pre_neck_mm;
-        SB_CHECK(sb_trajectory_builder_append_line(&builder, target, duration_msec));
+        target_with_yaw.z += entry->pre_neck_mm;
+        SB_CHECK(sb_trajectory_builder_append_line(&builder, target_with_yaw, duration_msec));
     }
 
     /* Add action */
@@ -462,21 +468,21 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         break;
 
     case SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE:
-        target.x = entry->target.x;
-        target.y = entry->target.y;
+        target_with_yaw.x = entry->target.x;
+        target_with_yaw.y = entry->target.y;
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->duration_sec));
-        SB_CHECK(sb_trajectory_builder_append_line(&builder, target, duration_msec));
+        SB_CHECK(sb_trajectory_builder_append_line(&builder, target_with_yaw, duration_msec));
 
         break;
 
     case SB_RTH_ACTION_GO_TO_WITH_ALTITUDE:
-        target.x = entry->target.x;
-        target.y = entry->target.y;
-        target.z = entry->target_altitude;
+        target_with_yaw.x = entry->target.x;
+        target_with_yaw.y = entry->target.y;
+        target_with_yaw.z = entry->target_altitude;
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->duration_sec));
-        SB_CHECK(sb_trajectory_builder_append_line(&builder, target, duration_msec));
+        SB_CHECK(sb_trajectory_builder_append_line(&builder, target_with_yaw, duration_msec));
 
         break;
 

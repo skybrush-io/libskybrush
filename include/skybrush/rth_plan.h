@@ -114,7 +114,7 @@ sb_error_t sb_rth_plan_update_from_buffer(sb_rth_plan_t* plan,
 sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_trajectory_t* trajectory,
     const sb_rth_plan_entry_t* entry,
-    sb_vector3_with_yaw_t start);
+    sb_vector3_t start);
 
 __END_DECLS
 

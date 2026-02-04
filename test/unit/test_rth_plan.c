@@ -355,7 +355,7 @@ void test_plan_duration_too_large(void)
     }
 }
 
-void assert_trajectory_is_constant(sb_trajectory_t* trajectory, float start, float end, sb_vector3_with_yaw_t pos)
+void assert_trajectory_is_constant(sb_trajectory_t* trajectory, float start, float end, sb_vector3_t pos)
 {
     float t;
     const float step = 0.5f;
@@ -386,11 +386,10 @@ void test_convert_to_trajectory(void)
     sb_rth_plan_entry_t entry;
     sb_trajectory_t* trajectory;
     sb_trajectory_player_t player;
-    sb_vector3_with_yaw_t start = {
+    sb_vector3_t start = {
         /* .x = */ 15000,
         /* .y = */ 25000,
-        /* .z = */ 20000,
-        /* .yaw = */ 59
+        /* .z = */ 20000
     };
     sb_vector3_with_yaw_t vec;
     float t;
@@ -441,14 +440,12 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(30000, vec.x);
         TEST_ASSERT_EQUAL(40000, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
-        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
 
         /* Test halfway through transition */
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 25, &vec));
         TEST_ASSERT_EQUAL(22500, vec.x);
         TEST_ASSERT_EQUAL(32500, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
-        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
 
         sb_trajectory_player_destroy(&player);
     }
@@ -472,14 +469,12 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(-40000, vec.x);
         TEST_ASSERT_EQUAL(-30000, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
-        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
 
         /* Test halfway through transition */
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 27, &vec));
         TEST_ASSERT_EQUAL(-12500, vec.x);
         TEST_ASSERT_EQUAL(-2500, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
-        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
 
         sb_trajectory_player_destroy(&player);
     }
@@ -504,14 +499,12 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(30000, vec.x);
         TEST_ASSERT_EQUAL(40000, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
-        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
 
         /* Test halfway through transition */
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + (i <= 650 ? 15 : 10), &vec));
         TEST_ASSERT_EQUAL(22500, vec.x);
         TEST_ASSERT_EQUAL(32500, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
-        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
 
         sb_trajectory_player_destroy(&player);
     }
@@ -536,21 +529,18 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(start.x, vec.x);
         TEST_ASSERT_EQUAL(start.y, vec.y);
         TEST_ASSERT_EQUAL(start.z + 5000, vec.z);
-        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
 
         /* Test arrival */
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 35, &vec));
         TEST_ASSERT_EQUAL(30000, vec.x);
         TEST_ASSERT_EQUAL(40000, vec.y);
         TEST_ASSERT_EQUAL(20000, vec.z);
-        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
 
         /* Test halfway through transition */
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 20, &vec));
         TEST_ASSERT_EQUAL(22500, vec.x);
         TEST_ASSERT_EQUAL(32500, vec.y);
         TEST_ASSERT_EQUAL(22500, vec.z);
-        TEST_ASSERT_EQUAL(start.yaw, vec.yaw);
 
         sb_trajectory_player_destroy(&player);
     }

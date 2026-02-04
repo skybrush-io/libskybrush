@@ -58,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `sb_trajectory_replace_end_to_land_at()` now takes an `sb_vector3_t` to specify the
   desired landing coordinate instead of an `sb_vector3_with_yaw_t`.
 
+- `sb_trajectory_update_from_rth_plan_entry()` now takes an `sb_vector3_t` to specify
+  the starting position instead of an `sb_vector3_with_yaw_t`.
+
 ### Added
 
 - Added `sb_screenplay_t` and `sb_screenplay_scene_t` to manage a complex
