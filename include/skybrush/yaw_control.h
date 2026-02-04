@@ -88,6 +88,8 @@ typedef struct sb_yaw_control_s {
 sb_yaw_control_t* sb_yaw_control_new(void);
 sb_error_t sb_yaw_control_init(sb_yaw_control_t* ctrl);
 
+sb_error_t sb_yaw_control_set_constant_yaw(sb_yaw_control_t* ctrl, float yaw_deg);
+
 sb_error_t sb_yaw_control_update_from_binary_file(sb_yaw_control_t* ctrl, int fd);
 sb_error_t sb_yaw_control_update_from_binary_file_in_memory(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes);
 sb_error_t sb_yaw_control_update_from_buffer(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes);

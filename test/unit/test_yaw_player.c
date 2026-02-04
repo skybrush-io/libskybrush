@@ -134,12 +134,34 @@ void test_yaw_rate_at(void)
     }
 }
 
+void test_constant_yaw_program(void)
+{
+    float value;
+    float t[] = { -1, 0, 0.5, 1, 2.5, 10 };
+    const float expected_yaw = 12.3f;
+    int i, n = sizeof(t) / sizeof(t[0]);
+
+    closeFixture();
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_set_constant_yaw(&ctrl, expected_yaw));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_player_init(&player, &ctrl));
+
+    for (i = 0; i < n; i++) {
+        sb_yaw_player_get_yaw_at(&player, t[i], &value);
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, expected_yaw, value);
+
+        sb_yaw_player_get_yaw_rate_at(&player, t[i], &value);
+        TEST_ASSERT_FLOAT_WITHIN(1e-6, 0, value);
+    }
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
     RUN_TEST(test_yaw_at);
     RUN_TEST(test_yaw_rate_at);
+    RUN_TEST(test_constant_yaw_program);
 
     return UNITY_END();
 }

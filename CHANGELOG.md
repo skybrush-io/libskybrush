@@ -67,6 +67,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `sb_vector3_t` type to cater for use-cases where the yaw component is not
   needed.
 
+- Added `sb_light_program_set_constant_color()` to set a constant color in a light
+  program object.
+
+- Added `sb_yaw_control_set_constant_yaw()` to set a constant yaw value in a yaw
+  control object.
+
 ## [4.3.0] - 2025-10-15
 
 ### Added

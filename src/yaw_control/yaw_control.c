@@ -97,6 +97,42 @@ sb_error_t sb_yaw_control_init(sb_yaw_control_t* ctrl)
     return SB_SUCCESS;
 }
 
+/**
+ * @brief Sets the yaw control object to a constant yaw.
+ *
+ * The resulting yaw control curve contains no deltas and keeps the given yaw
+ * value for all timestamps.
+ *
+ * @param ctrl     the yaw control object to update
+ * @param yaw_deg  the constant yaw to set, in degrees
+ *
+ * @return SB_SUCCESS if the object was updated successfully,
+ *         SB_ENOMEM if memory allocation failed
+ */
+sb_error_t sb_yaw_control_set_constant_yaw(sb_yaw_control_t* ctrl, float yaw_deg)
+{
+    uint8_t* buf;
+    size_t offset = 0;
+    int32_t yaw_ddeg;
+
+    yaw_ddeg = (int32_t)lroundf(yaw_deg * 10.0f);
+    if (yaw_ddeg > 32767) {
+        yaw_ddeg = 32767;
+    } else if (yaw_ddeg < -32768) {
+        yaw_ddeg = -32768;
+    }
+
+    buf = sb_calloc(uint8_t, 1 + sizeof(int16_t));
+    if (buf == 0) {
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
+    }
+
+    buf[offset++] = 0;
+    sb_write_int16(buf, &offset, (int16_t)yaw_ddeg);
+
+    return sb_i_yaw_control_update_from_bytes(ctrl, buf, offset, /* owned = */ 1);
+}
+
 /* ************************************************************************** */
 
 /**
