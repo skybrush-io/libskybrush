@@ -17,8 +17,6 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "skybrush/error.h"
-#include "skybrush/rth_plan.h"
 #include <assert.h>
 #include <limits.h>
 #include <math.h>

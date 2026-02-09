@@ -33,7 +33,6 @@
 #include <skybrush/utils.h>
 
 #include "../parsing.h"
-#include "skybrush/buffer.h"
 
 /**
  * @def MAX_DURATION
