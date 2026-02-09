@@ -24,6 +24,7 @@
 
 #include <skybrush/screenplay.h>
 #include <skybrush/time_axis.h>
+#include <skybrush/trajectory.h>
 
 #include "unity.h"
 
@@ -35,6 +36,34 @@ void setUp(void)
 void tearDown(void)
 {
     /* nothing to tear down */
+}
+
+static sb_error_t sb_i_build_hold_trajectory(sb_trajectory_t* trajectory, uint32_t duration_msec)
+{
+    sb_trajectory_builder_t builder;
+    sb_vector3_with_yaw_t start = { 0 };
+    sb_error_t err;
+
+    err = sb_trajectory_builder_init(&builder, 1, 0);
+    if (err != SB_SUCCESS) {
+        return err;
+    }
+
+    err = sb_trajectory_builder_set_start_position(&builder, start);
+    if (err != SB_SUCCESS) {
+        sb_trajectory_builder_destroy(&builder);
+        return err;
+    }
+
+    err = sb_trajectory_builder_hold_position_for(&builder, duration_msec);
+    if (err != SB_SUCCESS) {
+        sb_trajectory_builder_destroy(&builder);
+        return err;
+    }
+
+    err = sb_trajectory_update_from_builder(trajectory, &builder);
+    sb_trajectory_builder_destroy(&builder);
+    return err;
 }
 
 void test_screenplay_scene_init_sets_defaults(void)
@@ -555,6 +584,193 @@ void test_screenplay_scene_update_from_binary_file_in_memory(void)
     free(buf);
 }
 
+void test_screenplay_scene_get_warped_time_remaining_no_time_axis_segments(void)
+{
+    sb_screenplay_scene_t scene;
+    sb_trajectory_t traj;
+    sb_time_axis_t* axis;
+    float remaining;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_i_build_hold_trajectory(&traj, 10000u));
+
+    sb_screenplay_scene_set_trajectory(&scene, &traj);
+
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(axis));
+
+    remaining = sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 10.0f, remaining);
+
+    SB_DECREF_STATIC(&scene);
+    SB_DECREF_STATIC(&traj);
+}
+
+void test_screenplay_scene_get_warped_time_remaining_single_realtime_segment(void)
+{
+    sb_screenplay_scene_t scene;
+    sb_trajectory_t traj;
+    sb_time_axis_t* axis;
+    float remaining;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_i_build_hold_trajectory(&traj, 10000u));
+
+    sb_screenplay_scene_set_trajectory(&scene, &traj);
+
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_realtime(4000u)));
+
+    remaining = sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene);
+    TEST_ASSERT_EQUAL(6.0f, remaining);
+
+    sb_time_axis_clear(axis);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_realtime(12000u)));
+
+    remaining = sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene);
+    TEST_ASSERT_EQUAL(0.0f, remaining);
+
+    SB_DECREF_STATIC(&scene);
+    SB_DECREF_STATIC(&traj);
+}
+
+void test_screenplay_scene_get_warped_time_remaining_single_constant_rate_segment(void)
+{
+    sb_screenplay_scene_t scene;
+    sb_trajectory_t traj;
+    sb_time_axis_t* axis;
+    float remaining;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_i_build_hold_trajectory(&traj, 10000u));
+
+    sb_screenplay_scene_set_trajectory(&scene, &traj);
+
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_constant_rate(4000u, 0.5f)));
+
+    remaining = sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene);
+    TEST_ASSERT_EQUAL(8.0f, remaining);
+
+    SB_DECREF_STATIC(&scene);
+    SB_DECREF_STATIC(&traj);
+}
+
+void test_screenplay_scene_get_warped_time_remaining_single_spinup_segment(void)
+{
+    sb_screenplay_scene_t scene;
+    sb_trajectory_t traj;
+    sb_time_axis_t* axis;
+    float remaining;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_i_build_hold_trajectory(&traj, 10000u));
+
+    sb_screenplay_scene_set_trajectory(&scene, &traj);
+
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_spinup_to_realtime(8000u)));
+
+    remaining = sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene);
+    TEST_ASSERT_EQUAL(6.0f, remaining);
+
+    SB_DECREF_STATIC(&scene);
+    SB_DECREF_STATIC(&traj);
+}
+
+void test_screenplay_scene_get_warped_time_remaining_single_slowdown_segment(void)
+{
+    sb_screenplay_scene_t scene;
+    sb_trajectory_t traj;
+    sb_time_axis_t* axis;
+    float remaining;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_i_build_hold_trajectory(&traj, 10000u));
+
+    sb_screenplay_scene_set_trajectory(&scene, &traj);
+
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_slowdown_from_realtime(4000u)));
+
+    remaining = sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene);
+    TEST_ASSERT_EQUAL(8.0f, remaining);
+
+    SB_DECREF_STATIC(&scene);
+    SB_DECREF_STATIC(&traj);
+}
+
+void test_screenplay_scene_get_warped_time_remaining_complex_axis_positive_origin(void)
+{
+    sb_screenplay_scene_t scene;
+    sb_trajectory_t traj;
+    sb_time_axis_t* axis;
+    float remaining;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_i_build_hold_trajectory(&traj, 20000u));
+
+    sb_screenplay_scene_set_trajectory(&scene, &traj);
+
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_set_origin_sec(axis, 2.0f));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_spinup_to(4000u, 1.0f)));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_realtime(3000u)));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_slowdown_from(4000u, 1.0f)));
+
+    remaining = sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene);
+    TEST_ASSERT_EQUAL(13.0f, remaining);
+
+    SB_DECREF_STATIC(&scene);
+    SB_DECREF_STATIC(&traj);
+}
+
+void test_screenplay_scene_get_warped_time_remaining_at_end_no_trajectory(void)
+{
+    sb_screenplay_scene_t scene;
+    sb_time_axis_t* axis;
+    float remaining;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_realtime(5000u)));
+
+    remaining = sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene);
+    TEST_ASSERT_EQUAL(0.0f, remaining);
+
+    SB_DECREF_STATIC(&scene);
+}
+
+void test_screenplay_scene_get_warped_time_remaining_at_end_infinite_segment(void)
+{
+    sb_screenplay_scene_t scene;
+    sb_trajectory_t traj;
+    sb_time_axis_t* axis;
+    float remaining;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_i_build_hold_trajectory(&traj, 10000u));
+
+    sb_screenplay_scene_set_trajectory(&scene, &traj);
+
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_realtime(UINT32_MAX)));
+
+    remaining = sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene);
+    TEST_ASSERT_EQUAL(0.0f, remaining);
+
+    SB_DECREF_STATIC(&scene);
+    SB_DECREF_STATIC(&traj);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -571,6 +787,14 @@ int main(void)
     RUN_TEST(test_screenplay_scene_update_contents_from_updates_refs);
     RUN_TEST(test_screenplay_scene_clear_contents_preserves_duration_and_time_axis);
     RUN_TEST(test_screenplay_scene_update_from_binary_file_in_memory);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_no_time_axis_segments);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_single_realtime_segment);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_single_constant_rate_segment);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_single_spinup_segment);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_single_slowdown_segment);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_complex_axis_positive_origin);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_at_end_no_trajectory);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_at_end_infinite_segment);
 
     return UNITY_END();
 }

@@ -137,6 +137,7 @@ sb_error_t sb_time_axis_set_origin_sec(sb_time_axis_t* axis, float origin_sec);
 
 uint32_t sb_time_axis_get_total_duration_msec(const sb_time_axis_t* axis);
 float sb_time_axis_get_total_duration_sec(const sb_time_axis_t* axis);
+float sb_time_axis_get_total_warped_duration_sec(const sb_time_axis_t* axis);
 
 void sb_time_axis_clear(sb_time_axis_t* axis);
 sb_error_t sb_time_axis_append_segment(

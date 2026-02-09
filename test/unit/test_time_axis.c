@@ -211,6 +211,15 @@ void test_time_axis_get_total_duration_variants(void)
     TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_time_axis_get_total_duration_msec(&axis));
     TEST_ASSERT_TRUE(isinf(sb_time_axis_get_total_duration_sec(&axis)));
 
+    /* two segments, one having a warped time axis */
+    sb_time_segment_t c = sb_time_segment_make_realtime(1000);
+    sb_time_segment_t d = sb_time_segment_make_spinup_to_realtime(10000);
+    sb_time_axis_clear(&axis);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, c));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, d));
+    TEST_ASSERT_EQUAL_UINT32(11000u, sb_time_axis_get_total_duration_msec(&axis));
+    TEST_ASSERT_EQUAL(11.0f, sb_time_axis_get_total_duration_sec(&axis));
+
     /* overflow in sum */
     sb_time_axis_clear(&axis);
     sb_time_segment_t near_max = sb_time_segment_make_realtime(UINT32_MAX - 10u);
@@ -219,6 +228,33 @@ void test_time_axis_get_total_duration_variants(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, overflow));
     TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_time_axis_get_total_duration_msec(&axis));
     TEST_ASSERT_TRUE(isinf(sb_time_axis_get_total_duration_sec(&axis)));
+}
+
+void test_time_axis_get_total_warped_duration_sec(void)
+{
+    /* empty axis */
+    TEST_ASSERT_EQUAL(0.0f, sb_time_axis_get_total_warped_duration_sec(&axis));
+
+    /* normal sum */
+    sb_time_segment_t a = sb_time_segment_make_realtime(1000);
+    sb_time_segment_t b = sb_time_segment_make_realtime(2500);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, a));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, b));
+    TEST_ASSERT_EQUAL(3.5f, sb_time_axis_get_total_warped_duration_sec(&axis));
+
+    /* infinite duration segment */
+    sb_time_axis_clear(&axis);
+    sb_time_segment_t inf = sb_time_segment_make_realtime(UINT32_MAX);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, inf));
+    TEST_ASSERT_TRUE(isinf(sb_time_axis_get_total_warped_duration_sec(&axis)));
+
+    /* two segments, one having a warped time axis */
+    sb_time_segment_t c = sb_time_segment_make_realtime(1000);
+    sb_time_segment_t d = sb_time_segment_make_spinup_to_realtime(10000);
+    sb_time_axis_clear(&axis);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, c));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(&axis, d));
+    TEST_ASSERT_EQUAL(6.0f, sb_time_axis_get_total_warped_duration_sec(&axis));
 }
 
 /* Tests for sb_time_axis_map() */
@@ -688,6 +724,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_time_segment_warped_duration_spinup_and_slowdown);
     RUN_TEST(test_time_segment_warped_duration_realtime_cases);
     RUN_TEST(test_time_axis_get_total_duration_variants);
+    RUN_TEST(test_time_axis_get_total_warped_duration_sec);
 
     /* sb_time_axis_map tests */
     RUN_TEST(test_time_axis_map_single_constant_segment);

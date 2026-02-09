@@ -21,6 +21,7 @@
 #include "skybrush/rth_plan.h"
 #include <assert.h>
 #include <limits.h>
+#include <math.h>
 #include <skybrush/refcount.h>
 #include <skybrush/screenplay.h>
 
@@ -284,6 +285,49 @@ void sb_screenplay_scene_update_contents_from(
         sb_screenplay_scene_set_light_program(scene, NULL);
         sb_screenplay_scene_set_yaw_control(scene, NULL);
         sb_screenplay_scene_set_events(scene, NULL);
+    }
+}
+
+/**
+ * @brief Returns the number of seconds remaining from the trajectory at the end of the
+ * \em time axis of the scene, in warped time.
+ *
+ * The function returns \em warped time so it takes into account the different rates
+ * of the time axis segmnts as well as the time axis origin.
+ *
+ * Returns zero if no trajectory is associated to the scene. Also returns zero if the
+ * time axis of the scene is already longer than the trajectory.
+ *
+ * Note that the \em duration of the scene is ignored; we always inspect the end of the
+ * time axis.
+ *
+ * @param scene  the scene to query
+ */
+float sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(
+    sb_screenplay_scene_t* scene)
+{
+    sb_trajectory_t* trajectory = sb_screenplay_scene_get_trajectory(scene);
+    sb_time_axis_t* time_axis = sb_screenplay_scene_get_time_axis(scene);
+
+    if (trajectory && time_axis) {
+        float warped_duration_of_axis = sb_time_axis_get_total_warped_duration_sec(time_axis);
+        if (!isfinite(warped_duration_of_axis)) {
+            /* Time axis has infinite warped duration -> trajectory will definitely be
+             * played to the end
+             */
+            return 0.0f;
+        }
+
+        float result = sb_trajectory_get_total_duration_sec(trajectory) - warped_duration_of_axis;
+        float origin = sb_time_axis_get_origin_sec(time_axis);
+        if (origin < 0) {
+            // scene starts _later_ than 00:00 on the show clock so we need to take into
+            // account that we are not playing the trajectory from the very beginning
+            result += origin;
+        }
+        return result > 0 ? result : 0.0f;
+    } else {
+        return 0.0f;
     }
 }
 

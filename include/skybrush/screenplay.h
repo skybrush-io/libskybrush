@@ -97,6 +97,8 @@ sb_yaw_control_t* sb_screenplay_scene_get_yaw_control(
 sb_event_list_t* sb_screenplay_scene_get_events(
     sb_screenplay_scene_t* scene);
 sb_time_axis_t* sb_screenplay_scene_get_time_axis(sb_screenplay_scene_t* scene);
+float sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(
+    sb_screenplay_scene_t* scene);
 
 sb_error_t sb_screenplay_scene_set_duration_msec(
     sb_screenplay_scene_t* scene, uint32_t duration_msec);

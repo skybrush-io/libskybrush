@@ -278,7 +278,6 @@ size_t sb_time_axis_capacity(const sb_time_axis_t* axis)
  */
 const sb_time_segment_t* sb_time_axis_get_segment(const sb_time_axis_t* axis, size_t index)
 {
-    ASSERT_PRECONDITIONS();
     size_t num_segments = sb_time_axis_num_segments(axis);
     return index >= num_segments ? NULL : &axis->stor_begin[index];
 }
@@ -349,13 +348,11 @@ sb_error_t sb_time_axis_set_origin_sec(sb_time_axis_t* axis, float origin_sec)
  */
 uint32_t sb_time_axis_get_total_duration_msec(const sb_time_axis_t* axis)
 {
-    ASSERT_PRECONDITIONS();
-
     uint32_t total_duration_msec = 0;
     size_t num_segments = sb_time_axis_num_segments(axis);
 
     for (size_t i = 0; i < num_segments; i++) {
-        const sb_time_segment_t* seg = &axis->stor_begin[i];
+        const sb_time_segment_t* seg = sb_time_axis_get_segment(axis, i);
         if (seg->duration_msec == UINT32_MAX) {
             return UINT32_MAX; /* Infinite duration */
         }
@@ -386,6 +383,30 @@ float sb_time_axis_get_total_duration_sec(const sb_time_axis_t* axis)
 }
 
 /**
+ * @brief Returns the total duration of the time axis in warped time, in seconds.
+ *
+ * A time axis containing at least one segment with infinite duration is considered
+ * infinite, even if the rate of time in that segment is zero.
+ *
+ * @param axis Pointer to the time axis structure.
+ * @return Total duration of the time axis in warped time, in seconds.
+ *         \c INFINITY if the duration is infinite or the number of milliseconds would
+ *         overflow an \c uint32_t .
+ */
+float sb_time_axis_get_total_warped_duration_sec(const sb_time_axis_t* axis)
+{
+    float result = 0;
+    size_t num_segments = sb_time_axis_num_segments(axis);
+
+    for (size_t i = 0; i < num_segments; i++) {
+        const sb_time_segment_t* seg = sb_time_axis_get_segment(axis, i);
+        result += sb_time_segment_get_duration_in_warped_time_sec(seg);
+    }
+
+    return result;
+}
+
+/**
  * @brief Clears all segments from the time axis.
  *
  * @param axis Pointer to the time axis structure.
@@ -406,8 +427,6 @@ void sb_time_axis_clear(sb_time_axis_t* axis)
 sb_error_t sb_time_axis_insert_segment_at(
     sb_time_axis_t* axis, size_t index, sb_time_segment_t segment)
 {
-    ASSERT_PRECONDITIONS();
-
     size_t num_segments = sb_time_axis_num_segments(axis);
     if (index > num_segments) {
         return SB_EINVAL;
@@ -440,8 +459,6 @@ sb_error_t sb_time_axis_insert_segment_at(
  */
 sb_error_t sb_time_axis_remove_segment_at(sb_time_axis_t* axis, size_t index)
 {
-    ASSERT_PRECONDITIONS();
-
     size_t num_segments = sb_time_axis_num_segments(axis);
     if (index >= num_segments) {
         return SB_EINVAL;
@@ -495,8 +512,6 @@ float sb_time_axis_map_ex(const sb_time_axis_t* axis, int32_t wall_clock_time_ms
     const sb_time_segment_t* seg;
     size_t num_segments = sb_time_axis_num_segments(axis);
     uint32_t wall_clock_time_msec_unsigned;
-
-    ASSERT_PRECONDITIONS();
 
     if (num_segments == 0) {
         if (out_rate) {
