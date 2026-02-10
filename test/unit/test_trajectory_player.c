@@ -208,6 +208,42 @@ void test_acceleration_at(void)
     }
 }
 
+void test_clone_player(void)
+{
+    sb_trajectory_player_t clone;
+    sb_vector3_with_yaw_t pos_original;
+    sb_vector3_with_yaw_t pos_clone;
+    sb_vector3_with_yaw_t expected_25 = { 10000, 5000, 10000, 0 };
+    sb_vector3_with_yaw_t expected_30 = { 10000, 10000, 10000, 0 };
+
+    sb_trajectory_player_get_position_at(&player, 20, &pos_original);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_clone(&clone, &player));
+    TEST_ASSERT_EQUAL_PTR(player.trajectory, clone.trajectory);
+
+    sb_trajectory_player_get_position_at(&player, 25, &pos_original);
+    sb_trajectory_player_get_position_at(&clone, 25, &pos_clone);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_25.x, pos_original.x);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_25.y, pos_original.y);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_25.z, pos_original.z);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_25.yaw, pos_original.yaw);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_25.x, pos_clone.x);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_25.y, pos_clone.y);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_25.z, pos_clone.z);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_25.yaw, pos_clone.yaw);
+
+    sb_trajectory_player_get_position_at(&clone, 35, &pos_clone);
+    sb_trajectory_player_get_position_at(&player, 30, &pos_original);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_30.x, pos_original.x);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_30.y, pos_original.y);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_30.z, pos_original.z);
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, expected_30.yaw, pos_original.yaw);
+
+    sb_trajectory_player_destroy(&clone);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -215,6 +251,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_position_at);
     RUN_TEST(test_velocity_at);
     RUN_TEST(test_acceleration_at);
+    RUN_TEST(test_clone_player);
 
     return UNITY_END();
 }

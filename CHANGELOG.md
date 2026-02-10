@@ -76,6 +76,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `sb_yaw_control_set_constant_yaw()` to set a constant yaw value in a yaw
   control object.
 
+- Added `sb_trajectory_player_clone()` to create a clone of a trajectory player that
+  allows one to move forward on the time axis without affecting the state of the
+  original player that the clone was created from.
+
 ## [4.3.0] - 2025-10-15
 
 ### Added

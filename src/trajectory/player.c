@@ -78,6 +78,21 @@ void sb_trajectory_player_destroy(sb_trajectory_player_t* player)
 }
 
 /**
+ * Initializes a trajectory player from the current state of another trajectory
+ * player.
+ */
+sb_error_t sb_trajectory_player_clone(sb_trajectory_player_t* player, const sb_trajectory_player_t* other)
+{
+    sb_trajectory_player_state_t state;
+
+    SB_CHECK(sb_trajectory_player_init(player, other->trajectory));
+    sb_trajectory_player_save_state(other, &state);
+    sb_trajectory_player_restore_state(player, &state);
+
+    return SB_SUCCESS;
+}
+
+/**
  * Resets the internal state of the trajectory and rewinds it to time zero.
  */
 sb_error_t sb_trajectory_player_rewind(sb_trajectory_player_t* player)

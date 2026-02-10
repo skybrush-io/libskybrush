@@ -235,6 +235,7 @@ typedef struct sb_trajectory_player_s {
 } sb_trajectory_player_t;
 
 sb_error_t sb_trajectory_player_init(sb_trajectory_player_t* player, sb_trajectory_t* trajectory);
+sb_error_t sb_trajectory_player_clone(sb_trajectory_player_t* player, const sb_trajectory_player_t* other);
 void sb_trajectory_player_destroy(sb_trajectory_player_t* player);
 sb_error_t sb_trajectory_player_build_next_segment(sb_trajectory_player_t* player);
 void sb_trajectory_player_dump_state(const sb_trajectory_player_t* player);
