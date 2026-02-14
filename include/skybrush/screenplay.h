@@ -82,6 +82,7 @@ typedef struct sb_screenplay_scene_s {
     sb_event_list_t* events;
 } sb_screenplay_scene_t;
 
+sb_screenplay_scene_t* sb_screenplay_scene_new(void);
 sb_error_t sb_screenplay_scene_init(sb_screenplay_scene_t* scene);
 
 uint32_t sb_screenplay_scene_get_duration_msec(
@@ -136,7 +137,7 @@ sb_error_t sb_screenplay_scene_update_from_binary_file_in_memory(
  * Optionally, a screenplay may also hold a coordinated RTH (return-to-home) plan.
  */
 typedef struct sb_screenplay_s {
-    sb_screenplay_scene_t* scenes; /**< The list of scenes */
+    sb_screenplay_scene_t** scenes; /**< The list of scenes */
     size_t num_scenes; /**< The current number of scenes in the list */
     size_t max_scenes; /**< The maximum number of scenes that the list can hold */
 
@@ -151,6 +152,7 @@ sb_error_t sb_screenplay_init(sb_screenplay_t* screenplay);
 void sb_screenplay_destroy(sb_screenplay_t* screenplay);
 
 size_t sb_screenplay_capacity(const sb_screenplay_t* screenplay);
+sb_bool_t sb_screenplay_contains_scene(const sb_screenplay_t* screenplay, const sb_screenplay_scene_t* scene);
 sb_bool_t sb_screenplay_is_empty(const sb_screenplay_t* screenplay);
 size_t sb_screenplay_size(const sb_screenplay_t* screenplay);
 

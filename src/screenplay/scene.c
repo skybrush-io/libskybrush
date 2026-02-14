@@ -26,7 +26,29 @@
 static void sb_i_screenplay_scene_destroy(sb_screenplay_scene_t* scene);
 
 /**
- * @brief Initializes a screenplay scene with default values.
+ * \brief Allocates a new scene on the heap and initializes it.
+ *
+ * \return the new scene, or \c NULL if memory allocation failed
+ */
+sb_screenplay_scene_t* sb_screenplay_scene_new(void)
+{
+    sb_screenplay_scene_t* obj = sb_calloc(sb_screenplay_scene_t, 1);
+
+    if (obj) {
+        if (sb_screenplay_scene_init(obj)) {
+            sb_free(obj);
+        }
+    }
+
+    return obj;
+}
+
+/**
+ * @brief Initializes an already allocated screenplay scene with default values.
+ *
+ * You must call this function on an uninitialized screenplay scene before using it.
+ * \ref sb_screenplay_scene_new() takes care of the initialization for you if you
+ * allocate the scene on the heap.
  *
  * @param scene  the screenplay scene to initialize
  * @return \c SB_SUCCESS if the scene was initialized successfully,

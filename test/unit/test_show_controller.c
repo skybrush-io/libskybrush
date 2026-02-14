@@ -618,6 +618,51 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     SB_DECREF(yaw);
 }
 
+void test_show_controller_current_scene_dropped_on_scene_removal(void)
+{
+    sb_show_controller_t ctrl;
+    sb_screenplay_t screenplay;
+    sb_screenplay_scene_t* scene0 = NULL;
+    sb_screenplay_scene_t* scene1 = NULL;
+    sb_error_t err;
+
+    /* Initialize a screenplay with two scenes */
+    err = sb_screenplay_init(&screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene1));
+    TEST_ASSERT_NOT_NULL(scene0);
+    TEST_ASSERT_NOT_NULL(scene1);
+
+    /* Make first scene finite to be able to switch to second scene */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_msec(scene0, 1000u));
+
+    /* Initialize controller with the screenplay */
+    err = sb_show_controller_init(&ctrl, &screenplay);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+
+    /* Move into second scene so it becomes current */
+    err = sb_show_controller_update_time_msec(&ctrl, 1500u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, err);
+    TEST_ASSERT_EQUAL_PTR(scene1, sb_show_controller_get_current_scene(&ctrl));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(scene1));
+
+    /* Remove the current scene from the screenplay */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_remove_last_scene(&screenplay));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(scene1));
+
+    /* Notify the controller so it drops the removed scene */
+    sb_show_controller_notify_screenplay_changed(&ctrl);
+
+    /* Current scene should be cleared */
+    TEST_ASSERT_NULL(sb_show_controller_get_current_scene(&ctrl));
+
+    /* Cleanup */
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
+}
+
 void test_show_controller_get_current_scene(void)
 {
     sb_show_controller_t ctrl;
@@ -755,7 +800,7 @@ void test_show_controller_invalidate_cached_output(void)
     TEST_ASSERT_EQUAL_UINT32(5000u, output_time.time_msec);
 
     /* Invalidate cached output */
-    sb_show_controller_invalidate_output(&ctrl);
+    sb_show_controller_notify_screenplay_changed(&ctrl);
     output_time = sb_show_controller_get_current_output_time(&ctrl);
     TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, output_time.time_msec);
     TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
@@ -792,6 +837,7 @@ int main(void)
     RUN_TEST(test_show_controller_forward_left_back_slowdown);
     RUN_TEST(test_show_controller_play_fixture_with_yaw_control);
     RUN_TEST(test_show_controller_invalidate_cached_output);
+    RUN_TEST(test_show_controller_current_scene_dropped_on_scene_removal);
     RUN_TEST(test_show_controller_get_current_scene);
 
     return UNITY_END();

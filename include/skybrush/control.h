@@ -170,7 +170,7 @@ sb_bool_t sb_show_controller_is_output_valid(const sb_show_controller_t* control
 sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* controller, uint32_t time_msec);
 const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl);
 
-void sb_show_controller_invalidate_output(sb_show_controller_t* controller);
+void sb_show_controller_notify_screenplay_changed(sb_show_controller_t* controller);
 
 __END_DECLS
 

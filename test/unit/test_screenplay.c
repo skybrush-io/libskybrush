@@ -337,6 +337,29 @@ void test_screenplay_update_from_binary_file_in_memory_loads_rth_plan(void)
     free(buf);
 }
 
+void test_sb_screenplay_contains_scene(void)
+{
+    sb_screenplay_t screenplay;
+    sb_screenplay_scene_t* scene_ptr = NULL;
+    sb_screenplay_scene_t external_scene;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
+
+    /* Empty screenplay must not contain any scene */
+    TEST_ASSERT_FALSE(sb_screenplay_contains_scene(&screenplay, NULL));
+    TEST_ASSERT_FALSE(sb_screenplay_contains_scene(&screenplay, &external_scene));
+
+    /* Append a scene and verify membership */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene_ptr));
+    TEST_ASSERT_NOT_NULL(scene_ptr);
+    TEST_ASSERT_TRUE(sb_screenplay_contains_scene(&screenplay, scene_ptr));
+
+    /* A stack-allocated scene pointer must not be considered part of the screenplay */
+    TEST_ASSERT_FALSE(sb_screenplay_contains_scene(&screenplay, &external_scene));
+
+    sb_screenplay_destroy(&screenplay);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -349,6 +372,7 @@ int main(void)
     RUN_TEST(test_sb_screenplay_remove_last_scene);
     RUN_TEST(test_screenplay_update_from_binary_file_in_memory);
     RUN_TEST(test_screenplay_update_from_binary_file_in_memory_loads_rth_plan);
+    RUN_TEST(test_sb_screenplay_contains_scene);
 
     return UNITY_END();
 }

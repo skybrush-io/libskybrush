@@ -248,6 +248,7 @@ void sb_control_output_time_invalidate(sb_control_output_time_t* time)
 
 static sb_error_t sb_i_show_controller_set_current_scene(
     sb_show_controller_t* ctrl, sb_screenplay_scene_t* scene);
+static void sb_i_show_controller_invalidate_output(sb_show_controller_t* ctrl);
 
 /**
  * @brief Initializes a show controller with the given screenplay.
@@ -270,7 +271,7 @@ sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* 
     sb_control_output_set_velocity(&ctrl->default_output, zero);
     sb_control_output_set_yaw_rate(&ctrl->default_output, 0.0f);
 
-    sb_show_controller_invalidate_output(ctrl);
+    sb_i_show_controller_invalidate_output(ctrl);
 
     return SB_SUCCESS;
 }
@@ -282,7 +283,7 @@ sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* 
  */
 void sb_show_controller_destroy(sb_show_controller_t* ctrl)
 {
-    sb_show_controller_invalidate_output(ctrl);
+    sb_i_show_controller_invalidate_output(ctrl);
     sb_i_show_controller_set_current_scene(ctrl, NULL);
     sb_control_output_clear(&ctrl->output);
 }
@@ -386,7 +387,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
 
     /* invalidate the cached output_time_msec and warped_output_time_sec fields in
      * case we bail out with an error below */
-    sb_show_controller_invalidate_output(ctrl);
+    sb_i_show_controller_invalidate_output(ctrl);
 
     if (scene == NULL) {
         /* Time is out of bounds */
@@ -467,6 +468,26 @@ const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl)
 }
 
 /**
+ * @brief Notifies the show controller that the screenplay has changed.
+ *
+ * This function must be called whenever the screenplay is modified in a way that may
+ * potentially invalidate the current output, e.g., when scenes are added, removed,
+ * or modified.
+ *
+ * @param controller  pointer to the show controller to notify
+ */
+void sb_show_controller_notify_screenplay_changed(sb_show_controller_t* ctrl)
+{
+    if (!sb_screenplay_contains_scene(ctrl->screenplay, sb_show_controller_get_current_scene(ctrl))) {
+        /* Current scene was removed from the screenplay, we need to drop our reference
+         * to it. */
+        sb_i_show_controller_set_current_scene(ctrl, 0);
+    }
+
+    sb_i_show_controller_invalidate_output(ctrl);
+}
+
+/**
  * @brief Invalidates the current control output of the show controller.
  *
  * This function must be called whenever the screenplay is modified in a way that may
@@ -475,7 +496,7 @@ const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl)
  *
  * @param controller  pointer to the show controller to modify
  */
-void sb_show_controller_invalidate_output(sb_show_controller_t* ctrl)
+static void sb_i_show_controller_invalidate_output(sb_show_controller_t* ctrl)
 {
     ctrl->output = ctrl->default_output;
     sb_control_output_time_invalidate(&ctrl->output_time);

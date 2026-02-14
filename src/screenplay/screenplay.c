@@ -36,7 +36,7 @@ sb_error_t sb_screenplay_init(sb_screenplay_t* screenplay)
 {
     const int initial_capacity = 4;
 
-    screenplay->scenes = sb_calloc(sb_screenplay_scene_t, initial_capacity);
+    screenplay->scenes = sb_calloc(sb_screenplay_scene_t*, initial_capacity);
     if (screenplay->scenes == NULL) {
         return SB_ENOMEM; /* LCOV_EXCL_LINE */
     }
@@ -100,6 +100,27 @@ sb_bool_t sb_screenplay_is_empty(const sb_screenplay_t* screenplay)
 }
 
 /**
+ * @brief Checks whether the screenplay contains the given scene.
+ *
+ * @param screenplay  the screenplay to query
+ * @param scene   the scene to check for
+ * @return \c true if the screenplay contains the scene, \c false otherwise
+ */
+sb_bool_t sb_screenplay_contains_scene(const sb_screenplay_t* screenplay, const sb_screenplay_scene_t* scene)
+{
+    if (scene == NULL) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < screenplay->num_scenes; i++) {
+        if (screenplay->scenes[i] == scene) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/**
  * @brief Removes all scenes from the screenplay and clears the RTH plan (if any).
  *
  * @param screenplay  the screenplay to clear
@@ -140,7 +161,7 @@ sb_screenplay_scene_t* sb_screenplay_get_scene_ptr(
     sb_screenplay_t* screenplay, size_t index)
 {
     return (index < screenplay->num_scenes)
-        ? &screenplay->scenes[index]
+        ? screenplay->scenes[index]
         : NULL;
 }
 
@@ -165,7 +186,7 @@ sb_screenplay_scene_t* sb_screenplay_get_scene_ptr_at_time_msec(
     sb_screenplay_t* screenplay, uint32_t* time_msec, ssize_t* scene_index)
 {
     for (size_t i = 0; i < screenplay->num_scenes; i++) {
-        sb_screenplay_scene_t* scene = &screenplay->scenes[i];
+        sb_screenplay_scene_t* scene = screenplay->scenes[i];
         uint32_t scene_duration_msec = sb_screenplay_scene_get_duration_msec(scene);
 
         if (scene_duration_msec == UINT32_MAX) {
@@ -218,9 +239,12 @@ sb_error_t sb_screenplay_append_new_scene(sb_screenplay_t* screenplay, sb_screen
 
     SB_CHECK(sb_i_screenplay_ensure_has_free_space(screenplay));
 
-    scene = &screenplay->scenes[screenplay->num_scenes];
-    SB_CHECK(sb_screenplay_scene_init(scene));
-    screenplay->num_scenes++;
+    scene = sb_screenplay_scene_new();
+    if (scene == 0) {
+        return SB_ENOMEM; /* LCOV_EXCL_LINE */
+    }
+
+    screenplay->scenes[screenplay->num_scenes++] = scene;
 
     if (out_scene != NULL) {
         *out_scene = scene;
@@ -255,7 +279,8 @@ sb_error_t sb_screenplay_remove_last_scene(sb_screenplay_t* screenplay)
     }
 
     screenplay->num_scenes--;
-    SB_DECREF_STATIC(&screenplay->scenes[screenplay->num_scenes]);
+    SB_XDECREF(screenplay->scenes[screenplay->num_scenes]);
+    screenplay->scenes[screenplay->num_scenes] = 0;
 
     return SB_SUCCESS;
 }
@@ -402,7 +427,7 @@ static sb_error_t sb_i_screenplay_ensure_has_free_space(sb_screenplay_t* screenp
 
     if (free_space == 0) {
         size_t new_capacity = screenplay->max_scenes * 2;
-        sb_screenplay_scene_t* new_scenes = sb_realloc(screenplay->scenes, sb_screenplay_scene_t, new_capacity);
+        sb_screenplay_scene_t** new_scenes = sb_realloc(screenplay->scenes, sb_screenplay_scene_t*, new_capacity);
         if (new_scenes == 0) {
             return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }
