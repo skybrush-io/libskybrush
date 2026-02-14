@@ -622,22 +622,27 @@ void test_show_controller_get_current_scene(void)
 {
     sb_show_controller_t ctrl;
     sb_screenplay_t screenplay;
-    sb_screenplay_scene_t* ch0 = NULL;
-    sb_screenplay_scene_t* ch1 = NULL;
+    sb_screenplay_scene_t* scene0 = NULL;
+    sb_screenplay_scene_t* scene1 = NULL;
     sb_error_t err;
 
     /* Initialize a screenplay with two scenes */
     err = sb_screenplay_init(&screenplay);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch0));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &ch1));
-    TEST_ASSERT_NOT_NULL(ch0);
-    TEST_ASSERT_NOT_NULL(ch1);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene1));
+    TEST_ASSERT_NOT_NULL(scene0);
+    TEST_ASSERT_NOT_NULL(scene1);
 
     /* Give each scene a finite duration of 1000 ms so the screenplay spans 0..2000 ms */
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_msec(ch0, 1000u));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_msec(ch1, 1000u));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_msec(scene0, 1000u));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_msec(scene1, 1000u));
+
+    /* Check reference counts of scenes. They should have one owner, the screenplay
+     * itself; the pointers that we have here are borrowed references. */
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(scene0));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(scene1));
 
     /* Initialize controller with the screenplay */
     err = sb_show_controller_init(&ctrl, &screenplay);
@@ -646,23 +651,38 @@ void test_show_controller_get_current_scene(void)
     /* Before any update, current scene should be NULL (not yet established) */
     TEST_ASSERT_NULL(sb_show_controller_get_current_scene(&ctrl));
 
-    /* Update time within first scene -> get_current_scene should return ch0 */
+    /* Update time within first scene -> get_current_scene should return scene0 */
     err = sb_show_controller_update_time_msec(&ctrl, 500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL_PTR(ch0, sb_show_controller_get_current_scene(&ctrl));
+    TEST_ASSERT_EQUAL_PTR(scene0, sb_show_controller_get_current_scene(&ctrl));
     TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
 
-    /* Update time within second scene -> get_current_scene should return ch1 */
+    /* Check reference counts of scenes. scene0 should now have two references: the
+     * screenplay and the show controller, because the latter cached that the current
+     * scene is scene0 and it should be a strong reference. */
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(scene0));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(scene1));
+
+    /* Update time within second scene -> get_current_scene should return scene1 */
     err = sb_show_controller_update_time_msec(&ctrl, 1500u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
-    TEST_ASSERT_EQUAL_PTR(ch1, sb_show_controller_get_current_scene(&ctrl));
+    TEST_ASSERT_EQUAL_PTR(scene1, sb_show_controller_get_current_scene(&ctrl));
     TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
+
+    /* Check reference counts of scenes. scene1 should now have two references, and
+     * scene0 should have only one */
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(scene0));
+    TEST_ASSERT_EQUAL(2, SB_REFCNT(scene1));
 
     /* Update time out of bounds -> no current scene */
     err = sb_show_controller_update_time_msec(&ctrl, 3000u);
     TEST_ASSERT_EQUAL(SB_SUCCESS, err);
     TEST_ASSERT_NULL(sb_show_controller_get_current_scene(&ctrl));
     TEST_ASSERT_TRUE(sb_show_controller_has_reached_end(&ctrl));
+
+    /* Check reference counts of scenes. They should be back to one reference each */
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(scene0));
+    TEST_ASSERT_EQUAL(1, SB_REFCNT(scene1));
 
     /* Cleanup */
     sb_show_controller_destroy(&ctrl);

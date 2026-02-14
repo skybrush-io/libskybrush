@@ -509,6 +509,8 @@ static sb_error_t sb_i_show_controller_set_current_scene(
         sb_free(ctrl->event_list_player);
     }
 
+    SB_XINCREF(scene);
+    SB_XDECREF(ctrl->current_scene);
     ctrl->current_scene = scene;
 
     if (scene) {
