@@ -457,6 +457,12 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->pre_neck_duration_sec));
         target_with_yaw.z += entry->pre_neck_mm;
+
+        if (duration_msec == 0) {
+            /* We need at least 1 msec for the transition */
+            duration_msec = 1;
+        }
+
         SB_CHECK(sb_trajectory_builder_append_line(&builder, target_with_yaw, duration_msec));
     }
 
@@ -471,6 +477,12 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         target_with_yaw.y = entry->target.y;
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->duration_sec));
+
+        if (duration_msec == 0) {
+            /* We need at least 1 msec for the transition */
+            duration_msec = 1;
+        }
+
         SB_CHECK(sb_trajectory_builder_append_line(&builder, target_with_yaw, duration_msec));
 
         break;
@@ -481,6 +493,12 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         target_with_yaw.z = entry->target_altitude;
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->duration_sec));
+
+        if (duration_msec == 0) {
+            /* We need at least 1 msec for the transition */
+            duration_msec = 1;
+        }
+
         SB_CHECK(sb_trajectory_builder_append_line(&builder, target_with_yaw, duration_msec));
 
         break;

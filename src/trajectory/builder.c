@@ -228,6 +228,12 @@ sb_error_t sb_trajectory_builder_append_line(
         midpoint.z = (builder->last_position.z + target.z) / 2;
         midpoint.yaw = (builder->last_position.yaw + target.yaw) / 2;
 
+        /* Here we know that half_duration_msec and duration_msec - half_duration_msec
+         * are both positive because duration_msec was checked to be greater than
+         * \c MAX_DURATION_MSEC
+         */
+        assert(half_duration_msec > 0);
+        assert(duration_msec > half_duration_msec);
         SB_CHECK(sb_trajectory_builder_append_line(builder, midpoint, half_duration_msec));
         SB_CHECK(sb_trajectory_builder_append_line(builder, target, duration_msec - half_duration_msec));
 
@@ -287,6 +293,8 @@ sb_error_t sb_trajectory_builder_hold_position_for(
     while (duration_msec > 0) {
         current_duration_msec = duration_msec > MAX_DURATION_MSEC ? MAX_DURATION_MSEC : duration_msec;
         duration_msec -= current_duration_msec;
+
+        assert(current_duration_msec > 0);
 
         SB_CHECK(sb_trajectory_builder_append_line(builder, builder->last_position, current_duration_msec));
     }
