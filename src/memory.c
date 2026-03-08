@@ -18,6 +18,7 @@
  */
 
 #include <skybrush/memory.h>
+#include <stdint.h>
 #include <string.h>
 
 void* sb_i_simple_realloc(void* ptr, size_t old_size, size_t new_size)
