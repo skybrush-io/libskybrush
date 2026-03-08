@@ -519,7 +519,9 @@ static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events)
 
     if (free_space == 0) {
         size_t new_capacity = events->max_entries * 2;
-        sb_event_t* new_entries = sb_realloc(events->entries, sb_event_t, new_capacity);
+        sb_event_t* new_entries = sb_realloc(
+            events->entries, sb_event_t,
+            events->num_entries, new_capacity);
         if (new_entries == 0) {
             return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }

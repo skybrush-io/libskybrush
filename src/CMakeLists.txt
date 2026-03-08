@@ -5,6 +5,7 @@ add_library(
     control.c
     crc32.c
     error.c
+    memory.c
     parsing.c
     utils.c
 

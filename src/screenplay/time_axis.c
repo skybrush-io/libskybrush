@@ -597,7 +597,9 @@ static sb_error_t sb_i_time_axis_grow_if_needed(sb_time_axis_t* axis)
         size_t length = sb_time_axis_num_segments(axis);
         size_t new_capacity = (capacity == 0) ? 4 : (capacity * 2);
 
-        sb_time_segment_t* new_storage = sb_realloc(axis->stor_begin, sb_time_segment_t, new_capacity);
+        sb_time_segment_t* new_storage = sb_realloc(
+            axis->stor_begin, sb_time_segment_t,
+            length, new_capacity);
         if (new_storage == 0) {
             return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }

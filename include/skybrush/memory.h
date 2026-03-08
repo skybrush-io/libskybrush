@@ -1,7 +1,7 @@
 /*
  * This file is part of libskybrush.
  *
- * Copyright 2020-2025 CollMot Robotics Ltd.
+ * Copyright 2020-2026 CollMot Robotics Ltd.
  *
  * libskybrush is free software: you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -28,6 +28,11 @@
 #include <stdlib.h>
 
 /**
+ * Friendlier form of malloc.
+ */
+#define sb_malloc(type, count) ((type*)malloc(count * sizeof(type)))
+
+/**
  * Friendlier form of calloc.
  */
 #define sb_calloc(type, count) ((type*)calloc(count, sizeof(type)))
@@ -51,8 +56,12 @@
     }
 
 /**
- * Friendlier form of realloc.
+ * Somewhat friendlier form of realloc, with an extra argument that specifies the
+ * old size of the buffer allocated at \p ptr. This allows us to use a simple
+ * malloc-followed-by-free approach if the platform does not provide \c realloc().
  */
-#define sb_realloc(ptr, type, count) ((type*)realloc(ptr, sizeof(type) * (count)))
+#define sb_realloc(ptr, type, old_count, new_count) ((type*)sb_i_simple_realloc(ptr, sizeof(type) * (old_count), sizeof(type) * (new_count)))
+
+void* sb_i_simple_realloc(void* ptr, size_t old_size, size_t new_size);
 
 #endif

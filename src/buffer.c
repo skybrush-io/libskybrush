@@ -403,7 +403,7 @@ sb_error_t sb_i_buffer_realloc(sb_buffer_t* buf, size_t new_capacity)
 
         size = sb_buffer_size(buf);
 
-        buf->stor_begin = sb_realloc(buf->stor_begin, uint8_t, new_capacity);
+        buf->stor_begin = sb_realloc(buf->stor_begin, uint8_t, size, new_capacity);
         if (buf->stor_begin == 0) {
             buf->stor_end = buf->end = 0;
             return SB_ENOMEM; /* LCOV_EXCL_LINE */

@@ -427,7 +427,9 @@ static sb_error_t sb_i_screenplay_ensure_has_free_space(sb_screenplay_t* screenp
 
     if (free_space == 0) {
         size_t new_capacity = screenplay->max_scenes * 2;
-        sb_screenplay_scene_t** new_scenes = sb_realloc(screenplay->scenes, sb_screenplay_scene_t*, new_capacity);
+        sb_screenplay_scene_t** new_scenes = sb_realloc(
+            screenplay->scenes, sb_screenplay_scene_t*,
+            screenplay->num_scenes, new_capacity);
         if (new_scenes == 0) {
             return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }
