@@ -273,6 +273,9 @@ sb_error_t sb_trajectory_builder_init_from_trajectory(sb_trajectory_builder_t* b
     sb_trajectory_t* trajectory, const sb_vector3_with_yaw_t* last_position);
 void sb_trajectory_builder_destroy(sb_trajectory_builder_t* builder);
 
+sb_vector3_with_yaw_t sb_trajectory_builder_get_last_position(
+    const sb_trajectory_builder_t* builder);
+
 sb_error_t sb_trajectory_builder_set_start_position(
     sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t start);
 sb_error_t sb_trajectory_builder_append_line(

@@ -415,6 +415,54 @@ void test_hold_position_for(void)
     sb_trajectory_builder_destroy(&builder);
 }
 
+void test_get_last_position(void)
+{
+    sb_vector3_with_yaw_t vec;
+    sb_vector3_with_yaw_t last;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 2, 0));
+
+    last = sb_trajectory_builder_get_last_position(&builder);
+    TEST_ASSERT_EQUAL(0, last.x);
+    TEST_ASSERT_EQUAL(0, last.y);
+    TEST_ASSERT_EQUAL(0, last.z);
+    TEST_ASSERT_EQUAL(0, last.yaw);
+
+    vec.x = 10;
+    vec.y = 20;
+    vec.z = 15;
+    vec.yaw = 117;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, vec));
+
+    last = sb_trajectory_builder_get_last_position(&builder);
+    TEST_ASSERT_EQUAL(vec.x, last.x);
+    TEST_ASSERT_EQUAL(vec.y, last.y);
+    TEST_ASSERT_EQUAL(vec.z, last.z);
+    TEST_ASSERT_EQUAL(vec.yaw, last.yaw);
+
+    vec.x = 20;
+    vec.y = 40;
+    vec.z = 30;
+    vec.yaw = 210;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_line(&builder, vec, 10000));
+
+    last = sb_trajectory_builder_get_last_position(&builder);
+    TEST_ASSERT_EQUAL(vec.x, last.x);
+    TEST_ASSERT_EQUAL(vec.y, last.y);
+    TEST_ASSERT_EQUAL(vec.z, last.z);
+    TEST_ASSERT_EQUAL(vec.yaw, last.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_hold_position_for(&builder, 1000));
+
+    last = sb_trajectory_builder_get_last_position(&builder);
+    TEST_ASSERT_EQUAL(vec.x, last.x);
+    TEST_ASSERT_EQUAL(vec.y, last.y);
+    TEST_ASSERT_EQUAL(vec.z, last.z);
+    TEST_ASSERT_EQUAL(vec.yaw, last.yaw);
+
+    sb_trajectory_builder_destroy(&builder);
+}
+
 void test_conversion_to_trajectory(void)
 {
     sb_vector3_with_yaw_t vec;
@@ -480,6 +528,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_append_cubic_bezier);
     RUN_TEST(test_append_line);
     RUN_TEST(test_hold_position_for);
+    RUN_TEST(test_get_last_position);
     RUN_TEST(test_conversion_to_trajectory);
 
     return UNITY_END();

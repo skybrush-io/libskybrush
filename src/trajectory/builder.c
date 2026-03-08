@@ -108,6 +108,18 @@ void sb_trajectory_builder_destroy(sb_trajectory_builder_t* builder)
 }
 
 /**
+ * @brief Gets the last position of the trajectory being built.
+ *
+ * @param builder the trajectory builder
+ * @return the last position of the trajectory
+ */
+sb_vector3_with_yaw_t sb_trajectory_builder_get_last_position(
+    const sb_trajectory_builder_t* builder)
+{
+    return builder->last_position;
+}
+
+/**
  * @brief Sets the start point of the trajectory being built.
  *
  * @param builder the trajectory builder
