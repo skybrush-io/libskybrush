@@ -110,6 +110,8 @@ sb_error_t sb_rth_plan_update_from_binary_file_in_memory(
     sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes);
 sb_error_t sb_rth_plan_update_from_buffer(sb_rth_plan_t* plan,
     uint8_t* buf, size_t nbytes);
+sb_error_t sb_rth_plan_update_from_bytes(sb_rth_plan_t* plan,
+    uint8_t* buf, size_t nbytes);
 
 sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_trajectory_t* trajectory,
