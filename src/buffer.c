@@ -339,7 +339,7 @@ sb_error_t sb_buffer_concat(sb_buffer_t* buf, const sb_buffer_t* other)
  */
 sb_error_t sb_buffer_extend_with_zeros(sb_buffer_t* buf, size_t num_zeros)
 {
-    SB_CHECK(sb_i_buffer_ensure_free_space(buf, sb_buffer_size(buf) + num_zeros));
+    SB_CHECK(sb_i_buffer_ensure_free_space(buf, num_zeros));
     memset(buf->end, 0, num_zeros);
     buf->end += num_zeros;
     return SB_SUCCESS;
