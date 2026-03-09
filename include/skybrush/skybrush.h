@@ -32,6 +32,7 @@
 #include <skybrush/error.h>
 #include <skybrush/events.h>
 #include <skybrush/lights.h>
+#include <skybrush/motion.h>
 #include <skybrush/poly.h>
 #include <skybrush/refcount.h>
 #include <skybrush/rth_plan.h>

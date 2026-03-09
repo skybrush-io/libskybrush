@@ -17,30 +17,25 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef SKYBRUSH_UTILS_H
-#define SKYBRUSH_UTILS_H
+#ifndef SKYBRUSH_MOTION_H
+#define SKYBRUSH_MOTION_H
 
 #include <skybrush/basic_types.h>
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
-#include <stdint.h>
 
 __BEGIN_DECLS
 
 /**
- * @file utils.h
- * @brief Utility functions that do not fit elsewhere.
+ * @file motion.h
+ * @brief Functions related to motion planning.
  */
 
-uint32_t sb_ap_crc32_update(uint32_t crc, const uint8_t* buf, uint32_t size);
-sb_error_t sb_bezier_cut_at(float* dst, const float* src, uint8_t num_points, float ratio);
-void sb_bounding_box_expand(sb_bounding_box_t* box, float offset);
-void sb_interval_expand(sb_interval_t* interval, float offset);
-sb_error_t sb_scale_update_altitude(uint8_t* scale, float altitude);
-sb_error_t sb_scale_update_vector2(uint8_t* scale, sb_vector2_t point);
-sb_error_t sb_scale_update_vector3(uint8_t* scale, sb_vector3_t point);
-sb_error_t sb_scale_update_vector3_with_yaw(uint8_t* scale, sb_vector3_with_yaw_t point);
-sb_error_t sb_uint32_msec_duration_from_float_seconds(uint32_t* result_msec, float duration_sec);
+sb_error_t sb_get_cubic_bezier_from_velocity_constraints(
+    sb_vector3_with_yaw_t start, sb_vector3_with_yaw_t start_vel,
+    sb_vector3_with_yaw_t end, sb_vector3_with_yaw_t end_vel, float duration_sec,
+    sb_vector3_with_yaw_t* control1, sb_vector3_with_yaw_t* control2);
+float sb_get_travel_time_for_distance(float distance, float speed, float acceleration);
 
 __END_DECLS
 

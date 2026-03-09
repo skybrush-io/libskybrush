@@ -22,9 +22,9 @@
 #include <memory.h>
 
 #include <skybrush/error.h>
+#include <skybrush/motion.h>
 #include <skybrush/stats.h>
 #include <skybrush/trajectory.h>
-#include <skybrush/utils.h>
 
 static sb_bool_t sb_i_is_segment_descending_vertically(
     const sb_trajectory_segment_t* segment, float threshold);

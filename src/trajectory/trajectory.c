@@ -24,6 +24,7 @@
 
 #include <skybrush/formats/binary.h>
 #include <skybrush/memory.h>
+#include <skybrush/motion.h>
 #include <skybrush/trajectory.h>
 #include <skybrush/utils.h>
 
