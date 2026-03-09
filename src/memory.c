@@ -35,6 +35,7 @@ void* sb_i_simple_realloc(void* ptr, size_t old_size, size_t new_size)
     void* new_mem = sb_malloc(uint8_t, new_size);
     if (new_mem != 0) {
         memcpy(new_mem, ptr, old_size < new_size ? old_size : new_size);
+        sb_free(ptr);
     }
 
     return new_mem;
