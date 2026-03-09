@@ -83,6 +83,26 @@ typedef struct sb_rth_plan_entry_s {
 
     /** The duration of the pre-neck phase, in seconds */
     float pre_neck_duration_sec;
+
+    /**
+     * Maximum acceleration constraint to apply during the action, on a best-effort
+     * basis, in millimeters per second squared. Infinity, zero, NaN or a negative value
+     * means no constraint.
+     */
+    float max_acceleration;
+
+    /**
+     * Optional landing altitude; NaN means that the landing altitude is not specified.
+     * When it is not NaN, a final vertical segment will be added to the trajectory
+     * generated from the entry that brings the drone to this altitude vertically.
+     */
+    float landing_altitude;
+
+    /**
+     * Optional landing velocity; zero, negative, NaN or infinity means that a reasonable
+     * default value of 1 m/s will be used if a landing altitude is specified.
+     */
+    float landing_velocity;
 } sb_rth_plan_entry_t;
 
 /**
@@ -94,16 +114,31 @@ typedef struct sb_rth_plan_s {
     float scale; /**< Scaling factor for the coordinates */
     size_t header_length; /**< Number of bytes in the header of the buffer */
     size_t num_points; /**< Number of points in the RTH plan */
+    float max_acceleration; /**< Maximum acceleration during RTH actions */
+    float landing_altitude; /**< Optional landing altitude for RTH actions; NaN means not specified */
+    float landing_velocity; /**< Optional landing velocity for RTH actions; NaN means not specified */
 } sb_rth_plan_t;
 
 sb_rth_plan_t* sb_rth_plan_new(void);
 sb_error_t sb_rth_plan_init(sb_rth_plan_t* plan);
 
+float sb_rth_plan_get_default_acceleration_limit(const sb_rth_plan_t* plan);
+float sb_rth_plan_get_default_landing_altitude(const sb_rth_plan_t* plan);
+float sb_rth_plan_get_default_landing_velocity(const sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_entries(const sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_points(const sb_rth_plan_t* plan);
 sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vector2_t* point);
+sb_bool_t sb_rth_plan_has_default_landing_altitude(const sb_rth_plan_t* plan);
+sb_bool_t sb_rth_plan_has_default_landing_velocity(const sb_rth_plan_t* plan);
 sb_bool_t sb_rth_plan_is_empty(const sb_rth_plan_t* plan);
+
 sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth_plan_entry_t* result);
+
+void sb_rth_plan_clear_default_landing_altitude(sb_rth_plan_t* plan);
+void sb_rth_plan_clear_default_landing_velocity(sb_rth_plan_t* plan);
+sb_error_t sb_rth_plan_set_default_landing_altitude(sb_rth_plan_t* plan, float landing_altitude);
+void sb_rth_plan_set_default_landing_velocity(sb_rth_plan_t* plan, float landing_velocity);
+void sb_rth_plan_set_default_acceleration_limit(sb_rth_plan_t* plan, float max_acceleration);
 
 sb_error_t sb_rth_plan_update_from_binary_file(sb_rth_plan_t* plan, int fd);
 sb_error_t sb_rth_plan_update_from_binary_file_in_memory(
@@ -115,7 +150,7 @@ sb_error_t sb_rth_plan_update_from_bytes(sb_rth_plan_t* plan,
 
 sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_trajectory_t* trajectory, const sb_rth_plan_entry_t* entry,
-    sb_vector3_t start, float max_acceleration);
+    sb_vector3_t start);
 
 __END_DECLS
 

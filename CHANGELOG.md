@@ -61,10 +61,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `sb_trajectory_update_from_rth_plan_entry()` now takes an `sb_vector3_t` to specify
   the starting position instead of an `sb_vector3_with_yaw_t`.
 
-- `sb_trajectory_update_from_rth_plan_entry()` now also takes a maximum acceleration
-  parameter that specifies whether the generated trajectory segments should attempt to
-  respect a maximum acceleration constraint or not.
-
 ### Added
 
 - Added `sb_screenplay_t` and `sb_screenplay_scene_t` to manage a complex
@@ -87,6 +83,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `sb_trajectory_builder_move_to_in_time()` to create a three-phase transition
   in a trajectory from one point to another such that the initial and terminal
   velocities are zeros and the entire transition takes a specified amount of time.
+
+- RTH plans now have a default landing altitude, a default landing velocity and a
+  default acceleration limit. These are applied to RTH plan entries when they are
+  extracted from the RTH plan.
 
 ### Changed
 

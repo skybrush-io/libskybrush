@@ -332,7 +332,8 @@ sb_error_t sb_trajectory_builder_hold_position_for(
  *        positive.
  * @param max_acceleration  maximum acceleration, in units per second per second.
  *        May not be respected if the duration is too short to reach the required
- *        travel velocity.
+ *        travel velocity. Must be positive and finite; if it is not, it will be treated
+ *        as infinite.
  */
 sb_error_t sb_trajectory_builder_move_to_in_time(
     sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t target,
@@ -344,11 +345,11 @@ sb_error_t sb_trajectory_builder_move_to_in_time(
     float v2, t2, t1;
     uint32_t t1_msec;
 
-    if (max_acceleration <= 0 || duration_msec == 0) {
+    if (duration_msec == 0) {
         return SB_EINVAL;
     }
 
-    if (!isfinite(max_acceleration)) {
+    if (!isfinite(max_acceleration) || max_acceleration <= 0) {
         /* max acceleration is infinite so we can just use straight-line segments */
         return sb_trajectory_builder_append_line(builder, target, duration_msec);
     }

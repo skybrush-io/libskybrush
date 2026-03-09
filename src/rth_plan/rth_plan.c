@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <float.h>
+#include <math.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -58,6 +59,8 @@ static sb_error_t sb_i_rth_plan_parse_duration(const sb_rth_plan_t* plan, size_t
 static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan);
 static sb_error_t sb_i_rth_plan_update_from_bytes(sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_rth_plan_update_from_parser(sb_rth_plan_t* plan, sb_binary_file_parser_t* parser);
+
+static void sb_i_rth_plan_entry_clear(sb_rth_plan_entry_t* entry, const sb_rth_plan_t* plan);
 
 /**
  * \brief Allocates a new RTH plan object on the heap and initializes it.
@@ -97,8 +100,44 @@ sb_error_t sb_rth_plan_init(sb_rth_plan_t* plan)
     plan->scale = 1;
     plan->header_length = 0;
     plan->num_points = 0;
+    plan->max_acceleration = INFINITY;
+    plan->landing_altitude = NAN;
+    plan->landing_velocity = NAN;
 
     return SB_SUCCESS;
+}
+
+/**
+ * @brief Returns the maximum acceleration constraint to apply during RTH actions.
+ */
+float sb_rth_plan_get_default_acceleration_limit(const sb_rth_plan_t* plan)
+{
+    if (plan->max_acceleration > 0 && isfinite(plan->max_acceleration)) {
+        return plan->max_acceleration;
+    } else {
+        return INFINITY;
+    }
+}
+
+/**
+ * @brief Returns the default landing altitude for RTH actions, or NaN if no landing altitude is specified.
+ */
+float sb_rth_plan_get_default_landing_altitude(const sb_rth_plan_t* plan)
+{
+    return plan->landing_altitude;
+}
+
+/**
+ * @brief Returns the default landing velocity for RTH actions, or NaN if no landing velocity is specified.
+ */
+float sb_rth_plan_get_default_landing_velocity(const sb_rth_plan_t* plan)
+{
+    float val = plan->landing_velocity;
+    if (val > 0 && isfinite(val)) {
+        return val;
+    } else {
+        return NAN;
+    }
 }
 
 /**
@@ -150,6 +189,23 @@ sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vec
 }
 
 /**
+ * @brief Returns whether the RTH plan has a default landing altitude specified.
+ */
+sb_bool_t sb_rth_plan_has_default_landing_altitude(const sb_rth_plan_t* plan)
+{
+    return isfinite(plan->landing_altitude);
+}
+
+/**
+ * @brief Returns whether the RTH plan has a default landing velocity specified.
+ */
+sb_bool_t sb_rth_plan_has_default_landing_velocity(const sb_rth_plan_t* plan)
+{
+    float alt = plan->landing_velocity;
+    return isfinite(alt) && alt > 0;
+}
+
+/**
  * @brief Returns whether the RTH plan is empty (i.e. has no entries).
  *
  * @param plan   the RTH plan
@@ -158,6 +214,59 @@ sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vec
 sb_bool_t sb_rth_plan_is_empty(const sb_rth_plan_t* plan)
 {
     return sb_rth_plan_get_num_entries(plan) == 0;
+}
+
+/**
+ * @brief Sets the maximum acceleration constraint to apply during RTH actions.
+ */
+void sb_rth_plan_set_default_acceleration_limit(sb_rth_plan_t* plan, float max_acceleration)
+{
+    if (max_acceleration > 0 && isfinite(max_acceleration)) {
+        plan->max_acceleration = max_acceleration;
+    } else {
+        plan->max_acceleration = INFINITY;
+    }
+}
+
+/**
+ * @brief Sets the default landing altitude for RTH actions.
+ */
+sb_error_t sb_rth_plan_set_default_landing_altitude(sb_rth_plan_t* plan, float landing_altitude)
+{
+    if (isnan(landing_altitude) || isfinite(landing_altitude)) {
+        plan->landing_altitude = landing_altitude;
+        return SB_SUCCESS;
+    } else {
+        return SB_EINVAL;
+    }
+}
+
+/**
+ * @brief Sets the default landing velocity for RTH actions.
+ */
+void sb_rth_plan_set_default_landing_velocity(sb_rth_plan_t* plan, float landing_velocity)
+{
+    if (isfinite(landing_velocity) && landing_velocity > 0) {
+        plan->landing_velocity = landing_velocity;
+    } else {
+        plan->landing_velocity = NAN;
+    }
+}
+
+/**
+ * @brief Clears the default landing altitude for RTH actions.
+ */
+void sb_rth_plan_clear_default_landing_altitude(sb_rth_plan_t* plan)
+{
+    sb_rth_plan_set_default_landing_altitude(plan, NAN);
+}
+
+/**
+ * @brief Clears the default landing velocity for RTH actions.
+ */
+void sb_rth_plan_clear_default_landing_velocity(sb_rth_plan_t* plan)
+{
+    sb_rth_plan_set_default_landing_velocity(plan, NAN);
 }
 
 /**
@@ -180,8 +289,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
     uint8_t* buf = SB_BUFFER(plan->buffer);
     size_t buf_length = sb_buffer_size(&plan->buffer);
 
-    memset(&entry, 0, sizeof(entry));
-    entry.action = SB_RTH_ACTION_LAND;
+    sb_i_rth_plan_entry_clear(&entry, plan);
     entry.time_sec = time;
 
     if (time < 0) {
@@ -292,8 +400,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
     if (!found) {
         /* Requested time was beyond the last point for which we had an RTH plan.
          * In this case, we just land immediately. */
-        memset(&entry, 0, sizeof(entry));
-        entry.action = SB_RTH_ACTION_LAND;
+        sb_i_rth_plan_entry_clear(&entry, plan);
         entry.time_sec = time;
     }
 
@@ -404,14 +511,10 @@ sb_error_t sb_rth_plan_update_from_bytes(sb_rth_plan_t* plan, uint8_t* buf, size
  *        trajectory; it is assumed to be the coordinate where the RTH plan
  *        expects the vehicle to be (since the RTH plan does not store the
  *        start coordinate).
- * @param max_acceleration  the maximum acceleration to use for the generated trajectory,
- *        in units per second per second. Infinity if there are no acceleration
- *        constrains, in which case the generated trajectory will contain
- *        constant-velocity linear segments only.
  */
 sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_trajectory_t* trajectory, const sb_rth_plan_entry_t* entry,
-    sb_vector3_t start, float max_acceleration)
+    sb_vector3_t start)
 {
     sb_trajectory_builder_t builder;
     sb_vector3_with_yaw_t start_with_yaw;
@@ -420,6 +523,12 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
     sb_error_t retval = SB_SUCCESS;
     uint32_t duration_msec;
     float start_time = entry->time_sec;
+    float max_acceleration = entry->max_acceleration;
+
+    /* Validate acceleration */
+    if (max_acceleration <= 0 || !isfinite(max_acceleration)) {
+        max_acceleration = INFINITY;
+    }
 
     /* Determine final scale for trajectory generation */
     SB_CHECK(sb_scale_update_vector3(&scale, start));
@@ -520,9 +629,29 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
     }
 
-    /* TODO(ntamas): add smooth landing to a landing altitude before ending the
-     * trajectory?
-     */
+    /* add smooth landing to a landing altitude before ending the trajectory if needed */
+    if (isfinite(entry->landing_altitude)) {
+        float landing_velocity_mm_sec = entry->landing_velocity;
+        float landing_duration_sec;
+
+        if (!isfinite(landing_velocity_mm_sec) || landing_velocity_mm_sec <= 0) {
+            landing_velocity_mm_sec = 1000; /* default landing velocity: 1 m/s */
+        }
+
+        landing_duration_sec = fabsf(target_with_yaw.z - entry->landing_altitude) / landing_velocity_mm_sec;
+        target_with_yaw.z = entry->landing_altitude;
+
+        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+            &duration_msec, landing_duration_sec));
+
+        if (duration_msec == 0) {
+            /* We need at least 1 msec for the transition */
+            duration_msec = 1;
+        }
+
+        SB_CHECK(sb_trajectory_builder_move_to_in_time(
+            &builder, target_with_yaw, duration_msec, max_acceleration));
+    }
 
     retval = sb_trajectory_update_from_builder(trajectory, &builder);
 
@@ -673,4 +802,16 @@ static sb_error_t sb_i_rth_plan_update_from_parser(sb_rth_plan_t* plan, sb_binar
     /* ownership of 'buf' taken by the RTH plan if needed */
 
     return SB_SUCCESS;
+}
+
+/* ************************************************************************** */
+
+static void sb_i_rth_plan_entry_clear(sb_rth_plan_entry_t* entry, const sb_rth_plan_t* plan)
+{
+    memset(entry, 0, sizeof(sb_rth_plan_entry_t));
+
+    entry->action = SB_RTH_ACTION_LAND;
+    entry->max_acceleration = sb_rth_plan_get_default_acceleration_limit(plan);
+    entry->landing_altitude = sb_rth_plan_get_default_landing_altitude(plan);
+    entry->landing_velocity = sb_rth_plan_get_default_landing_velocity(plan);
 }

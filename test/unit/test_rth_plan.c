@@ -131,6 +131,65 @@ void test_is_empty(void)
     TEST_ASSERT(!sb_rth_plan_is_empty(plan));
 }
 
+void test_default_acceleration_limit(void)
+{
+    float value;
+
+    value = sb_rth_plan_get_default_acceleration_limit(plan);
+    TEST_ASSERT(value > 0 || value == INFINITY);
+
+    sb_rth_plan_set_default_acceleration_limit(plan, 1234.5f);
+    TEST_ASSERT_EQUAL_FLOAT(1234.5f, sb_rth_plan_get_default_acceleration_limit(plan));
+
+    sb_rth_plan_set_default_acceleration_limit(plan, 0);
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_rth_plan_get_default_acceleration_limit(plan));
+
+    sb_rth_plan_set_default_acceleration_limit(plan, -10);
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_rth_plan_get_default_acceleration_limit(plan));
+}
+
+void test_default_landing_altitude(void)
+{
+    TEST_ASSERT(!sb_rth_plan_has_default_landing_altitude(plan));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_set_default_landing_altitude(plan, 1500.0f));
+    TEST_ASSERT(sb_rth_plan_has_default_landing_altitude(plan));
+    TEST_ASSERT_EQUAL_FLOAT(1500.0f, sb_rth_plan_get_default_landing_altitude(plan));
+
+    /* invalid value */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_rth_plan_set_default_landing_altitude(plan, INFINITY));
+
+    sb_rth_plan_clear_default_landing_altitude(plan);
+    TEST_ASSERT(!sb_rth_plan_has_default_landing_altitude(plan));
+}
+
+void test_default_landing_velocity(void)
+{
+    TEST_ASSERT(!sb_rth_plan_has_default_landing_velocity(plan));
+
+    sb_rth_plan_set_default_landing_velocity(plan, 750.0f);
+    TEST_ASSERT(sb_rth_plan_has_default_landing_velocity(plan));
+    TEST_ASSERT_EQUAL_FLOAT(750.0f, sb_rth_plan_get_default_landing_velocity(plan));
+
+    /* invalid values */
+    sb_rth_plan_set_default_landing_velocity(plan, -750.0f);
+    TEST_ASSERT(!sb_rth_plan_has_default_landing_velocity(plan));
+    sb_rth_plan_set_default_landing_velocity(plan, 750.0f);
+
+    /* more invalid values */
+    sb_rth_plan_set_default_landing_velocity(plan, INFINITY);
+    TEST_ASSERT(!sb_rth_plan_has_default_landing_velocity(plan));
+    sb_rth_plan_set_default_landing_velocity(plan, 750.0f);
+
+    /* even more invalid values */
+    sb_rth_plan_set_default_landing_velocity(plan, NAN);
+    TEST_ASSERT(!sb_rth_plan_has_default_landing_velocity(plan));
+    sb_rth_plan_set_default_landing_velocity(plan, 750.0f);
+
+    sb_rth_plan_clear_default_landing_velocity(plan);
+    TEST_ASSERT(!sb_rth_plan_has_default_landing_velocity(plan));
+}
+
 void test_evaluate_at(void)
 {
     sb_rth_plan_entry_t entry;
@@ -393,7 +452,6 @@ void test_convert_to_trajectory(void)
     };
     sb_vector3_with_yaw_t vec;
     float t;
-    const float max_acceleration = INFINITY;
 
     TEST_ASSERT_NOT_NULL(trajectory = sb_trajectory_new());
 
@@ -416,7 +474,7 @@ void test_convert_to_trajectory(void)
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start, max_acceleration));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         TEST_ASSERT_EQUAL(0, sb_trajectory_get_total_duration_msec(trajectory));
         assert_trajectory_is_constant(trajectory, 0.0f, 10.0f, start);
@@ -428,7 +486,7 @@ void test_convert_to_trajectory(void)
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start, max_acceleration));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         t = 15;
         TEST_ASSERT_EQUAL(t * 1000 + 55000, sb_trajectory_get_total_duration_msec(trajectory));
@@ -457,7 +515,7 @@ void test_convert_to_trajectory(void)
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start, max_acceleration));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         t = 45;
         TEST_ASSERT_EQUAL(t * 1000 + 52000, sb_trajectory_get_total_duration_msec(trajectory));
@@ -488,7 +546,7 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
 
         entry.time_sec = t;
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start, max_acceleration));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         TEST_ASSERT_EQUAL(t * 1000 + (i <= 650 ? 30000 : 20000), sb_trajectory_get_total_duration_msec(trajectory));
         assert_trajectory_is_constant(trajectory, 0.0f, t, start);
@@ -518,7 +576,7 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
 
         entry.time_sec = t;
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start, max_acceleration));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         TEST_ASSERT_EQUAL(t * 1000 + 35000, sb_trajectory_get_total_duration_msec(trajectory));
         assert_trajectory_is_constant(trajectory, 0.0f, t, start);
@@ -551,7 +609,7 @@ void test_convert_to_trajectory(void)
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start, max_acceleration));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         t = 115;
         TEST_ASSERT_EQUAL(t * 1000, sb_trajectory_get_total_duration_msec(trajectory));
@@ -563,7 +621,7 @@ void test_convert_to_trajectory(void)
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start, max_acceleration));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         TEST_ASSERT_EQUAL(t * 1000, sb_trajectory_get_total_duration_msec(trajectory));
         assert_trajectory_is_constant(trajectory, 0.0f, t, start);
@@ -581,6 +639,9 @@ int main(int argc, char* argv[])
     RUN_TEST(test_get_points);
     RUN_TEST(test_get_num_entries);
     RUN_TEST(test_is_empty);
+    RUN_TEST(test_default_acceleration_limit);
+    RUN_TEST(test_default_landing_altitude);
+    RUN_TEST(test_default_landing_velocity);
     RUN_TEST(test_evaluate_at);
     RUN_TEST(test_plan_duration_too_large);
     RUN_TEST(test_convert_to_trajectory);
