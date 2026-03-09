@@ -61,6 +61,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `sb_trajectory_update_from_rth_plan_entry()` now takes an `sb_vector3_t` to specify
   the starting position instead of an `sb_vector3_with_yaw_t`.
 
+- `sb_trajectory_update_from_rth_plan_entry()` now also takes a maximum acceleration
+  parameter that specifies whether the generated trajectory segments should attempt to
+  respect a maximum acceleration constraint or not.
+
 ### Added
 
 - Added `sb_screenplay_t` and `sb_screenplay_scene_t` to manage a complex
@@ -79,6 +83,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `sb_trajectory_player_clone()` to create a clone of a trajectory player that
   allows one to move forward on the time axis without affecting the state of the
   original player that the clone was created from.
+
+- Added `sb_trajectory_builder_move_to_in_time()` to create a three-phase transition
+  in a trajectory from one point to another such that the initial and terminal
+  velocities are zeros and the entire transition takes a specified amount of time.
+
+### Changed
+
+- `sb_realloc()` now reallocates memory using `sb_malloc()` and `sb_free()` instead of
+  using `realloc()` directly. This is because on some platforms (such as the ArduPilot
+  codebase with gcc 13) the `realloc()` implementation seems to work incorrectly and
+  does not copy the final few bytes of small memory blocks. This might be a bug in
+  ArduPilot or ChibiOS, or we might be doing something with `realloc()` that is not
+  supported.
 
 ## [4.3.0] - 2025-10-15
 
