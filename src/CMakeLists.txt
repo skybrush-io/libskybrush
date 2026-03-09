@@ -6,6 +6,7 @@ add_library(
     crc32.c
     error.c
     memory.c
+    motion.c
     parsing.c
     utils.c
 

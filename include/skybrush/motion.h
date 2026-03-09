@@ -36,6 +36,7 @@ sb_error_t sb_get_cubic_bezier_from_velocity_constraints(
     sb_vector3_with_yaw_t end, sb_vector3_with_yaw_t end_vel, float duration_sec,
     sb_vector3_with_yaw_t* control1, sb_vector3_with_yaw_t* control2);
 float sb_get_travel_time_for_distance(float distance, float speed, float acceleration);
+float sb_get_travel_velocity_for_distance(float distance, float time, float acceleration);
 
 __END_DECLS
 

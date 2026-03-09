@@ -63,24 +63,24 @@ sb_error_t sb_get_cubic_bezier_from_velocity_constraints(
 /**
  * Calculates the time needed for the three phase motion of constant
  * acceleration + constant velocity + constant deceleration to move a given
- * distance.
+ * distance, with a maximum speed limit.
  *
  * Start and end speed is assumed to be zero. Full speed might not be reached if
  * distance is not large enough.
  *
- * \param  distance      the (nonnegative) distance travelled
- * \param  speed         the (positive) maximal travel speed of the motion
+ * \param  distance      the (nonnegative) distance to travel
+ * \param  max_speed     the (positive) maximal travel speed of the motion
  * \param  acceleration  the (positive) acceleration of the motion; \c INFINITY is
  *                       treated as constant speed during the entire motion
  *
  * \return the time needed for the motion, or infinity in case of invalid inputs
  */
-float sb_get_travel_time_for_distance(float distance, float speed, float acceleration)
+float sb_get_travel_time_for_distance(float distance, float max_speed, float acceleration)
 {
     float t1, t2, s1;
 
     /* We return infinite time for invalid input values */
-    if (distance < 0 || speed <= 0 || acceleration <= 0) {
+    if (distance < 0 || max_speed <= 0 || acceleration <= 0) {
         return INFINITY;
     }
 
@@ -89,17 +89,17 @@ float sb_get_travel_time_for_distance(float distance, float speed, float acceler
     }
 
     if (acceleration == INFINITY) {
-        return distance / speed;
+        return distance / max_speed;
     }
 
     /* Calculate time of acceleration phase from zero to max speed */
-    t1 = speed / acceleration;
+    t1 = max_speed / acceleration;
     s1 = acceleration / 2 * t1 * t1;
 
     if (distance >= 2 * s1) {
         /* If we have time for full acceleration, we add time of
            constant speed on the remaining distance */
-        t2 = (distance - 2 * s1) / speed;
+        t2 = (distance - 2 * s1) / max_speed;
     } else {
         /* Otherwise we accelerate to lower speed in less time */
         /* s1 = distance / 2; t1 = sqrt(2 * s1 / acceleration) */
@@ -108,4 +108,37 @@ float sb_get_travel_time_for_distance(float distance, float speed, float acceler
     }
 
     return 2 * t1 + t2;
+}
+
+/**
+ * Calculates the travel velocity needed for the three phase motion of constant
+ * acceleration + constant velocity + constant deceleration to move a given
+ * distance over a given duration.
+ *
+ * Start and end speed is assumed to be zero. Full velocity might not be attainable
+ * while respecting the acceleration constraint.
+ *
+ * \param  distance      the (nonnegative) distance to travel
+ * \param  time          the (positive) total duration of the motion
+ * \param  acceleration  the (positive) acceleration of the motion; \c INFINITY is
+ *                       treated as constant speed during the entire motion
+ *
+ * \return the travel velocity needed for the motion, or infinity in case of invalid inputs
+ */
+float sb_get_travel_velocity_for_distance(float distance, float time, float acceleration)
+{
+    /* We return infinite speed for invalid input values */
+    if (distance < 0 || time <= 0 || acceleration <= 0) {
+        return INFINITY;
+    }
+
+    if (distance == 0) {
+        return 0;
+    }
+
+    if (acceleration == INFINITY) {
+        return distance / time;
+    }
+
+    return (sqrtf(time * time + 4 * acceleration * distance) - time) / (2 * acceleration);
 }

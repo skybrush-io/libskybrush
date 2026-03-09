@@ -104,7 +104,7 @@ void test_get_cubic_bezier_from_velocity_constraints(void)
     SB_XDECREF(trajectory);
 }
 
-void test_get_travel_time(void)
+void test_get_travel_time_for_distance(void)
 {
     /* Test erroneous input */
     TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_time_for_distance(-1, 1, 1));
@@ -125,12 +125,35 @@ void test_get_travel_time(void)
     TEST_ASSERT_EQUAL_FLOAT(2 * sqrtf(2), sb_get_travel_time_for_distance(2, 2, 1));
 }
 
+void test_get_travel_velocity_for_distance(void)
+{
+    /* Test erroneous input */
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_velocity_for_distance(-1, 1, 1));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_velocity_for_distance(1, 0, 1));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_velocity_for_distance(1, 1, 0));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_velocity_for_distance(0, 1, 0));
+
+    /* Test zero distance (trivial case) */
+    TEST_ASSERT_EQUAL_FLOAT(0, sb_get_travel_velocity_for_distance(0, 1, 1));
+
+    /* Test infinite acceleration (trivial case) */
+    TEST_ASSERT_EQUAL_FLOAT(2, sb_get_travel_velocity_for_distance(6, 3, INFINITY));
+
+    /* Test the case when we can reach the required travel velocity */
+    TEST_ASSERT_EQUAL_FLOAT(1, sb_get_travel_velocity_for_distance(6, 5, 1));
+    TEST_ASSERT_EQUAL_FLOAT(1, sb_get_travel_velocity_for_distance(5, 4, 1));
+
+    /* Test the case when we do not have time for full acceleration and deceleration */
+    TEST_ASSERT_EQUAL_FLOAT(1, sb_get_travel_velocity_for_distance(2, 1, 1));
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
     RUN_TEST(test_get_cubic_bezier_from_velocity_constraints);
-    RUN_TEST(test_get_travel_time);
+    RUN_TEST(test_get_travel_time_for_distance);
+    RUN_TEST(test_get_travel_velocity_for_distance);
 
     return UNITY_END();
 }
