@@ -115,18 +115,20 @@ float sb_get_travel_time_for_distance(float distance, float max_speed, float acc
  * acceleration + constant velocity + constant deceleration to move a given
  * distance over a given duration.
  *
- * Start and end speed is assumed to be zero. Full velocity might not be attainable
- * while respecting the acceleration constraint.
+ * Start and end speed is assumed to be zero.
  *
  * \param  distance      the (nonnegative) distance to travel
  * \param  time          the (positive) total duration of the motion
  * \param  acceleration  the (positive) acceleration of the motion; \c INFINITY is
  *                       treated as constant speed during the entire motion
  *
- * \return the travel velocity needed for the motion, or infinity in case of invalid inputs
+ * \return the travel velocity needed for the motion, or infinity in case of invalid
+ *         or infeasible inputs
  */
 float sb_get_travel_velocity_for_distance(float distance, float time, float acceleration)
 {
+    float d;
+
     /* We return infinite speed for invalid input values */
     if (distance < 0 || time <= 0 || acceleration <= 0) {
         return INFINITY;
@@ -140,5 +142,10 @@ float sb_get_travel_velocity_for_distance(float distance, float time, float acce
         return distance / time;
     }
 
-    return (sqrtf(time * time + 4 * acceleration * distance) - time) / (2 * acceleration);
+    d = time * time - 4 * distance / acceleration;
+    if (d >= 0) {
+        return -(sqrtf(d) - time) / 2 * acceleration;
+    } else {
+        return INFINITY;
+    }
 }

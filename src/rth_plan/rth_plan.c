@@ -404,11 +404,14 @@ sb_error_t sb_rth_plan_update_from_bytes(sb_rth_plan_t* plan, uint8_t* buf, size
  *        trajectory; it is assumed to be the coordinate where the RTH plan
  *        expects the vehicle to be (since the RTH plan does not store the
  *        start coordinate).
+ * @param max_acceleration  the maximum acceleration to use for the generated trajectory,
+ *        in units per second per second. Infinity if there are no acceleration
+ *        constrains, in which case the generated trajectory will contain
+ *        constant-velocity linear segments only.
  */
 sb_error_t sb_trajectory_update_from_rth_plan_entry(
-    sb_trajectory_t* trajectory,
-    const sb_rth_plan_entry_t* entry,
-    sb_vector3_t start)
+    sb_trajectory_t* trajectory, const sb_rth_plan_entry_t* entry,
+    sb_vector3_t start, float max_acceleration)
 {
     sb_trajectory_builder_t builder;
     sb_vector3_with_yaw_t start_with_yaw;
@@ -463,7 +466,8 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
             duration_msec = 1;
         }
 
-        SB_CHECK(sb_trajectory_builder_append_line(&builder, target_with_yaw, duration_msec));
+        SB_CHECK(sb_trajectory_builder_move_to_in_time(
+            &builder, target_with_yaw, duration_msec, max_acceleration));
     }
 
     /* Add action */
@@ -483,8 +487,8 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
             duration_msec = 1;
         }
 
-        SB_CHECK(sb_trajectory_builder_append_line(&builder, target_with_yaw, duration_msec));
-
+        SB_CHECK(sb_trajectory_builder_move_to_in_time(
+            &builder, target_with_yaw, duration_msec, max_acceleration));
         break;
 
     case SB_RTH_ACTION_GO_TO_WITH_ALTITUDE:
@@ -499,8 +503,8 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
             duration_msec = 1;
         }
 
-        SB_CHECK(sb_trajectory_builder_append_line(&builder, target_with_yaw, duration_msec));
-
+        SB_CHECK(sb_trajectory_builder_move_to_in_time(
+            &builder, target_with_yaw, duration_msec, max_acceleration));
         break;
 
     default:
@@ -515,6 +519,10 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
             &duration_msec, entry->post_delay_sec));
         SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
     }
+
+    /* TODO(ntamas): add smooth landing to a landing altitude before ending the
+     * trajectory?
+     */
 
     retval = sb_trajectory_update_from_builder(trajectory, &builder);
 

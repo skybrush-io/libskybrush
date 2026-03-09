@@ -287,6 +287,9 @@ sb_error_t sb_trajectory_builder_append_cubic_bezier(
     uint32_t duration_msec);
 sb_error_t sb_trajectory_builder_hold_position_for(
     sb_trajectory_builder_t* builder, uint32_t duration_msec);
+sb_error_t sb_trajectory_builder_move_to_in_time(
+    sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t target,
+    uint32_t duration_msec, float max_acceleration);
 
 __END_DECLS
 

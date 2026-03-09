@@ -114,9 +114,8 @@ sb_error_t sb_rth_plan_update_from_bytes(sb_rth_plan_t* plan,
     uint8_t* buf, size_t nbytes);
 
 sb_error_t sb_trajectory_update_from_rth_plan_entry(
-    sb_trajectory_t* trajectory,
-    const sb_rth_plan_entry_t* entry,
-    sb_vector3_t start);
+    sb_trajectory_t* trajectory, const sb_rth_plan_entry_t* entry,
+    sb_vector3_t start, float max_acceleration);
 
 __END_DECLS
 

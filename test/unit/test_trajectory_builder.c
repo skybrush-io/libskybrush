@@ -516,6 +516,124 @@ void test_conversion_to_trajectory(void)
     SB_XDECREF(trajectory);
 }
 
+void test_move_to_in_time(void)
+{
+    sb_vector3_with_yaw_t vec;
+    sb_trajectory_t* trajectory;
+    sb_trajectory_player_t player;
+
+    TEST_ASSERT_NOT_NULL(trajectory = sb_trajectory_new());
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 1, 0));
+
+    vec.x = 1000;
+    vec.y = 2000;
+    vec.z = 1500;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, vec));
+
+    /* target is 5000 units on the XY plane from the starting position.
+     * Max acceleration is 1000 units/s^2, and we want to use 6000 msec to reach the
+     * target. This means a peak travel velocity of 1000 units/s, reached in one second,
+     * followed by 4 seconds of constant velocity, and then one second of deceleration.
+     */
+    vec.x = 4000;
+    vec.y = 6000;
+    vec.z = 1500;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_move_to_in_time(&builder, vec, 6000, 1000));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_builder(trajectory, &builder));
+    sb_trajectory_builder_destroy(&builder);
+
+    TEST_ASSERT_EQUAL(6000, sb_trajectory_get_total_duration_msec(trajectory));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+
+    /* Start of trajectory */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 0, &vec));
+    TEST_ASSERT_EQUAL(1000, vec.x);
+    TEST_ASSERT_EQUAL(2000, vec.y);
+    TEST_ASSERT_EQUAL(1500, vec.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 0, &vec));
+    TEST_ASSERT_EQUAL(0, vec.x);
+    TEST_ASSERT_EQUAL(0, vec.y);
+    TEST_ASSERT_EQUAL(0, vec.z);
+
+    /* Midpoint of acceleration segment */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 0.5f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(1075, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(2099.875f, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(1500, vec.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 0.5f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(300, vec.x);
+    // should be 400 but there are rounding errors in the control points
+    TEST_ASSERT_EQUAL_FLOAT(399.75f, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(0, vec.z);
+
+    /* Start of constant-velocity segment */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 1.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(1300, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(2400, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(1500, vec.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 1.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(600, vec.x);
+    // should be 800 but there are rounding errors in the control points
+    TEST_ASSERT_EQUAL_FLOAT(801, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(0, vec.z);
+
+    /* 1s into constant-velocity segment */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 2.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(1900, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(3200, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(1500, vec.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 2.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(600, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(800, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(0, vec.z);
+
+    /* 2s into constant-velocity segment (midpoint) */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 3.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(2500, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(4000, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(1500, vec.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 3.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(600, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(800, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(0, vec.z);
+
+    /* 3s into constant-velocity segment */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 4.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(3100, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(4800, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(1500, vec.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 4.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(600, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(800, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(0, vec.z);
+
+    /* End of constant-velocity segment */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 5.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(3700, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(5600, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(1500, vec.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 5.0f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(600, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(800, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(0, vec.z);
+
+    /* Midpoint of deceleration segment */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 5.5f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(3925, vec.x);
+    TEST_ASSERT_EQUAL_FLOAT(5899.75f, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(1500, vec.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 5.5f, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(300, vec.x);
+    // should be 400 but there are rounding errors in the control points
+    TEST_ASSERT_EQUAL_FLOAT(400.5f, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(0, vec.z);
+
+    sb_trajectory_player_destroy(&player);
+    SB_XDECREF(trajectory);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -530,6 +648,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_hold_position_for);
     RUN_TEST(test_get_last_position);
     RUN_TEST(test_conversion_to_trajectory);
+    RUN_TEST(test_move_to_in_time);
 
     return UNITY_END();
 }

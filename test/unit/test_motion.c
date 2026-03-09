@@ -140,11 +140,15 @@ void test_get_travel_velocity_for_distance(void)
     TEST_ASSERT_EQUAL_FLOAT(2, sb_get_travel_velocity_for_distance(6, 3, INFINITY));
 
     /* Test the case when we can reach the required travel velocity */
-    TEST_ASSERT_EQUAL_FLOAT(1, sb_get_travel_velocity_for_distance(6, 5, 1));
-    TEST_ASSERT_EQUAL_FLOAT(1, sb_get_travel_velocity_for_distance(5, 4, 1));
+    TEST_ASSERT_EQUAL_FLOAT(1, sb_get_travel_velocity_for_distance(5, 6, 1));
+    TEST_ASSERT_EQUAL_FLOAT(1, sb_get_travel_velocity_for_distance(4, 5, 1));
+    TEST_ASSERT_EQUAL_FLOAT(1, sb_get_travel_velocity_for_distance(1, 2, 1));
+
+    /* Test the case when we have just enough time for full acceleration and deceleration */
+    TEST_ASSERT_EQUAL_FLOAT(3, sb_get_travel_velocity_for_distance(9, 6, 1));
 
     /* Test the case when we do not have time for full acceleration and deceleration */
-    TEST_ASSERT_EQUAL_FLOAT(1, sb_get_travel_velocity_for_distance(2, 1, 1));
+    TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_get_travel_velocity_for_distance(10, 6, 1));
 }
 
 int main(int argc, char* argv[])

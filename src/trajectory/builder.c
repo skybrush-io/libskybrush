@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include <skybrush/buffer.h>
+#include <skybrush/motion.h>
 #include <skybrush/trajectory.h>
 #include <skybrush/utils.h>
 
@@ -313,6 +314,122 @@ sb_error_t sb_trajectory_builder_hold_position_for(
 
     return SB_SUCCESS;
 }
+
+/**
+ * Appends multiple segments to the trajectory being built in a way that they
+ * take the trajectory from its current position to the given target position in a given
+ * fixed time while trying to respnect the given maximum acceleration constraint.
+ *
+ * The trajectory builder will append multiple segments: one that speeds up from
+ * zero velocity to a required travel velocity, one or more segments that moves the
+ * drone at the required travel velocity and one that slows down from the travel
+ * velocity to zero velocity.
+ *
+ * the given initial velocity vector to the travel velocity
+ * @param builder the trajectory builder
+ * @param target  the target to move to
+ * @param duration_msec the total duration of the transition, in milliseconds. Must be
+ *        positive.
+ * @param max_acceleration  maximum acceleration, in units per second per second.
+ *        May not be respected if the duration is too short to reach the required
+ *        travel velocity.
+ */
+sb_error_t sb_trajectory_builder_move_to_in_time(
+    sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t target,
+    uint32_t duration_msec, float max_acceleration)
+{
+    sb_vector3_with_yaw_t p, q, initial_vel, travel_vel, c1, c2;
+    float duration_sec;
+    float distance;
+    float v2, t2, t1;
+    uint32_t t1_msec;
+
+    if (max_acceleration <= 0 || duration_msec == 0) {
+        return SB_EINVAL;
+    }
+
+    if (!isfinite(max_acceleration)) {
+        /* max acceleration is infinite so we can just use straight-line segments */
+        return sb_trajectory_builder_append_line(builder, target, duration_msec);
+    }
+
+    if (duration_msec < 3) {
+        /* duration is too short so we can use a single straight-line segment */
+        return sb_trajectory_builder_append_line(builder, target, duration_msec);
+    }
+
+    /* calculate required travel velocity */
+    p = builder->last_position;
+    distance = hypotf(hypotf(target.x - p.x, target.y - p.y), target.z - p.z);
+    duration_sec = duration_msec / 1000.0f;
+    v2 = sb_get_travel_velocity_for_distance(distance, duration_sec, max_acceleration);
+
+    /* pre-fill initial and final velocity constant */
+    initial_vel.x = initial_vel.y = initial_vel.z = 0;
+    initial_vel.yaw = (target.yaw - p.yaw) / duration_sec;
+
+    /* calculate duration of constant-velocity segment */
+    t2 = duration_sec - 2 * v2 / max_acceleration;
+    if (t2 < 0) {
+        /* max acceleration is not enough. We will have a zero-duration segment and
+         * uniform acceleration from zero to the required travel velocity and then
+         * back to zero */
+        t2 = 0;
+        v2 = 2 * distance / duration_sec;
+    }
+    t1 = (duration_sec - t2) / 2.0f;
+    t1_msec = (uint32_t)(t1 * 1000);
+    if (t1_msec < 1) {
+        t1_msec = 1;
+        t1 = t1_msec * 1000.0f;
+    }
+
+    /* add segment to accelerate smoothly from zero to travel velocity */
+    p = builder->last_position;
+    travel_vel.x = v2 * (target.x - p.x) / distance;
+    travel_vel.y = v2 * (target.y - p.y) / distance;
+    travel_vel.z = v2 * (target.z - p.z) / distance;
+    travel_vel.yaw = initial_vel.yaw;
+
+    q = p;
+    q.x += travel_vel.x * t1 / 2.0f;
+    q.y += travel_vel.y * t1 / 2.0f;
+    q.z += travel_vel.z * t1 / 2.0f;
+    q.yaw += travel_vel.yaw * t1;
+
+    SB_CHECK(
+        sb_get_cubic_bezier_from_velocity_constraints(
+            /* start = */ p, /* start_vel = */ initial_vel,
+            /* end = */ q, /* end_vel = */ travel_vel,
+            /* duration_sec = */ t1,
+            &c1, &c2));
+    SB_CHECK(sb_trajectory_builder_append_cubic_bezier(builder, c1, c2, q, t1_msec));
+
+    /* add constant-velocity segment */
+    p = target;
+    p.x -= travel_vel.x * t1 / 2.0f;
+    p.y -= travel_vel.y * t1 / 2.0f;
+    p.z -= travel_vel.z * t1 / 2.0f;
+    p.yaw -= travel_vel.yaw * t1;
+    if (duration_msec > 2 * t1_msec) {
+        /* Only add the constant-velocity segment if it has a positive duration */
+        SB_CHECK(sb_trajectory_builder_append_line(builder, p, duration_msec - 2 * t1_msec));
+    }
+
+    /* add segment to decelerate smoothly from travel velocity to zero */
+    q = target;
+    SB_CHECK(
+        sb_get_cubic_bezier_from_velocity_constraints(
+            /* start = */ p, /* start_vel = */ travel_vel,
+            /* end = */ q, /* end_vel = */ initial_vel,
+            /* duration_sec = */ t1,
+            &c1, &c2));
+    SB_CHECK(sb_trajectory_builder_append_cubic_bezier(builder, c1, c2, q, t1_msec));
+
+    return SB_SUCCESS;
+}
+
+/* ************************************************************************** */
 
 /**
  * @brief Finalizes the trajectory being built and converts it into a trajectory
