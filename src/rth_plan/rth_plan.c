@@ -728,8 +728,13 @@ static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan)
 
     /* third and fourth bytes are the preferred acceleration */
     offset = 2;
-    plan->max_acceleration = sb_parse_uint16(buf, &offset) * plan->scale / 1000.0f;
+    plan->max_acceleration = sb_parse_uint16(buf, &offset);
     plan->num_points = sb_parse_uint16(buf, &offset);
+
+    /* Zero in the binary representation means no constraint */
+    if (plan->max_acceleration == 0) {
+        plan->max_acceleration = INFINITY;
+    }
 
     return offset; /* size of the header */
 }
