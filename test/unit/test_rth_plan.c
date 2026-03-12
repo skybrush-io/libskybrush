@@ -222,7 +222,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
         TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
 
     /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
@@ -238,7 +238,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
         TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
 
     /* Command is "go to (-40m, -30m) in 50s with pre-delay=2s" from T=15
@@ -254,7 +254,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
         TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
 
     /* Command is "go to (30m, 40m) in 30/20s" from T=45 (exclusive) to T=80 (inclusive).
@@ -272,7 +272,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(t <= 65 ? 30 : 20, entry.duration_sec);
         TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
 
     /* Command is "go straight to (30m, 40m, 20m) in 30s + 5s/5m pre-neck"
@@ -289,7 +289,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(5, entry.pre_neck_duration_sec);
-        TEST_ASSERT_EQUAL(5000, entry.pre_neck_mm);
+        TEST_ASSERT_EQUAL(5000, entry.pre_neck);
         TEST_ASSERT_EQUAL(30, entry.duration_sec);
     }
 
@@ -307,7 +307,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
         TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
 
     /* We are now beyond the last time instant for which we have an RTH plan. In this
@@ -325,7 +325,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
         TEST_ASSERT_EQUAL(0, entry.target_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+        TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
 
     /* Test positive infinity */
@@ -339,7 +339,7 @@ void test_evaluate_at(void)
     TEST_ASSERT_EQUAL(0, entry.duration_sec);
     TEST_ASSERT_EQUAL(0, entry.target_altitude);
     TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
-    TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+    TEST_ASSERT_EQUAL(0, entry.pre_neck);
 
     /* Test negative infinity */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, -INFINITY, &entry));
@@ -352,7 +352,7 @@ void test_evaluate_at(void)
     TEST_ASSERT_EQUAL(0, entry.duration_sec);
     TEST_ASSERT_EQUAL(0, entry.target_altitude);
     TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
-    TEST_ASSERT_EQUAL(0, entry.pre_neck_mm);
+    TEST_ASSERT_EQUAL(0, entry.pre_neck);
 }
 
 void test_plan_duration_too_large(void)

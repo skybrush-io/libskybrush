@@ -65,10 +65,10 @@ typedef struct sb_rth_plan_entry_s {
     /** The net duration of the action, in seconds */
     float duration_sec;
 
-    /** The (horizontal) target of the action; coordinates are in millimeters */
+    /** The (horizontal) target of the action */
     sb_vector2_t target;
 
-    /** The altitude of the target, if neeeded; coordinates are in millimeters */
+    /** The altitude of the target, if neeeded */
     float target_altitude;
 
     /** Optional delay to add \em before the action, in seconds */
@@ -77,16 +77,16 @@ typedef struct sb_rth_plan_entry_s {
     /** Optional delay to add \em after the action, in seconds */
     float post_delay_sec;
 
-    /** Optional vertical neck to add \em before the action, after the pre delay,
-     * in millimeters. Applicable only to SB_RTH_ACTION_GO_TO_WITH_ALTITUDE */
-    float pre_neck_mm;
+    /** Optional vertical neck to add \em before the action, after the pre delay.
+     * Applicable only to SB_RTH_ACTION_GO_TO_WITH_ALTITUDE */
+    float pre_neck;
 
     /** The duration of the pre-neck phase, in seconds */
     float pre_neck_duration_sec;
 
     /**
      * Maximum acceleration constraint to apply during the action, on a best-effort
-     * basis, in millimeters per second squared. Infinity, zero, NaN or a negative value
+     * basis, in units per second squared. Infinity, zero, NaN or a negative value
      * means no constraint.
      */
     float max_acceleration;

@@ -357,10 +357,10 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
 
             /* If the action has a pre-neck, parse its size and duration */
             if (sb_i_rth_action_has_neck(entry.action)) {
-                entry.pre_neck_mm = sb_i_rth_plan_parse_coordinate(plan, &offset);
+                entry.pre_neck = sb_i_rth_plan_parse_coordinate(plan, &offset);
                 SB_CHECK(sb_i_rth_plan_parse_duration(plan, &offset, &entry.pre_neck_duration_sec));
             } else {
-                entry.pre_neck_mm = 0;
+                entry.pre_neck = 0;
                 entry.pre_neck_duration_sec = 0;
             }
         }
@@ -533,7 +533,7 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
     /* Determine final scale for trajectory generation */
     SB_CHECK(sb_scale_update_vector3(&scale, start));
     if (sb_i_rth_action_has_neck(entry->action)) {
-        SB_CHECK(sb_scale_update_altitude(&scale, start.z + entry->pre_neck_mm));
+        SB_CHECK(sb_scale_update_altitude(&scale, start.z + entry->pre_neck));
     }
     if (sb_i_rth_action_has_target(entry->action)) {
         SB_CHECK(sb_scale_update_vector2(&scale, entry->target));
@@ -565,10 +565,10 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
     target_with_yaw = start_with_yaw;
 
     /* Add pre-neck */
-    if (entry->pre_neck_mm || entry->pre_neck_duration_sec) {
+    if (entry->pre_neck || entry->pre_neck_duration_sec) {
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->pre_neck_duration_sec));
-        target_with_yaw.z += entry->pre_neck_mm;
+        target_with_yaw.z += entry->pre_neck;
 
         if (duration_msec == 0) {
             /* We need at least 1 msec for the transition */
@@ -722,9 +722,13 @@ static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan)
 
     assert(buf != 0);
 
-    plan->scale = (float)((buf[0] & 0x7f));
+    /* first byte is "flags", unused */
+    /* second byte is "scale", MSB is ignored */
+    plan->scale = (float)((buf[1] & 0x7f));
 
-    offset = 1;
+    /* third and fourth bytes are the preferred acceleration */
+    offset = 2;
+    plan->max_acceleration = sb_parse_uint16(buf, &offset) * plan->scale / 1000.0f;
     plan->num_points = sb_parse_uint16(buf, &offset);
 
     return offset; /* size of the header */
