@@ -44,14 +44,14 @@
  */
 #define MAX_DURATION 16777216
 
-#define OFFSET_OF_POINT(index) (plan->header_length + (index) * 2 * sizeof(int16_t))
+#define OFFSET_OF_POINT(index) (plan->header_length + (index) * 3 * sizeof(int16_t))
 #define OFFSET_OF_ENTRY_TABLE (OFFSET_OF_POINT(plan->num_points))
 #define OFFSET_OF_FIRST_ENTRY (OFFSET_OF_ENTRY_TABLE + sizeof(uint16_t))
 
+static sb_bool_t sb_i_rth_action_has_arrival_altitude(sb_rth_action_t action);
 static sb_bool_t sb_i_rth_action_has_duration(sb_rth_action_t action);
 static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action);
 static sb_bool_t sb_i_rth_action_has_target(sb_rth_action_t action);
-static sb_bool_t sb_i_rth_action_has_target_altitude(sb_rth_action_t action);
 
 static void sb_i_rth_plan_destroy(sb_rth_plan_t* plan);
 static float sb_i_rth_plan_parse_coordinate(const sb_rth_plan_t* plan, size_t* offset);
@@ -172,7 +172,7 @@ size_t sb_rth_plan_get_num_points(const sb_rth_plan_t* plan)
  * @param index  the index of the point
  * @param point  the point will be returned here
  */
-sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vector2_t* point)
+sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vector3_t* point)
 {
     size_t num_points = sb_rth_plan_get_num_points(plan);
     size_t offset;
@@ -184,6 +184,7 @@ sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vec
     offset = OFFSET_OF_POINT(index);
     point->x = sb_i_rth_plan_parse_coordinate(plan, &offset);
     point->y = sb_i_rth_plan_parse_coordinate(plan, &offset);
+    point->z = sb_i_rth_plan_parse_coordinate(plan, &offset);
 
     return SB_SUCCESS;
 }
@@ -348,11 +349,11 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
                 point_index = 0;
             }
 
-            /* If the action has a target altitude, parse it */
-            if (sb_i_rth_action_has_target_altitude(entry.action)) {
-                entry.target_altitude = sb_i_rth_plan_parse_coordinate(plan, &offset);
+            /* If the action has an arrival altitude, parse it */
+            if (sb_i_rth_action_has_arrival_altitude(entry.action)) {
+                entry.arrival_altitude = sb_i_rth_plan_parse_coordinate(plan, &offset);
             } else {
-                entry.target_altitude = 0;
+                entry.arrival_altitude = 0;
             }
 
             /* If the action has a pre-neck, parse its size and duration */
@@ -536,10 +537,10 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         SB_CHECK(sb_scale_update_altitude(&scale, start.z + entry->pre_neck));
     }
     if (sb_i_rth_action_has_target(entry->action)) {
-        SB_CHECK(sb_scale_update_vector2(&scale, entry->target));
+        SB_CHECK(sb_scale_update_vector3(&scale, entry->target));
     }
-    if (sb_i_rth_action_has_target_altitude(entry->action)) {
-        SB_CHECK(sb_scale_update_altitude(&scale, entry->target_altitude));
+    if (sb_i_rth_action_has_arrival_altitude(entry->action)) {
+        SB_CHECK(sb_scale_update_altitude(&scale, entry->arrival_altitude));
     }
 
     if (start_time < 0) {
@@ -603,7 +604,7 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
     case SB_RTH_ACTION_GO_TO_WITH_ALTITUDE:
         target_with_yaw.x = entry->target.x;
         target_with_yaw.y = entry->target.y;
-        target_with_yaw.z = entry->target_altitude;
+        target_with_yaw.z = entry->arrival_altitude;
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->duration_sec));
 
@@ -630,6 +631,7 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
     }
 
     /* add smooth landing to a landing altitude before ending the trajectory if needed */
+    /* TODO(ntamas): use entry->target.z from SB_RTH_ACTION_GO_TO_WITH_ALTITUDE */
     if (isfinite(entry->landing_altitude)) {
         float landing_velocity_mm_sec = entry->landing_velocity;
         float landing_duration_sec;
@@ -691,9 +693,9 @@ static sb_bool_t sb_i_rth_action_has_target(sb_rth_action_t action)
 }
 
 /**
- * @brief Returns whether the given RTH action has an associated target altitude.
+ * @brief Returns whether the given RTH action has an associated arrival altitude.
  */
-static sb_bool_t sb_i_rth_action_has_target_altitude(sb_rth_action_t action)
+static sb_bool_t sb_i_rth_action_has_arrival_altitude(sb_rth_action_t action)
 {
     return action == SB_RTH_ACTION_GO_TO_WITH_ALTITUDE;
 }

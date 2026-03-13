@@ -100,25 +100,29 @@ void test_new(void)
 
 void test_get_points(void)
 {
-    sb_vector2_t vec;
+    sb_vector3_t vec;
 
     TEST_ASSERT_EQUAL(2, sb_rth_plan_get_num_points(plan));
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_get_point(plan, 0, &vec));
     TEST_ASSERT_EQUAL_FLOAT(30000, vec.x);
     TEST_ASSERT_EQUAL_FLOAT(40000, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(0, vec.z);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_get_point(plan, 1, &vec));
     TEST_ASSERT_EQUAL_FLOAT(-40000, vec.x);
     TEST_ASSERT_EQUAL_FLOAT(-30000, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(5000, vec.z);
 
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_rth_plan_get_point(plan, 2, &vec));
     TEST_ASSERT_EQUAL_FLOAT(-40000, vec.x);
     TEST_ASSERT_EQUAL_FLOAT(-30000, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(5000, vec.z);
 
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_rth_plan_get_point(plan, 5234, &vec));
     TEST_ASSERT_EQUAL_FLOAT(-40000, vec.x);
     TEST_ASSERT_EQUAL_FLOAT(-30000, vec.y);
+    TEST_ASSERT_EQUAL_FLOAT(5000, vec.z);
 }
 
 void test_get_num_entries(void)
@@ -133,10 +137,7 @@ void test_is_empty(void)
 
 void test_default_acceleration_limit(void)
 {
-    float value;
-
-    value = sb_rth_plan_get_default_acceleration_limit(plan);
-    TEST_ASSERT(value > 0 || value == INFINITY);
+    TEST_ASSERT_EQUAL_FLOAT(2000.0f, sb_rth_plan_get_default_acceleration_limit(plan));
 
     sb_rth_plan_set_default_acceleration_limit(plan, 1234.5f);
     TEST_ASSERT_EQUAL_FLOAT(1234.5f, sb_rth_plan_get_default_acceleration_limit(plan));
@@ -220,7 +221,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);
+        TEST_ASSERT_EQUAL(0, entry.arrival_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
@@ -236,7 +237,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(5, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);
+        TEST_ASSERT_EQUAL(0, entry.arrival_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
@@ -252,7 +253,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(2, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);
+        TEST_ASSERT_EQUAL(0, entry.arrival_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
@@ -270,7 +271,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(t <= 65 ? 30 : 20, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);
+        TEST_ASSERT_EQUAL(0, entry.arrival_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
@@ -284,7 +285,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_WITH_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
-        TEST_ASSERT_EQUAL(20000, entry.target_altitude);
+        TEST_ASSERT_EQUAL(20000, entry.arrival_altitude);
         TEST_ASSERT_EQUAL(90, entry.time_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
@@ -305,7 +306,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);
+        TEST_ASSERT_EQUAL(0, entry.arrival_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
@@ -323,7 +324,7 @@ void test_evaluate_at(void)
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(0, entry.duration_sec);
-        TEST_ASSERT_EQUAL(0, entry.target_altitude);
+        TEST_ASSERT_EQUAL(0, entry.arrival_altitude);
         TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
         TEST_ASSERT_EQUAL(0, entry.pre_neck);
     }
@@ -337,7 +338,7 @@ void test_evaluate_at(void)
     TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
     TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
     TEST_ASSERT_EQUAL(0, entry.duration_sec);
-    TEST_ASSERT_EQUAL(0, entry.target_altitude);
+    TEST_ASSERT_EQUAL(0, entry.arrival_altitude);
     TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
     TEST_ASSERT_EQUAL(0, entry.pre_neck);
 
@@ -350,7 +351,7 @@ void test_evaluate_at(void)
     TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
     TEST_ASSERT_EQUAL(0, entry.post_delay_sec);
     TEST_ASSERT_EQUAL(0, entry.duration_sec);
-    TEST_ASSERT_EQUAL(0, entry.target_altitude);
+    TEST_ASSERT_EQUAL(0, entry.arrival_altitude);
     TEST_ASSERT_EQUAL(0, entry.pre_neck_duration_sec);
     TEST_ASSERT_EQUAL(0, entry.pre_neck);
 }
@@ -363,11 +364,17 @@ void test_plan_duration_too_large(void)
         /* header */
         0x73, 0x6b, 0x79, 0x62, 0x01,
         /* RTH plan block */
-        0x04, 0x26, 0x00, 0x0A,
+        0x04, 0x2D, 0x00,
+        /* Flags */
+        0x00,
+        /* Scale */
+        0x0A,
+        /* Acceleration, 2000 units/s^2 */
+        0xD0, 0x07,
         /* Two RTH points */
         0x02, 0x00,
-        0xB8, 0x0B, 0xA0, 0x0F,
-        0x60, 0xF0, 0x48, 0xF4,
+        0xB8, 0x0B, 0xA0, 0x0F, 0x40, 0x00,
+        0x60, 0xF0, 0x48, 0xF4, 0x00, 0x00,
         /* Six entries */
         0x06, 0x00,
         /* Entry 1: T = 0, land */
@@ -403,6 +410,7 @@ void test_plan_duration_too_large(void)
         TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
+        TEST_ASSERT_EQUAL(640, entry.target.z);
         TEST_ASSERT_EQUAL(0, entry.pre_delay_sec);
         TEST_ASSERT_EQUAL(5, entry.post_delay_sec);
         TEST_ASSERT_EQUAL(50, entry.duration_sec);
@@ -467,7 +475,11 @@ void test_convert_to_trajectory(void)
      * When evaluating the RTH plan at a given time instant t, the entry that is
      * in effect is the entry at t, or if there is no entry at t, then the
      * _next_ entry in the list
+     *
+     * The original RTH plan uses an acceleration limit of 2000 units/s^2, but we will
+     * use no acceleration limit to get rid of the effect of small rounding errors.
      */
+    sb_rth_plan_set_default_acceleration_limit(plan, INFINITY);
 
     /* Land automatically for negative time, up to and including T=0 */
     for (int i = -20; i <= 0; i++) {

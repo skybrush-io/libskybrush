@@ -65,11 +65,11 @@ typedef struct sb_rth_plan_entry_s {
     /** The net duration of the action, in seconds */
     float duration_sec;
 
-    /** The (horizontal) target of the action */
-    sb_vector2_t target;
+    /** The target of the action */
+    sb_vector3_t target;
 
     /** The altitude of the target, if neeeded */
-    float target_altitude;
+    float arrival_altitude;
 
     /** Optional delay to add \em before the action, in seconds */
     float pre_delay_sec;
@@ -127,7 +127,7 @@ float sb_rth_plan_get_default_landing_altitude(const sb_rth_plan_t* plan);
 float sb_rth_plan_get_default_landing_velocity(const sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_entries(const sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_points(const sb_rth_plan_t* plan);
-sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vector2_t* point);
+sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vector3_t* point);
 sb_bool_t sb_rth_plan_has_default_landing_altitude(const sb_rth_plan_t* plan);
 sb_bool_t sb_rth_plan_has_default_landing_velocity(const sb_rth_plan_t* plan);
 sb_bool_t sb_rth_plan_is_empty(const sb_rth_plan_t* plan);
