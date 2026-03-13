@@ -43,11 +43,17 @@ typedef enum {
     /** Land in place */
     SB_RTH_ACTION_LAND = 1,
 
-    /** Go to the target of the action, keeping altitude */
-    SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE = 2,
+    /**
+     * Go above the target coordinate of the action, keeping altitude, and start a
+     * descent from there to the target.
+     */
+    SB_RTH_ACTION_GO_ABOVE_KEEPING_ALTITUDE = 2,
 
-    /** Go to the target of the action in a straight line, optionally preceded
-     * by a vertical neck */
+    /**
+     * Go above the target of the action in a straight line to a specified altitude
+     * and start a descent from there to the target, optionally preceded by a vertical
+     * neck.
+     */
     SB_RTH_ACTION_GO_TO_WITH_ALTITUDE = 3
 } sb_rth_action_t;
 
@@ -68,7 +74,7 @@ typedef struct sb_rth_plan_entry_s {
     /** The target of the action */
     sb_vector3_t target;
 
-    /** The altitude of the target, if neeeded */
+    /** The arrival altitude above the target, if neeeded */
     float arrival_altitude;
 
     /** Optional delay to add \em before the action, in seconds */
@@ -92,15 +98,9 @@ typedef struct sb_rth_plan_entry_s {
     float max_acceleration;
 
     /**
-     * Optional landing altitude; NaN means that the landing altitude is not specified.
-     * When it is not NaN, a final vertical segment will be added to the trajectory
-     * generated from the entry that brings the drone to this altitude vertically.
-     */
-    float landing_altitude;
-
-    /**
-     * Optional landing velocity; zero, negative, NaN or infinity means that a reasonable
-     * default value of 1 m/s will be used if a landing altitude is specified.
+     * Optional landing velocity for the descent from the arrival altitude above the
+     * target to the target itself. Zero, negative, NaN or infinity means that no
+     * descent will be added.
      */
     float landing_velocity;
 } sb_rth_plan_entry_t;
@@ -115,7 +115,6 @@ typedef struct sb_rth_plan_s {
     size_t header_length; /**< Number of bytes in the header of the buffer */
     size_t num_points; /**< Number of points in the RTH plan */
     float max_acceleration; /**< Maximum acceleration during RTH actions */
-    float landing_altitude; /**< Optional landing altitude for RTH actions; NaN means not specified */
     float landing_velocity; /**< Optional landing velocity for RTH actions; NaN means not specified */
 } sb_rth_plan_t;
 
@@ -123,20 +122,16 @@ sb_rth_plan_t* sb_rth_plan_new(void);
 sb_error_t sb_rth_plan_init(sb_rth_plan_t* plan);
 
 float sb_rth_plan_get_default_acceleration_limit(const sb_rth_plan_t* plan);
-float sb_rth_plan_get_default_landing_altitude(const sb_rth_plan_t* plan);
 float sb_rth_plan_get_default_landing_velocity(const sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_entries(const sb_rth_plan_t* plan);
 size_t sb_rth_plan_get_num_points(const sb_rth_plan_t* plan);
 sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vector3_t* point);
-sb_bool_t sb_rth_plan_has_default_landing_altitude(const sb_rth_plan_t* plan);
 sb_bool_t sb_rth_plan_has_default_landing_velocity(const sb_rth_plan_t* plan);
 sb_bool_t sb_rth_plan_is_empty(const sb_rth_plan_t* plan);
 
 sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth_plan_entry_t* result);
 
-void sb_rth_plan_clear_default_landing_altitude(sb_rth_plan_t* plan);
 void sb_rth_plan_clear_default_landing_velocity(sb_rth_plan_t* plan);
-sb_error_t sb_rth_plan_set_default_landing_altitude(sb_rth_plan_t* plan, float landing_altitude);
 void sb_rth_plan_set_default_landing_velocity(sb_rth_plan_t* plan, float landing_velocity);
 void sb_rth_plan_set_default_acceleration_limit(sb_rth_plan_t* plan, float max_acceleration);
 

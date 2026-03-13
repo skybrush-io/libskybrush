@@ -149,21 +149,6 @@ void test_default_acceleration_limit(void)
     TEST_ASSERT_EQUAL_FLOAT(INFINITY, sb_rth_plan_get_default_acceleration_limit(plan));
 }
 
-void test_default_landing_altitude(void)
-{
-    TEST_ASSERT(!sb_rth_plan_has_default_landing_altitude(plan));
-
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_set_default_landing_altitude(plan, 1500.0f));
-    TEST_ASSERT(sb_rth_plan_has_default_landing_altitude(plan));
-    TEST_ASSERT_EQUAL_FLOAT(1500.0f, sb_rth_plan_get_default_landing_altitude(plan));
-
-    /* invalid value */
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_rth_plan_set_default_landing_altitude(plan, INFINITY));
-
-    sb_rth_plan_clear_default_landing_altitude(plan);
-    TEST_ASSERT(!sb_rth_plan_has_default_landing_altitude(plan));
-}
-
 void test_default_landing_velocity(void)
 {
     TEST_ASSERT(!sb_rth_plan_has_default_landing_velocity(plan));
@@ -230,7 +215,7 @@ void test_evaluate_at(void)
      * to T=15 (inclusive). Execution starts at T=15 */
     for (int i = 2; i <= 150; i += 2) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, i / 10.0f, &entry));
-        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
+        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_ABOVE_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
         TEST_ASSERT_EQUAL(15, entry.time_sec);
@@ -246,7 +231,7 @@ void test_evaluate_at(void)
      * (exclusive) to T=45 (inclusive). Execution starts at T=45 */
     for (int i = 155; i <= 450; i += 5) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, i / 10.0f, &entry));
-        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
+        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_ABOVE_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(-40000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(-30000, entry.target.y);
         TEST_ASSERT_EQUAL(45, entry.time_sec);
@@ -264,7 +249,7 @@ void test_evaluate_at(void)
         t = i / 10.0f;
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, t, &entry));
-        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
+        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_ABOVE_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
         TEST_ASSERT_EQUAL(t <= 65 ? 65 : 80, entry.time_sec);
@@ -407,7 +392,7 @@ void test_plan_duration_too_large(void)
      * to T=3 (inclusive) */
     for (int i = 2; i <= 30; i += 2) {
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_evaluate_at(plan, i / 10.0f, &entry));
-        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE, entry.action);
+        TEST_ASSERT_EQUAL(SB_RTH_ACTION_GO_ABOVE_KEEPING_ALTITUDE, entry.action);
         TEST_ASSERT_EQUAL(30000, entry.target.x); /* target is in [mm] */
         TEST_ASSERT_EQUAL(40000, entry.target.y);
         TEST_ASSERT_EQUAL(640, entry.target.z);
@@ -466,9 +451,9 @@ void test_convert_to_trajectory(void)
     /* RTH plan from file has the following entries:
      *
      * T = 0: land
-     * T = 15: go to (30m, 40m) in 50s with post-delay=5s
-     * T = 45: go to (-40m, -30m) in 50s with pre-delay=2s
-     * T = 65: go to (30m, 40m) in 30s
+     * T = 15: go above (30m, 40m, 0m) in 50s with post-delay=5s, then land with 1 m/s
+     * T = 45: go above (-40m, -30m, 5m) in 50s with pre-delay=2s, then land with 1 m/s
+     * T = 65: go above (30m, 40m, 0m) in 30s, then land with 1 m/s
      * T = 80: same as previous entry
      * T = 105: land
      *
@@ -478,8 +463,12 @@ void test_convert_to_trajectory(void)
      *
      * The original RTH plan uses an acceleration limit of 2000 units/s^2, but we will
      * use no acceleration limit to get rid of the effect of small rounding errors.
+     *
+     * We also set the default landing velocity to 1000 units/s so we can test the
+     * automatic addition of a smooth descent at the end of the generated trajectory.
      */
     sb_rth_plan_set_default_acceleration_limit(plan, INFINITY);
+    sb_rth_plan_set_default_landing_velocity(plan, 1000);
 
     /* Land automatically for negative time, up to and including T=0 */
     for (int i = -20; i <= 0; i++) {
@@ -492,8 +481,9 @@ void test_convert_to_trajectory(void)
         assert_trajectory_is_constant(trajectory, 0.0f, 10.0f, start);
     }
 
-    /* Command is "go to (30m, 40m) in 50s with post-delay=5s" from T=0 (exclusive)
-     * to T=15 (inclusive). RTH plan is designed to start at T=15 */
+    /* Command is "go above (30m, 40m, 0m) in 50s, wait 5 seconds, then land with
+     * 1 m/s" from T=0 (exclusive) to T=15 (inclusive). RTH plan is designed to start
+     * at T=15 */
     for (int i = 2; i <= 150; i += 2) {
         t = i / 10.0f;
 
@@ -501,7 +491,7 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         t = 15;
-        TEST_ASSERT_EQUAL(t * 1000 + 55000, sb_trajectory_get_total_duration_msec(trajectory));
+        TEST_ASSERT_EQUAL(t * 1000 + 75000, sb_trajectory_get_total_duration_msec(trajectory));
         assert_trajectory_is_constant(trajectory, 0.0f, t, start);
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
@@ -518,11 +508,24 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(32500, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
 
+        /* Test end of post-delay */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 55, &vec));
+        TEST_ASSERT_EQUAL(30000, vec.x);
+        TEST_ASSERT_EQUAL(40000, vec.y);
+        TEST_ASSERT_EQUAL(start.z, vec.z);
+
+        /* Test halfway through descent */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 65, &vec));
+        TEST_ASSERT_EQUAL(30000, vec.x);
+        TEST_ASSERT_EQUAL(40000, vec.y);
+        TEST_ASSERT_EQUAL(start.z / 2, vec.z);
+
         sb_trajectory_player_destroy(&player);
     }
 
-    /* Command is "go to (-40m, -30m) in 50s with pre-delay=2s" from T=15
-     * (exclusive) to T=45 (inclusive). RTH plan is designed to start at T=45 */
+    /* Command is "wait 2 seconds, go above (-40m, -30m, 5m) in 50s, then land with
+     * 1 m/s" from T=15 (exclusive) to T=45 (inclusive). RTH plan is designed to start
+     * at T=45 */
     for (int i = 155; i <= 450; i += 5) {
         t = i / 10.0f;
 
@@ -530,7 +533,7 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
         t = 45;
-        TEST_ASSERT_EQUAL(t * 1000 + 52000, sb_trajectory_get_total_duration_msec(trajectory));
+        TEST_ASSERT_EQUAL(t * 1000 + 67000, sb_trajectory_get_total_duration_msec(trajectory));
         assert_trajectory_is_constant(trajectory, 0.0f, t + 2.0, start);
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
@@ -547,11 +550,18 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(-2500, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
 
+        /* Test one third of descent */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 57, &vec));
+        TEST_ASSERT_EQUAL(-40000, vec.x);
+        TEST_ASSERT_EQUAL(-30000, vec.y);
+        TEST_ASSERT_EQUAL(5000 + 2 * (start.z - 5000) / 3, vec.z);
+
         sb_trajectory_player_destroy(&player);
     }
 
-    /* Command is "go to (30m, 40m) in 30s" from T=45 (exclusive) to T=80 (inclusive).
-     * RTH plan is designed to start at T=80, but we deliberately push it back. */
+    /* Command is "go above (30m, 40m) in 30s, then land with 1 m/s" from T=45 (exclusive)
+     * to T=80 (inclusive). RTH plan is designed to start at T=80, but we deliberately
+     * push it back. */
     for (int i = 455; i <= 800; i += 5) {
         t = i / 10.0f;
 
@@ -560,13 +570,13 @@ void test_convert_to_trajectory(void)
         entry.time_sec = t;
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
-        TEST_ASSERT_EQUAL(t * 1000 + (i <= 650 ? 30000 : 20000), sb_trajectory_get_total_duration_msec(trajectory));
+        TEST_ASSERT_EQUAL(t * 1000 + (i <= 650 ? 30000 : 20000) + 20000, sb_trajectory_get_total_duration_msec(trajectory));
         assert_trajectory_is_constant(trajectory, 0.0f, t, start);
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
 
         /* Test arrival */
-        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 30, &vec));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + (i <= 650 ? 30 : 20), &vec));
         TEST_ASSERT_EQUAL(30000, vec.x);
         TEST_ASSERT_EQUAL(40000, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
@@ -577,11 +587,18 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(32500, vec.y);
         TEST_ASSERT_EQUAL(start.z, vec.z);
 
+        /* Test halfway through descent */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + (i <= 650 ? 30 : 20) + 10, &vec));
+        TEST_ASSERT_EQUAL(30000, vec.x);
+        TEST_ASSERT_EQUAL(40000, vec.y);
+        TEST_ASSERT_EQUAL(start.z / 2, vec.z);
+
         sb_trajectory_player_destroy(&player);
     }
 
-    /* Command is "go straight (30m, 40m, 20m) in 30s+5s" from T=80 (exclusive) to T=90 (inclusive).
-     * RTH plan is designed to start at T=90, but we deliberately push it back. */
+    /* Command is "go straight (30m, 40m, 20m) in 30s+5s, then land with 1 m/s" from
+     * T=80 (exclusive) to T=90 (inclusive). RTH plan is designed to start at T=90, but
+     * we deliberately push it back. */
     for (int i = 805; i <= 900; i += 5) {
         t = i / 10.0f;
 
@@ -590,7 +607,7 @@ void test_convert_to_trajectory(void)
         entry.time_sec = t;
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
 
-        TEST_ASSERT_EQUAL(t * 1000 + 35000, sb_trajectory_get_total_duration_msec(trajectory));
+        TEST_ASSERT_EQUAL(t * 1000 + 55000, sb_trajectory_get_total_duration_msec(trajectory));
         assert_trajectory_is_constant(trajectory, 0.0f, t, start);
 
         TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
@@ -612,6 +629,12 @@ void test_convert_to_trajectory(void)
         TEST_ASSERT_EQUAL(22500, vec.x);
         TEST_ASSERT_EQUAL(32500, vec.y);
         TEST_ASSERT_EQUAL(22500, vec.z);
+
+        /* Test halfway through descent */
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t + 45, &vec));
+        TEST_ASSERT_EQUAL(30000, vec.x);
+        TEST_ASSERT_EQUAL(40000, vec.y);
+        TEST_ASSERT_EQUAL(10000, vec.z);
 
         sb_trajectory_player_destroy(&player);
     }
@@ -652,7 +675,6 @@ int main(int argc, char* argv[])
     RUN_TEST(test_get_num_entries);
     RUN_TEST(test_is_empty);
     RUN_TEST(test_default_acceleration_limit);
-    RUN_TEST(test_default_landing_altitude);
     RUN_TEST(test_default_landing_velocity);
     RUN_TEST(test_evaluate_at);
     RUN_TEST(test_plan_duration_too_large);

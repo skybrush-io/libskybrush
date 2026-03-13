@@ -101,7 +101,6 @@ sb_error_t sb_rth_plan_init(sb_rth_plan_t* plan)
     plan->header_length = 0;
     plan->num_points = 0;
     plan->max_acceleration = INFINITY;
-    plan->landing_altitude = NAN;
     plan->landing_velocity = NAN;
 
     return SB_SUCCESS;
@@ -117,14 +116,6 @@ float sb_rth_plan_get_default_acceleration_limit(const sb_rth_plan_t* plan)
     } else {
         return INFINITY;
     }
-}
-
-/**
- * @brief Returns the default landing altitude for RTH actions, or NaN if no landing altitude is specified.
- */
-float sb_rth_plan_get_default_landing_altitude(const sb_rth_plan_t* plan)
-{
-    return plan->landing_altitude;
 }
 
 /**
@@ -190,14 +181,6 @@ sb_error_t sb_rth_plan_get_point(const sb_rth_plan_t* plan, size_t index, sb_vec
 }
 
 /**
- * @brief Returns whether the RTH plan has a default landing altitude specified.
- */
-sb_bool_t sb_rth_plan_has_default_landing_altitude(const sb_rth_plan_t* plan)
-{
-    return isfinite(plan->landing_altitude);
-}
-
-/**
  * @brief Returns whether the RTH plan has a default landing velocity specified.
  */
 sb_bool_t sb_rth_plan_has_default_landing_velocity(const sb_rth_plan_t* plan)
@@ -230,19 +213,6 @@ void sb_rth_plan_set_default_acceleration_limit(sb_rth_plan_t* plan, float max_a
 }
 
 /**
- * @brief Sets the default landing altitude for RTH actions.
- */
-sb_error_t sb_rth_plan_set_default_landing_altitude(sb_rth_plan_t* plan, float landing_altitude)
-{
-    if (isnan(landing_altitude) || isfinite(landing_altitude)) {
-        plan->landing_altitude = landing_altitude;
-        return SB_SUCCESS;
-    } else {
-        return SB_EINVAL;
-    }
-}
-
-/**
  * @brief Sets the default landing velocity for RTH actions.
  */
 void sb_rth_plan_set_default_landing_velocity(sb_rth_plan_t* plan, float landing_velocity)
@@ -252,14 +222,6 @@ void sb_rth_plan_set_default_landing_velocity(sb_rth_plan_t* plan, float landing
     } else {
         plan->landing_velocity = NAN;
     }
-}
-
-/**
- * @brief Clears the default landing altitude for RTH actions.
- */
-void sb_rth_plan_clear_default_landing_altitude(sb_rth_plan_t* plan)
-{
-    sb_rth_plan_set_default_landing_altitude(plan, NAN);
 }
 
 /**
@@ -329,7 +291,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
             break;
 
         case 2:
-            entry.action = SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE;
+            entry.action = SB_RTH_ACTION_GO_ABOVE_KEEPING_ALTITUDE;
             break;
 
         case 3:
@@ -586,7 +548,7 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         /* this is easy, nothing to do */
         break;
 
-    case SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE:
+    case SB_RTH_ACTION_GO_ABOVE_KEEPING_ALTITUDE:
         target_with_yaw.x = entry->target.x;
         target_with_yaw.y = entry->target.y;
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
@@ -630,18 +592,17 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
     }
 
-    /* add smooth landing to a landing altitude before ending the trajectory if needed */
-    /* TODO(ntamas): use entry->target.z from SB_RTH_ACTION_GO_TO_WITH_ALTITUDE */
-    if (isfinite(entry->landing_altitude)) {
-        float landing_velocity_mm_sec = entry->landing_velocity;
+    /* Add smooth descent to the target if needed */
+    if (sb_i_rth_action_has_target(entry->action) && entry->landing_velocity > 0 && isfinite(entry->landing_velocity)) {
+        float current_altitude = target_with_yaw.z;
+        float landing_velocity = entry->landing_velocity;
         float landing_duration_sec;
 
-        if (!isfinite(landing_velocity_mm_sec) || landing_velocity_mm_sec <= 0) {
-            landing_velocity_mm_sec = 1000; /* default landing velocity: 1 m/s */
-        }
+        target_with_yaw.x = entry->target.x;
+        target_with_yaw.y = entry->target.y;
+        target_with_yaw.z = entry->target.z;
 
-        landing_duration_sec = fabsf(target_with_yaw.z - entry->landing_altitude) / landing_velocity_mm_sec;
-        target_with_yaw.z = entry->landing_altitude;
+        landing_duration_sec = fabsf(current_altitude - target_with_yaw.z) / landing_velocity;
 
         SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, landing_duration_sec));
@@ -689,7 +650,7 @@ static sb_bool_t sb_i_rth_action_has_neck(sb_rth_action_t action)
 static sb_bool_t sb_i_rth_action_has_target(sb_rth_action_t action)
 {
     return (
-        action == SB_RTH_ACTION_GO_TO_KEEPING_ALTITUDE || action == SB_RTH_ACTION_GO_TO_WITH_ALTITUDE);
+        action == SB_RTH_ACTION_GO_ABOVE_KEEPING_ALTITUDE || action == SB_RTH_ACTION_GO_TO_WITH_ALTITUDE);
 }
 
 /**
@@ -823,6 +784,5 @@ static void sb_i_rth_plan_entry_clear(sb_rth_plan_entry_t* entry, const sb_rth_p
 
     entry->action = SB_RTH_ACTION_LAND;
     entry->max_acceleration = sb_rth_plan_get_default_acceleration_limit(plan);
-    entry->landing_altitude = sb_rth_plan_get_default_landing_altitude(plan);
     entry->landing_velocity = sb_rth_plan_get_default_landing_velocity(plan);
 }
