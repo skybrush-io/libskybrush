@@ -284,7 +284,7 @@ sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* 
 void sb_show_controller_destroy(sb_show_controller_t* ctrl)
 {
     sb_i_show_controller_invalidate_output(ctrl);
-    sb_i_show_controller_set_current_scene(ctrl, NULL);
+    sb_i_show_controller_set_current_scene(ctrl, NULL); /* always successful */
     sb_control_output_clear(&ctrl->output);
 }
 
@@ -380,7 +380,7 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     }
 
     scene = ctrl->screenplay ? sb_screenplay_get_scene_ptr_at_time_msec(ctrl->screenplay, time_msec, &scene_index) : NULL;
-    sb_i_show_controller_set_current_scene(ctrl, scene);
+    SB_CHECK(sb_i_show_controller_set_current_scene(ctrl, scene));
 
     /* time_in_scene_msec is now up-to-date */
 
@@ -482,7 +482,7 @@ void sb_show_controller_notify_screenplay_changed(sb_show_controller_t* ctrl)
     if (!sb_screenplay_contains_scene(ctrl->screenplay, sb_show_controller_get_current_scene(ctrl))) {
         /* Current scene was removed from the screenplay, we need to drop our reference
          * to it. */
-        sb_i_show_controller_set_current_scene(ctrl, 0);
+        sb_i_show_controller_set_current_scene(ctrl, NULL); /* always successful */
     }
 
     sb_i_show_controller_invalidate_output(ctrl);
