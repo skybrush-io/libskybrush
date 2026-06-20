@@ -112,7 +112,11 @@ sb_bool_t sb_screenplay_scene_contains_time_msec(
     const sb_screenplay_scene_t* scene, uint32_t time_msec)
 {
     int32_t origin_msec = sb_screenplay_scene_get_origin_msec(scene);
-    if (time_msec < origin_msec) {
+
+    // origin_msec is signed, time_msec is unsigned, so we cannot compare them directly.
+    // First we need to check whether origin_msec >= 0, otherwise we cannot do the
+    // cast.
+    if (origin_msec >= 0 && time_msec < (uint32_t)origin_msec) {
         return 0;
     }
 
