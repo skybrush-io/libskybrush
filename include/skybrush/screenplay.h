@@ -190,6 +190,8 @@ sb_bool_t sb_screenplay_contains_scene(const sb_screenplay_t* screenplay, const 
 sb_bool_t sb_screenplay_is_empty(const sb_screenplay_t* screenplay);
 size_t sb_screenplay_size(const sb_screenplay_t* screenplay);
 
+sb_screenplay_scene_t* sb_screenplay_find_first_scene_with_tag(
+    sb_screenplay_t* screenplay, sb_screenplay_scene_tag_t tag);
 sb_rth_plan_t* sb_screenplay_get_rth_plan(sb_screenplay_t* screenplay);
 sb_screenplay_scene_t* sb_screenplay_get_scene_ptr(
     sb_screenplay_t* screenplay, size_t index);

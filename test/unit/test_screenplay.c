@@ -481,6 +481,42 @@ void test_sb_screenplay_contains_scene(void)
     sb_screenplay_destroy(&screenplay);
 }
 
+void test_sb_screenplay_find_first_scene_with_tag(void)
+{
+    sb_screenplay_t screenplay;
+    sb_screenplay_scene_t* scene0 = NULL;
+    sb_screenplay_scene_t* scene1 = NULL;
+    sb_screenplay_scene_t* scene2 = NULL;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
+
+    /* Empty screenplay -> no match */
+    TEST_ASSERT_NULL(sb_screenplay_find_first_scene_with_tag(&screenplay, 7));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene1));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene2));
+
+    TEST_ASSERT_NOT_NULL(scene0);
+    TEST_ASSERT_NOT_NULL(scene1);
+    TEST_ASSERT_NOT_NULL(scene2);
+
+    sb_screenplay_scene_set_tag(scene0, 1);
+    sb_screenplay_scene_set_tag(scene1, 7);
+    sb_screenplay_scene_set_tag(scene2, 7);
+
+    /* Returns first matching scene */
+    TEST_ASSERT_EQUAL_PTR(scene1, sb_screenplay_find_first_scene_with_tag(&screenplay, 7));
+
+    /* Finds unique match */
+    TEST_ASSERT_EQUAL_PTR(scene0, sb_screenplay_find_first_scene_with_tag(&screenplay, 1));
+
+    /* Missing tag -> no match */
+    TEST_ASSERT_NULL(sb_screenplay_find_first_scene_with_tag(&screenplay, 42));
+
+    sb_screenplay_destroy(&screenplay);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -498,6 +534,7 @@ int main(void)
     RUN_TEST(test_screenplay_update_from_binary_file_in_memory);
     RUN_TEST(test_screenplay_update_from_binary_file_in_memory_loads_rth_plan);
     RUN_TEST(test_sb_screenplay_contains_scene);
+    RUN_TEST(test_sb_screenplay_find_first_scene_with_tag);
 
     return UNITY_END();
 }

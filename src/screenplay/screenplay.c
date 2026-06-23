@@ -209,6 +209,29 @@ sb_screenplay_scene_t* sb_screenplay_get_scene_ptr_at_time_msec(
 }
 
 /**
+ * @brief Returns a pointer to the first scene in the screenplay that has the given tag.
+ *
+ * @param screenplay  the screenplay to search
+ * @param tag         the tag to search for
+ * @return a pointer to the first scene with the given tag, or \c NULL if no such scene exists
+ */
+sb_screenplay_scene_t* sb_screenplay_find_first_scene_with_tag(
+    sb_screenplay_t* screenplay, sb_screenplay_scene_tag_t tag)
+{
+    for (size_t i = 0; i < screenplay->num_scenes; i++) {
+        sb_screenplay_scene_t* scene = sb_screenplay_get_scene_ptr(screenplay, i);
+
+        assert(scene != NULL);
+
+        if (sb_screenplay_scene_get_tag(scene) == tag) {
+            return scene;
+        }
+    }
+
+    return NULL;
+}
+
+/**
  * @brief Appends a new scene to the end of the screenplay.
  *
  * The new scene is initialized with default values (infinite duration, no trajectory,
