@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `sb_screenplay_find_first_scene_with_tag()` to find the first scene in a
   screenplay that has a given tag.
 
+- Added `sb_rth_plan_entry_clear()` to clear an RTH plan entry (i.e. make it
+  represent a landing in place without any delays).
+
 ## [5.0.0] - 2026-06-20
 
 ### Breaking changes

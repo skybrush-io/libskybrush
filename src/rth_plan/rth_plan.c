@@ -55,9 +55,6 @@ static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan);
 static sb_error_t sb_i_rth_plan_update_from_bytes(sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_rth_plan_update_from_parser(sb_rth_plan_t* plan, sb_binary_file_parser_t* parser);
 
-static void sb_i_rth_plan_entry_clear(
-    sb_rth_plan_entry_t* entry, const sb_rth_plan_t* plan, float time_sec);
-
 /**
  * \brief Allocates a new RTH plan object on the heap and initializes it.
  *
@@ -270,7 +267,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
     uint8_t* buf = SB_BUFFER(plan->buffer);
     size_t buf_length = sb_buffer_size(&plan->buffer);
 
-    sb_i_rth_plan_entry_clear(&entry, plan, time);
+    sb_rth_plan_entry_clear(&entry, plan, time);
 
     if (time < 0) {
         found = 1;
@@ -299,7 +296,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
         if (flags != 0) {
             /* Entry is different; we need to reset the entry to the defaults and then
              * update it */
-            sb_i_rth_plan_entry_clear(&entry, plan, time_s);
+            sb_rth_plan_entry_clear(&entry, plan, time_s);
 
             /* Parse action parameters */
             if (flags & SB_RTH_PLAN_ENTRY_HAS_NECK) {
@@ -348,7 +345,7 @@ sb_error_t sb_rth_plan_evaluate_at(const sb_rth_plan_t* plan, float time, sb_rth
     if (!found) {
         /* Requested time was beyond the last point for which we had an RTH plan.
          * In this case, we just land immediately to the default landing altitude */
-        sb_i_rth_plan_entry_clear(&entry, plan, time);
+        sb_rth_plan_entry_clear(&entry, plan, time);
     }
 
     if (result) {
@@ -697,14 +694,14 @@ static sb_error_t sb_i_rth_plan_update_from_parser(sb_rth_plan_t* plan, sb_binar
 
 /* ************************************************************************** */
 
-static void sb_i_rth_plan_entry_clear(sb_rth_plan_entry_t* entry, const sb_rth_plan_t* plan, float time_sec)
+void sb_rth_plan_entry_clear(sb_rth_plan_entry_t* entry, const sb_rth_plan_t* plan, float time_sec)
 {
     memset(entry, 0, sizeof(sb_rth_plan_entry_t));
 
     entry->time_sec = time_sec;
-    entry->max_acceleration = sb_rth_plan_get_default_acceleration_limit(plan);
-    entry->landing_velocity = sb_rth_plan_get_default_landing_velocity(plan);
-    entry->landing_altitude = sb_rth_plan_get_default_landing_altitude(plan);
+    entry->max_acceleration = plan ? sb_rth_plan_get_default_acceleration_limit(plan) : INFINITY;
+    entry->landing_velocity = plan ? sb_rth_plan_get_default_landing_velocity(plan) : NAN;
+    entry->landing_altitude = plan ? sb_rth_plan_get_default_landing_altitude(plan) : 0.0f;
 
     /* set some default flags because technically these are valid even if they are
      * just at their default values */

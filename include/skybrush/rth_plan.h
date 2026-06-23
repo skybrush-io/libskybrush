@@ -130,6 +130,8 @@ typedef struct sb_rth_plan_s {
     float landing_altitude; /**< Default landing altitude for RTH actions */
 } sb_rth_plan_t;
 
+void sb_rth_plan_entry_clear(sb_rth_plan_entry_t* entry, const sb_rth_plan_t* plan, float time_sec);
+
 sb_rth_plan_t* sb_rth_plan_new(void);
 sb_error_t sb_rth_plan_init(sb_rth_plan_t* plan);
 
