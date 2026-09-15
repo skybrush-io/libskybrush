@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   landing part of a trajectory so it ends at another point with a given
   terminal velocity (not necessarily zero).
 
+### Fixed
+
+- Fixed a bug in `sb_trajectory_replace_end_to_land_at()` that resulted in
+  incorrect durations when the Z coordinate of the final point was not zero.
+
 ## [5.0.0] - 2026-06-20
 
 ### Breaking changes

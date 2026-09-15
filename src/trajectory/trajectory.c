@@ -597,7 +597,8 @@ sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
         return SB_EINVAL;
     }
 
-    duration_sec = stats->pos_at_landing_time.z < 0 ? 0 : (stats->pos_at_landing_time.z / new_landing_velocity);
+    float vertical_distance = stats->pos_at_landing_time.z - new_landing_position.z;
+    duration_sec = vertical_distance < 0 ? 0 : (vertical_distance / new_landing_velocity);
 
     // Limit the landing duration to one minute because we are going to
     // append a single Bezier segment and the trajectory format has its

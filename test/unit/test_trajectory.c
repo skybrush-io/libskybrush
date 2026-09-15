@@ -646,6 +646,64 @@ void test_replace_end_to_land_at_with_terminal_velocity_negative(void)
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at_with_terminal_velocity(trajectory, &stats, origin, 500, -100));
 }
 
+void test_replace_end_to_land_at_nonzero_landing_altitude(void)
+{
+    sb_vector3_t landing_position = { 1000, 0, 2000 };
+    sb_vector3_with_yaw_t pos, vel;
+    sb_trajectory_stats_t stats;
+    sb_trajectory_player_t player;
+
+    prepare_stats_for_replace_end_to_land_at(trajectory, &stats);
+
+    /* Same setup as in test_replace_end_to_land_at(), but the drone should
+     * land at an altitude of 2m instead of 0m. The vertical distance to
+     * travel is 3m (from 5m to 2m), so with a landing speed of 0.5 m/s the
+     * landing segment must be 6 seconds long, not the 10 seconds we would
+     * get if we ignored the altitude of the landing position. This is a
+     * regression test for the bug where the vertical distance was
+     * calculated from the altitude of the start of the landing segment
+     * only, implicitly assuming that the landing position is at altitude
+     * zero. */
+    TEST_ASSERT_EQUAL(45, stats.landing_time_sec);
+    TEST_ASSERT_EQUAL(5000, stats.pos_at_landing_time.z);
+    TEST_ASSERT_EQUAL(-1000, stats.vel_at_landing_time.z);
+    TEST_ASSERT_EQUAL(50, stats.duration_sec);
+    TEST_ASSERT_EQUAL(50000, stats.duration_msec);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_replace_end_to_land_at(trajectory, &stats, landing_position, 500));
+    TEST_ASSERT_EQUAL(51, stats.landing_time_sec);
+    TEST_ASSERT_EQUAL(51, stats.duration_sec);
+    TEST_ASSERT_EQUAL(51000, stats.duration_msec);
+    TEST_ASSERT_EQUAL(1000, stats.start_to_end_distance_xy);
+    TEST_ASSERT_EQUAL(1000, stats.pos_at_landing_time.x);
+    TEST_ASSERT_EQUAL(2000, stats.pos_at_landing_time.z);
+    TEST_ASSERT_EQUAL(0, stats.vel_at_landing_time.z);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+
+    /* Start of the landing segment is the same as before */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 45, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 45, &vel));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(0, pos.y);
+    TEST_ASSERT_EQUAL(5000, pos.z);
+    TEST_ASSERT_EQUAL(0, vel.x);
+    TEST_ASSERT_EQUAL(0, vel.y);
+    TEST_ASSERT_EQUAL(-1000, vel.z);
+
+    /* End of the landing segment: the drone arrives at (1, 0, 2) with
+     * zero velocity, six seconds after the start of the landing segment */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 51, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 51, &vel));
+    TEST_ASSERT_EQUAL_FLOAT(1000, pos.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.y);
+    TEST_ASSERT_EQUAL_FLOAT(2000, pos.z);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, vel.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, vel.y);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, vel.z);
+
+    sb_trajectory_player_destroy(&player);
+}
+
 void test_replace_end_to_land_at_missing_stats(void)
 {
     sb_vector3_t origin = { 1000, 0, 0 };
@@ -699,6 +757,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_replace_end_to_land_at_missing_stats);
     RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity);
     RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity_negative);
+    RUN_TEST(test_replace_end_to_land_at_nonzero_landing_altitude);
 
     /* regression tests */
     RUN_TEST(test_propose_takeoff_time_hover_3m);
