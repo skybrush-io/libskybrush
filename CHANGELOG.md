@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `sb_rth_plan_entry_clear()` to clear an RTH plan entry (i.e. make it
   represent a landing in place without any delays).
 
+- Added `sb_trajectory_replace_end_to_land_at_with_velocity()` to replace the
+  landing part of a trajectory so it ends at another point with a given
+  terminal velocity (not necessarily zero).
+
 ## [5.0.0] - 2026-06-20
 
 ### Breaking changes
