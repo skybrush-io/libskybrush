@@ -535,6 +535,10 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
 /**
  * Replaces the end of a trajectory to land smoothly to the given landing position.
  *
+ * This function is a thin wrapper around
+ * \c sb_trajectory_replace_end_to_land_at_with_terminal_velocity() with a
+ * terminal (arrival) velocity of zero.
+ *
  * \param  trajectory  the trajectory to modify
  * \param  stats  the valid statistics of the trajectory to use and update. It
  *         is assumed that at least the following components are valid in the stats:
@@ -550,12 +554,46 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_vector3_t new_landing_position,
     float new_landing_velocity)
 {
+    return sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
+        trajectory, stats, new_landing_position, new_landing_velocity, 0);
+}
+
+/**
+ * Replaces the end of a trajectory to land smoothly to the given landing
+ * position, arriving there with the given terminal (arrival) velocity.
+ *
+ * \param  trajectory  the trajectory to modify
+ * \param  stats  the valid statistics of the trajectory to use and update. It
+ *         is assumed that at least the following components are valid in the stats:
+ *         landing time, position and velocity at landing time.
+ * \param  new_landing_position  the new landing position to direct the trajectory to
+ * \param  new_landing_velocity  the new vertical landing velocity to use, treated
+ *         as an average velocity during a fully vertical descent. It is used to
+ *         derive the duration of the landing segment.
+ * \param  terminal_velocity  the magnitude of the velocity that the trajectory
+ *         should terminate with; positive values point downwards on the Z axis.
+ *         Zero means that the drone arrives at the landing position with zero
+ *         velocity.
+ *
+ * \return error code
+ */
+sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
+    sb_trajectory_t* trajectory,
+    sb_trajectory_stats_t* stats,
+    sb_vector3_t new_landing_position,
+    float new_landing_velocity,
+    float terminal_velocity)
+{
     sb_error_t retval;
-    sb_vector3_with_yaw_t new_end, c1, c2, zero;
+    sb_vector3_with_yaw_t new_end, c1, c2, end_vel;
     sb_trajectory_builder_t builder;
     float duration_sec;
 
     if (!(stats->valid_components & SB_TRAJECTORY_STATS_LANDING_TIME)) {
+        return SB_EINVAL;
+    }
+
+    if (terminal_velocity < 0) {
         return SB_EINVAL;
     }
 
@@ -578,13 +616,16 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
 
     // Calculate the cubic Bezier curve that will send the drone back to its
     // takeoff position from the point where it crosses the takeoff altitude
-    // threshold from above
-    zero.x = zero.y = zero.z = zero.yaw = 0;
+    // threshold from above. The drone arrives at the landing position with
+    // the given terminal velocity; positive magnitudes point downwards on
+    // the Z axis.
+    end_vel.x = end_vel.y = end_vel.z = end_vel.yaw = 0;
+    end_vel.z = -terminal_velocity;
     sb_get_cubic_bezier_from_velocity_constraints(
         /* start = */ stats->pos_at_landing_time,
         /* start_vel = */ stats->vel_at_landing_time,
         /* end = */ new_end,
-        /* end_vel = */ zero,
+        /* end_vel = */ end_vel,
         /* duration_sec = */ duration_sec,
         &c1, &c2);
 
@@ -622,7 +663,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     // Update trajectory statistics
     stats->landing_time_sec += duration_sec;
     stats->pos_at_landing_time = new_end;
-    stats->vel_at_landing_time = zero;
+    stats->vel_at_landing_time = end_vel;
     if (stats->valid_components & SB_TRAJECTORY_STATS_DURATION) {
         stats->duration_sec += duration_sec;
         stats->duration_msec += (uint32_t)(duration_sec * 1000);

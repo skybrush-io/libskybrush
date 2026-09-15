@@ -207,6 +207,12 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
     sb_trajectory_stats_t* stats,
     sb_vector3_t new_landing_position,
     float new_landing_velocity);
+sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
+    sb_trajectory_t* trajectory,
+    sb_trajectory_stats_t* stats,
+    sb_vector3_t new_landing_position,
+    float new_landing_velocity,
+    float terminal_velocity);
 
 /* ************************************************************************* */
 

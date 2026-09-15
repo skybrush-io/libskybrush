@@ -595,6 +595,57 @@ void test_replace_end_to_land_at(void)
     sb_trajectory_player_destroy(&player);
 }
 
+void test_replace_end_to_land_at_with_terminal_velocity(void)
+{
+    sb_vector3_t origin = { 1000, 0, 0 };
+    sb_vector3_with_yaw_t pos, vel;
+    sb_trajectory_stats_t stats;
+    sb_trajectory_player_t player;
+
+    prepare_stats_for_replace_end_to_land_at(trajectory, &stats);
+
+    /* Same setup as in test_replace_end_to_land_at(), but the drone should
+     * arrive at the landing position with a vertical velocity of 0.2 m/s
+     * downwards instead of stopping there */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_replace_end_to_land_at_with_terminal_velocity(trajectory, &stats, origin, 500, 200));
+    TEST_ASSERT_EQUAL(55, stats.duration_sec);
+    TEST_ASSERT_EQUAL(55000, stats.duration_msec);
+    TEST_ASSERT_EQUAL(1000, stats.start_to_end_distance_xy);
+    TEST_ASSERT_EQUAL(1000, stats.pos_at_landing_time.x);
+    TEST_ASSERT_EQUAL(0, stats.pos_at_landing_time.z);
+    TEST_ASSERT_EQUAL(-200, stats.vel_at_landing_time.z);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+
+    /* Start of the landing segment is the same as before */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 45, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 45, &vel));
+    TEST_ASSERT_EQUAL(0, pos.x);
+    TEST_ASSERT_EQUAL(5000, pos.z);
+    TEST_ASSERT_EQUAL(-1000, vel.z);
+
+    /* End of the landing segment: same position, but with the terminal
+     * velocity pointing downwards on the Z axis */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 55, &pos));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 55, &vel));
+    TEST_ASSERT_EQUAL_FLOAT(1000, pos.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.z);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, vel.x);
+    TEST_ASSERT_EQUAL_FLOAT(0, vel.y);
+    TEST_ASSERT_FLOAT_WITHIN(3, -200, vel.z);
+
+    sb_trajectory_player_destroy(&player);
+}
+
+void test_replace_end_to_land_at_with_terminal_velocity_negative(void)
+{
+    sb_vector3_t origin = { 1000, 0, 0 };
+    sb_trajectory_stats_t stats;
+
+    prepare_stats_for_replace_end_to_land_at(trajectory, &stats);
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at_with_terminal_velocity(trajectory, &stats, origin, 500, -100));
+}
+
 void test_replace_end_to_land_at_missing_stats(void)
 {
     sb_vector3_t origin = { 1000, 0, 0 };
@@ -646,6 +697,8 @@ int main(int argc, char* argv[])
     RUN_TEST(test_cut_at);
     RUN_TEST(test_replace_end_to_land_at);
     RUN_TEST(test_replace_end_to_land_at_missing_stats);
+    RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity);
+    RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity_negative);
 
     /* regression tests */
     RUN_TEST(test_propose_takeoff_time_hover_3m);
