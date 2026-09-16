@@ -593,7 +593,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
         return SB_EINVAL;
     }
 
-    if (terminal_velocity < 0) {
+    if (terminal_velocity < 0 || new_landing_velocity <= 0) {
         return SB_EINVAL;
     }
 
