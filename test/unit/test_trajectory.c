@@ -637,13 +637,15 @@ void test_replace_end_to_land_at_with_terminal_velocity(void)
     sb_trajectory_player_destroy(&player);
 }
 
-void test_replace_end_to_land_at_with_terminal_velocity_negative(void)
+void test_replace_end_to_land_at_with_terminal_velocity_invalid(void)
 {
     sb_vector3_t origin = { 1000, 0, 0 };
     sb_trajectory_stats_t stats;
 
     prepare_stats_for_replace_end_to_land_at(trajectory, &stats);
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at_with_terminal_velocity(trajectory, &stats, origin, 500, -100));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at_with_terminal_velocity(trajectory, &stats, origin, -500, 100));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at_with_terminal_velocity(trajectory, &stats, origin, 0, 100));
 }
 
 void test_replace_end_to_land_at_nonzero_landing_altitude(void)
@@ -756,7 +758,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_replace_end_to_land_at);
     RUN_TEST(test_replace_end_to_land_at_missing_stats);
     RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity);
-    RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity_negative);
+    RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity_invalid);
     RUN_TEST(test_replace_end_to_land_at_nonzero_landing_altitude);
 
     /* regression tests */
