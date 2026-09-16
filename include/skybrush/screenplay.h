@@ -41,6 +41,19 @@ __BEGIN_DECLS
 typedef uint8_t sb_screenplay_scene_tag_t;
 
 /**
+ * @brief Flags for a \c sb_screenplay_scene_t.
+ */
+typedef enum sb_screenplay_scene_flag_e {
+    SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION = 0x01, /**< The scene has a dynamic duration, which is primarily determined by its associated trajectory. */
+} sb_screenplay_scene_flag_t;
+
+typedef uint8_t sb_screenplay_scene_flags_t;
+typedef uint8_t sb_screenplay_scene_flag_mask_t;
+
+#define SB_SCREENPLAY_SCENE_FLAG_MASK_NONE 0x00
+#define SB_SCREENPLAY_SCENE_FLAG_MASK_ALL 0xFF
+
+/**
  * @brief A single scene in a \c sb_screenplay_t.
  *
  * A scene owns a mandatory time axis that specifies how time flows during the
@@ -70,7 +83,7 @@ typedef struct sb_screenplay_scene_s {
 
     /**
      * Optional light program correspnding to the scene; \c NULL if no light commands
-     * xshould be emitted while playing the scene.
+     * should be emitted while playing the scene.
      */
     sb_light_program_t* light_program;
 
@@ -91,9 +104,20 @@ typedef struct sb_screenplay_scene_s {
      * purposes by the owner of this structure. It is deliberately _not_ called "ID"
      * to avoid the impression that any sort of uniqueness is guaranteed.
      *
-     * THe tag of a newly generated scene is 0.
+     * The tag of a newly generated scene is 0.
      */
     sb_screenplay_scene_tag_t tag;
+
+    /**
+     * Additional boolean flags of the scene.
+     *
+     * This is currently used to mark a scene as having a "dynamic duration", which
+     * basically means that the duration of the scene is primarily determined by its
+     * associated trajectory and it should be adjusted accordingly when the trajectory
+     * is updated. This is useful for scenes that are meant to play a trajectory to
+     * completion.
+     */
+    uint8_t flags;
 } sb_screenplay_scene_t;
 
 sb_screenplay_scene_t* sb_screenplay_scene_new(void);
@@ -105,6 +129,7 @@ uint32_t sb_screenplay_scene_get_duration_msec(
     const sb_screenplay_scene_t* scene);
 float sb_screenplay_scene_get_duration_sec(
     const sb_screenplay_scene_t* scene);
+
 sb_trajectory_t* sb_screenplay_scene_get_trajectory(
     sb_screenplay_scene_t* scene);
 sb_light_program_t* sb_screenplay_scene_get_light_program(
@@ -113,6 +138,8 @@ sb_yaw_control_t* sb_screenplay_scene_get_yaw_control(
     sb_screenplay_scene_t* scene);
 sb_event_list_t* sb_screenplay_scene_get_events(
     sb_screenplay_scene_t* scene);
+sb_screenplay_scene_flags_t sb_screenplay_scene_get_flags(
+    const sb_screenplay_scene_t* scene);
 sb_screenplay_scene_tag_t sb_screenplay_scene_get_tag(
     const sb_screenplay_scene_t* scene);
 sb_time_axis_t* sb_screenplay_scene_get_time_axis(sb_screenplay_scene_t* scene);
@@ -120,8 +147,16 @@ int32_t sb_screenplay_scene_get_origin_msec(const sb_screenplay_scene_t* scene);
 float sb_screenplay_scene_get_origin_sec(const sb_screenplay_scene_t* scene);
 float sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(
     sb_screenplay_scene_t* scene);
+sb_screenplay_scene_flags_t sb_screenplay_scene_has_flag(
+    const sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_t flag);
+sb_screenplay_scene_flags_t sb_screenplay_scene_has_all_flags(
+    const sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_mask_t mask);
+sb_screenplay_scene_flags_t sb_screenplay_scene_has_any_flag(
+    const sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_mask_t mask);
 sb_bool_t sb_screenplay_scene_is_infinite(const sb_screenplay_scene_t* scene);
 
+void sb_screenplay_scene_clear_flag(
+    sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_t flag);
 void sb_screenplay_scene_set_duration_msec(
     sb_screenplay_scene_t* scene, uint32_t duration_msec);
 sb_error_t sb_screenplay_scene_set_duration_sec(
@@ -130,6 +165,10 @@ void sb_screenplay_scene_set_origin_msec(
     sb_screenplay_scene_t* scene, int32_t origin_msec);
 sb_error_t sb_screenplay_scene_set_origin_sec(
     sb_screenplay_scene_t* scene, float origin_sec);
+void sb_screenplay_scene_set_flag(
+    sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_t flag);
+void sb_screenplay_scene_set_flags(
+    sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_mask_t mask, sb_screenplay_scene_flags_t flags);
 void sb_screenplay_scene_set_infinite(sb_screenplay_scene_t* scene);
 void sb_screenplay_scene_set_trajectory(
     sb_screenplay_scene_t* scene, sb_trajectory_t* trajectory);

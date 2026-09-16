@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [main]
+## [5.2.0] - 2026-09-16
+
+### Added
+
+- Added support for marking a scene as "dynamic", meaning that users are free to adjust
+  its duration when the underlying trajectory changes. Used by the ArduPilot firmware
+  to identify the main show scene and whether it is allowed to extend or shorten its
+  duration when the underlying trajectory is altered.
+
+## [5.1.0] - 2026-09-15
 
 ### Added
 

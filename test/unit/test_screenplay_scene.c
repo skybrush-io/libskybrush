@@ -92,6 +92,10 @@ void test_screenplay_scene_init_sets_defaults(void)
     /* Tag must be zero */
     TEST_ASSERT_EQUAL(0, sb_screenplay_scene_get_tag(&scene));
 
+    /* Flags must be cleared */
+    TEST_ASSERT_EQUAL(SB_SCREENPLAY_SCENE_FLAG_MASK_NONE, sb_screenplay_scene_get_flags(&scene));
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
     /* Clean up */
     SB_DECREF_STATIC(&scene);
 }
@@ -215,6 +219,110 @@ void test_screenplay_scene_getters_and_setters(void)
     SB_DECREF_STATIC(&prog);
     SB_DECREF_STATIC(&yaw);
     SB_DECREF_STATIC(&events);
+}
+
+void test_screenplay_scene_set_and_clear_flag(void)
+{
+    sb_screenplay_scene_t scene;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+
+    /* flag is not set initially */
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
+    /* setting the flag */
+    sb_screenplay_scene_set_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION);
+    TEST_ASSERT_TRUE(sb_screenplay_scene_has_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
+    /* setting the same flag again must be idempotent */
+    sb_screenplay_scene_set_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION);
+    TEST_ASSERT_TRUE(sb_screenplay_scene_has_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
+    /* clearing the flag */
+    sb_screenplay_scene_clear_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION);
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
+    /* clearing an already-cleared flag must be idempotent */
+    sb_screenplay_scene_clear_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION);
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
+    SB_DECREF_STATIC(&scene);
+}
+
+void test_screenplay_scene_set_flags_with_mask(void)
+{
+    sb_screenplay_scene_t scene;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+
+    /* start from a clean slate */
+    TEST_ASSERT_EQUAL(SB_SCREENPLAY_SCENE_FLAG_MASK_NONE, sb_screenplay_scene_get_flags(&scene));
+
+    /* set the dynamic duration flag through a full mask */
+    sb_screenplay_scene_set_flags(&scene, SB_SCREENPLAY_SCENE_FLAG_MASK_ALL, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION);
+    TEST_ASSERT_EQUAL(SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION, sb_screenplay_scene_get_flags(&scene));
+
+    /* empty mask must leave flags unchanged */
+    sb_screenplay_scene_set_flags(&scene, SB_SCREENPLAY_SCENE_FLAG_MASK_NONE, 0);
+    TEST_ASSERT_EQUAL(SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION, sb_screenplay_scene_get_flags(&scene));
+
+    /* clearing all flags with a full mask and zero flags */
+    sb_screenplay_scene_set_flags(&scene, SB_SCREENPLAY_SCENE_FLAG_MASK_ALL, 0);
+    TEST_ASSERT_EQUAL(SB_SCREENPLAY_SCENE_FLAG_MASK_NONE, sb_screenplay_scene_get_flags(&scene));
+
+    /* bits outside the mask in the flags argument must be ignored */
+    sb_screenplay_scene_set_flags(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION, SB_SCREENPLAY_SCENE_FLAG_MASK_ALL);
+    TEST_ASSERT_EQUAL(SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION, sb_screenplay_scene_get_flags(&scene));
+
+    SB_DECREF_STATIC(&scene);
+}
+
+void test_screenplay_scene_has_all_flags_and_has_any_flag(void)
+{
+    sb_screenplay_scene_t scene;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+
+    /* empty mask: has_all_flags is trivially true, has_any_flag is trivially false */
+    TEST_ASSERT_TRUE(sb_screenplay_scene_has_all_flags(&scene, SB_SCREENPLAY_SCENE_FLAG_MASK_NONE));
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_any_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_MASK_NONE));
+
+    /* no flags set: has_all_flags false, has_any_flag false */
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_all_flags(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_any_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
+    /* set the flag: both should now report it */
+    sb_screenplay_scene_set_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION);
+    TEST_ASSERT_TRUE(sb_screenplay_scene_has_all_flags(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+    TEST_ASSERT_TRUE(sb_screenplay_scene_has_any_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
+    /* masks with bits beyond the ones that are set must fail has_all_flags but
+     * succeed has_any_flag */
+    sb_screenplay_scene_flags_t mask = SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION | (sb_screenplay_scene_flag_t)0x02;
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_all_flags(&scene, mask));
+    TEST_ASSERT_TRUE(sb_screenplay_scene_has_any_flag(&scene, mask));
+
+    /* mask without any set bit must fail both */
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_all_flags(&scene, 0x02));
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_any_flag(&scene, 0x02));
+
+    SB_DECREF_STATIC(&scene);
+}
+
+void test_screenplay_scene_reset_clears_flags(void)
+{
+    sb_screenplay_scene_t scene;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+
+    sb_screenplay_scene_set_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION);
+    TEST_ASSERT_TRUE(sb_screenplay_scene_has_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
+    sb_screenplay_scene_reset(&scene);
+    TEST_ASSERT_EQUAL(SB_SCREENPLAY_SCENE_FLAG_MASK_NONE, sb_screenplay_scene_get_flags(&scene));
+    TEST_ASSERT_FALSE(sb_screenplay_scene_has_flag(&scene, SB_SCREENPLAY_SCENE_FLAG_DYNAMIC_DURATION));
+
+    SB_DECREF_STATIC(&scene);
 }
 
 void test_screenplay_scene_reset_clears_tag(void)
@@ -901,6 +1009,10 @@ int main(void)
     RUN_TEST(test_screenplay_scene_init_sets_defaults);
     RUN_TEST(test_screenplay_scene_get_and_set_tag);
     RUN_TEST(test_screenplay_scene_origin_accessors);
+    RUN_TEST(test_screenplay_scene_set_and_clear_flag);
+    RUN_TEST(test_screenplay_scene_set_flags_with_mask);
+    RUN_TEST(test_screenplay_scene_has_all_flags_and_has_any_flag);
+    RUN_TEST(test_screenplay_scene_reset_clears_flags);
     RUN_TEST(test_screenplay_scene_reset_clears_tag);
     RUN_TEST(test_screenplay_scene_getters_and_setters);
     RUN_TEST(test_screenplay_scene_set_duration_sec_finite_rounding);

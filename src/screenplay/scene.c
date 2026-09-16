@@ -67,6 +67,7 @@ sb_error_t sb_screenplay_scene_init(sb_screenplay_scene_t* scene)
     scene->events = NULL;
 
     scene->tag = 0;
+    scene->flags = 0;
 
     SB_REF_INIT(scene, sb_i_screenplay_scene_destroy);
 
@@ -303,6 +304,17 @@ float sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_ti
 }
 
 /**
+ * @brief Returns the current flags of a scene.
+ *
+ * @param scene  the scene to query
+ * @return the flags of the scene
+ */
+sb_screenplay_scene_flags_t sb_screenplay_scene_get_flags(const sb_screenplay_scene_t* scene)
+{
+    return scene->flags;
+}
+
+/**
  * @brief Returns the tag of a scene.
  *
  * @param scene  the scene to query
@@ -311,6 +323,45 @@ float sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_ti
 sb_screenplay_scene_tag_t sb_screenplay_scene_get_tag(const sb_screenplay_scene_t* scene)
 {
     return scene->tag;
+}
+
+/**
+ * @brief Returns whether the scene has the given flag set.
+ *
+ * @param scene  the scene to query
+ * @param flag   the flag to check
+ * @return \c true if the scene has the flag set, \c false otherwise
+ */
+sb_screenplay_scene_flags_t sb_screenplay_scene_has_flag(
+    const sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_t flag)
+{
+    return scene->flags & flag;
+}
+
+/**
+ * @brief Returns whether the scene has all of the given flags set.
+ *
+ * @param scene  the scene to query
+ * @param mask   the mask of flags to check
+ * @return \c true if the scene has all of the flags set, \c false otherwise
+ */
+sb_screenplay_scene_flags_t sb_screenplay_scene_has_all_flags(
+    const sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_mask_t mask)
+{
+    return (scene->flags & mask) == mask;
+}
+
+/**
+ * @brief Returns whether the scene has any of the given flags set.
+ *
+ * @param scene  the scene to query
+ * @param mask   the mask of flags to check
+ * @return \c true if the scene has any of the flags set, \c false otherwise
+ */
+sb_screenplay_scene_flags_t sb_screenplay_scene_has_any_flag(
+    const sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_mask_t mask)
+{
+    return (scene->flags & mask) != 0;
 }
 
 /**
@@ -484,6 +535,48 @@ void sb_screenplay_scene_set_tag(sb_screenplay_scene_t* scene, sb_screenplay_sce
 }
 
 /**
+ * @brief Clears a flag from a scene.
+ *
+ * @param scene  the scene to modify
+ * @param flag   the flag to clear
+ */
+void sb_screenplay_scene_clear_flag(
+    sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_t flag)
+{
+    scene->flags &= ~flag;
+}
+
+/**
+ * @brief Sets a flag on a scene.
+ *
+ * @param scene  the scene to modify
+ * @param flag   the flag to set
+ */
+void sb_screenplay_scene_set_flag(
+    sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_t flag)
+{
+    scene->flags |= flag;
+}
+
+/**
+ * @brief Sets multiple flags on a scene, using a mask to specify which flags to modify.
+ *
+ * This function allows you to set or clear multiple flags on a scene at once. The
+ * \em mask parameter specifies which flags should be modified, and the \em flags
+ * parameter specifies the new values for those flags. Any flag that is not included
+ * in the mask will remain unchanged.
+ *
+ * @param scene  the scene to modify
+ * @param mask   a bitmask specifying which flags to modify
+ * @param flags  the new values for the specified flags
+ */
+void sb_screenplay_scene_set_flags(
+    sb_screenplay_scene_t* scene, sb_screenplay_scene_flag_mask_t mask, sb_screenplay_scene_flags_t flags)
+{
+    scene->flags = (scene->flags & ~mask) | (flags & mask);
+}
+
+/**
  * @brief Resets the screenplay scene to its default state.
  *
  * All associated objects of the screenplay scene will be cleared. The time axis
@@ -500,6 +593,7 @@ void sb_screenplay_scene_reset(sb_screenplay_scene_t* scene)
     sb_screenplay_scene_set_events(scene, NULL);
     sb_screenplay_scene_set_infinite(scene);
     sb_screenplay_scene_set_tag(scene, 0);
+    sb_screenplay_scene_set_flags(scene, SB_SCREENPLAY_SCENE_FLAG_MASK_ALL, 0);
     sb_time_axis_clear(&scene->time_axis);
 }
 
