@@ -569,7 +569,8 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
  * \param  new_landing_position  the new landing position to direct the trajectory to
  * \param  new_landing_velocity  the new vertical landing velocity to use, treated
  *         as an average velocity during a fully vertical descent. It is used to
- *         derive the duration of the landing segment.
+ *         derive the duration of the landing segment. Use positive values, pointing
+ *         downwards on the Z axis.
  * \param  terminal_velocity  the magnitude of the velocity that the trajectory
  *         should terminate with; positive values point downwards on the Z axis.
  *         Zero means that the drone arrives at the landing position with zero
