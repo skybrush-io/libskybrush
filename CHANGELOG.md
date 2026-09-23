@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   block types in the Skybrush binary show file format, starting with the new
   GCS light control setup block.
 
+- Added a new color palette module (`skybrush/palette.h`) that represents a
+  color palette as a raw buffer of packed RGB colors, with functions to clear
+  a palette, to fill it with data from a buffer (either borrowed or owned,
+  similar to how `sb_trajectory_t` handles its internal buffer), to destroy a
+  palette, and to get the i-th color of a palette. Will be used by the new
+  GCS light control setup block.
+
 ## [5.2.0] - 2026-09-16
 
 ### Added

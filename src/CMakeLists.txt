@@ -7,6 +7,7 @@ add_library(
     error.c
     memory.c
     motion.c
+    palette.c
     parsing.c
     utils.c
 

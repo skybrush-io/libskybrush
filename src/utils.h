@@ -36,6 +36,16 @@ __BEGIN_DECLS
 
 #define clamp(value, low, high) ((value) < (low) ? (low) : ((value) > (high) ? (high) : (value)))
 
+/**
+ * \def SB_STATIC_ASSERT(condition)
+ * \brief Compile-time assertion.
+ *
+ * Evaluates to an expression of type \c void that fails to compile when the
+ * given condition is false. Can be used inside function bodies only; it is
+ * not a valid declaration at file scope.
+ */
+#define SB_STATIC_ASSERT(condition) ((void)sizeof(char[1 - 2 * !(condition)]))
+
 __END_DECLS
 
 #endif
