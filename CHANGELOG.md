@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source). These will be used to implement interactive control of drone lights from a
   ground station.
 
+- Added a new, self-contained tag-length-value (TLV) parser module
+  (`skybrush/formats/tlv.h`) that will be used to parse the bodies of certain
+  block types in the Skybrush binary show file format, starting with the new
+  GCS light control setup block.
+
 ## [5.2.0] - 2026-09-16
 
 ### Added

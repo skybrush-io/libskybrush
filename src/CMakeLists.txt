@@ -13,6 +13,7 @@ add_library(
     events/events.c
 
     formats/binary.c
+    formats/tlv.c
 
     lights/colors.c
     lights/error_handler.cpp
