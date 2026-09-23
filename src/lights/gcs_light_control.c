@@ -26,12 +26,18 @@
 #include <skybrush/palette.h>
 
 #include "../parsing.h"
-#include "skybrush/basic_types.h"
 
 /**
- * \brief Length of the value of the X-Y coordinates tag, in bytes.
+ * \brief Length of the value of a tag that holds a two-component signed
+ *        16-bit vector (an X-Y coordinate pair or a matrix size), in bytes.
  */
-#define SB_I_GCS_LIGHT_CONTROL_SETUP_COORDINATES_LENGTH sizeof(sb_vector2_i16_t)
+#define SB_I_GCS_LIGHT_CONTROL_SETUP_VECTOR2_I16_LENGTH sizeof(sb_vector2_i16_t)
+
+/**
+ * \brief Largest allowed value of each component of the X-Y coordinates
+ *        and the matrix size in a GCS light control setup block.
+ */
+#define SB_I_GCS_LIGHT_CONTROL_SETUP_MAX_COMPONENT_VALUE 4095
 
 /**
  * \brief Result of parsing the body of a GCS light control setup block.
@@ -42,6 +48,7 @@
 typedef struct
 {
     sb_vector2_i16_t coords; /**< The last X-Y coordinate pair found in the block, or (0, 0) if the block contained none */
+    sb_vector2_i16_t size; /**< The last matrix size found in the block, or (0, 0) if the block contained none */
     const uint8_t* palette_bytes; /**< Pointer to the last palette found in the block; null if there was none */
     size_t palette_num_bytes; /**< Number of bytes in the last palette found in the block */
 } sb_i_gcs_light_control_setup_parse_result_t;
@@ -49,6 +56,9 @@ typedef struct
 static sb_error_t sb_i_gcs_light_control_setup_parse(
     const uint8_t* buf, size_t size,
     sb_i_gcs_light_control_setup_parse_result_t* result);
+
+static sb_error_t sb_i_gcs_light_control_setup_parse_vector2_i16(
+    const sb_tlv_entry_t* entry, sb_vector2_i16_t* result);
 
 static sb_error_t sb_i_gcs_light_control_setup_update_from_bytes(
     sb_gcs_light_control_setup_t* setup, uint8_t* buf, size_t size, sb_bool_t owned);
@@ -64,6 +74,8 @@ sb_error_t sb_gcs_light_control_setup_init(sb_gcs_light_control_setup_t* setup)
 
     setup->coords.x = 0;
     setup->coords.y = 0;
+    setup->size.x = 0;
+    setup->size.y = 0;
 
     return sb_color_palette_init(&setup->palette);
 }
@@ -76,6 +88,8 @@ sb_error_t sb_gcs_light_control_setup_clear(sb_gcs_light_control_setup_t* setup)
 
     setup->coords.x = 0;
     setup->coords.y = 0;
+    setup->size.x = 0;
+    setup->size.y = 0;
 
     return sb_color_palette_clear(&setup->palette);
 }
@@ -142,7 +156,6 @@ static sb_error_t sb_i_gcs_light_control_setup_parse(
     sb_tlv_parser_t parser;
     sb_tlv_entry_t entry;
     sb_error_t retval;
-    size_t offset;
 
     memset(result, 0, sizeof(sb_i_gcs_light_control_setup_parse_result_t));
 
@@ -158,12 +171,11 @@ static sb_error_t sb_i_gcs_light_control_setup_parse(
 
         switch (entry.tag) {
         case SB_GCS_LIGHT_CONTROL_SETUP_TAG_COORDINATES:
-            if (entry.length != SB_I_GCS_LIGHT_CONTROL_SETUP_COORDINATES_LENGTH) {
-                return SB_ECORRUPTED;
-            }
-            offset = 0;
-            result->coords.x = sb_parse_int16(entry.value, &offset);
-            result->coords.y = sb_parse_int16(entry.value, &offset);
+            SB_CHECK(sb_i_gcs_light_control_setup_parse_vector2_i16(&entry, &result->coords));
+            break;
+
+        case SB_GCS_LIGHT_CONTROL_SETUP_TAG_MATRIX_SIZE:
+            SB_CHECK(sb_i_gcs_light_control_setup_parse_vector2_i16(&entry, &result->size));
             break;
 
         case SB_GCS_LIGHT_CONTROL_SETUP_TAG_PALETTE:
@@ -179,6 +191,33 @@ static sb_error_t sb_i_gcs_light_control_setup_parse(
              * with new tags in the future without breaking older parsers */
             break;
         }
+    }
+
+    return SB_SUCCESS;
+}
+
+/**
+ * Parses and validates a two-component signed 16-bit vector (an X-Y
+ * coordinate pair or a matrix size) from the given tag-length-value entry.
+ *
+ * The value of the entry must be four bytes long and both of its components
+ * must be unsigned values in the range [0; 4096). The components themselves
+ * are parsed with \ref sb_parse_vector2_i16().
+ */
+static sb_error_t sb_i_gcs_light_control_setup_parse_vector2_i16(
+    const sb_tlv_entry_t* entry, sb_vector2_i16_t* result)
+{
+    size_t offset = 0;
+
+    if (entry->length != SB_I_GCS_LIGHT_CONTROL_SETUP_VECTOR2_I16_LENGTH) {
+        return SB_ECORRUPTED;
+    }
+
+    *result = sb_parse_vector2_i16(entry->value, &offset);
+
+    if (result->x < 0 || result->x > SB_I_GCS_LIGHT_CONTROL_SETUP_MAX_COMPONENT_VALUE || result->y < 0
+        || result->y > SB_I_GCS_LIGHT_CONTROL_SETUP_MAX_COMPONENT_VALUE) {
+        return SB_ECORRUPTED;
     }
 
     return SB_SUCCESS;
@@ -211,7 +250,7 @@ static sb_error_t sb_i_gcs_light_control_setup_update_from_bytes(
     }
 
     /* the palette is applied first because this is the only step that may
-     * fail; the X-Y coordinate pair is applied afterwards */
+     * fail; the coordinates and the matrix size are applied afterwards */
 
     if (result.palette_num_bytes == 0) {
         /* no palette in the block (or an empty one): use the default */
@@ -240,6 +279,7 @@ static sb_error_t sb_i_gcs_light_control_setup_update_from_bytes(
 
     if (retval == SB_SUCCESS) {
         setup->coords = result.coords;
+        setup->size = result.size;
     }
 
 cleanup:

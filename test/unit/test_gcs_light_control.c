@@ -74,10 +74,25 @@ void tearDown(void)
         }                                                            \
     } while (0)
 
+/* Convenience macro to encode a matrix size tag into a buffer at a given
+ * offset and to advance the offset accordingly */
+#define WRITE_SIZE(buf, offset, x, y)                                   \
+    do {                                                                \
+        (buf)[(offset)++] = SB_GCS_LIGHT_CONTROL_SETUP_TAG_MATRIX_SIZE; \
+        (buf)[(offset)++] = 0x04;                                       \
+        (buf)[(offset)++] = 0x00;                                       \
+        (buf)[(offset)++] = (uint8_t)((x) & 0xff);                      \
+        (buf)[(offset)++] = (uint8_t)(((x) >> 8) & 0xff);               \
+        (buf)[(offset)++] = (uint8_t)((y) & 0xff);                      \
+        (buf)[(offset)++] = (uint8_t)(((y) >> 8) & 0xff);               \
+    } while (0)
+
 static void assert_defaults(const sb_gcs_light_control_setup_t* setup)
 {
     TEST_ASSERT_EQUAL_INT16(0, setup->coords.x);
     TEST_ASSERT_EQUAL_INT16(0, setup->coords.y);
+    TEST_ASSERT_EQUAL_INT16(0, setup->size.x);
+    TEST_ASSERT_EQUAL_INT16(0, setup->size.y);
     TEST_ASSERT_EQUAL(0, setup->palette.num_colors);
     TEST_ASSERT_TRUE(
         sb_rgb_color_equals(SB_COLOR_BLACK, sb_color_palette_get_color(&setup->palette, 0)));
@@ -123,10 +138,11 @@ void test_update_from_buffer(void)
 {
     sb_gcs_light_control_setup_t setup;
     uint8_t palette[6] = { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff };
-    uint8_t body[16];
+    uint8_t body[7 + 7 + 9];
     size_t offset = 0;
 
-    WRITE_COORDS(body, offset, 10, -20);
+    WRITE_COORDS(body, offset, 10, 20);
+    WRITE_SIZE(body, offset, 100, 200);
     WRITE_PALETTE(body, offset, palette, sizeof(palette));
 
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_gcs_light_control_setup_update_from_buffer(0, body, sizeof(body)));
@@ -135,7 +151,10 @@ void test_update_from_buffer(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
 
     TEST_ASSERT_EQUAL_INT16(10, setup.coords.x);
-    TEST_ASSERT_EQUAL_INT16(-20, setup.coords.y);
+    TEST_ASSERT_EQUAL_INT16(20, setup.coords.y);
+
+    TEST_ASSERT_EQUAL_INT16(100, setup.size.x);
+    TEST_ASSERT_EQUAL_INT16(200, setup.size.y);
 
     TEST_ASSERT_EQUAL(2, setup.palette.num_colors);
     TEST_ASSERT(sb_buffer_is_view(&setup.palette.buffer));
@@ -252,7 +271,20 @@ void test_update_with_missing_tags(void)
 
     TEST_ASSERT_EQUAL_INT16(0, setup.coords.x);
     TEST_ASSERT_EQUAL_INT16(0, setup.coords.y);
+    TEST_ASSERT_EQUAL(0, setup.size.x);
+    TEST_ASSERT_EQUAL_INT16(0, setup.size.y);
     TEST_ASSERT_EQUAL(1, setup.palette.num_colors);
+
+    /* body with a matrix size only */
+    offset = 0;
+    WRITE_SIZE(body, offset, 100, 200);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
+
+    TEST_ASSERT_EQUAL_INT16(0, setup.coords.x);
+    TEST_ASSERT_EQUAL_INT16(0, setup.coords.y);
+    TEST_ASSERT_EQUAL_INT16(100, setup.size.x);
+    TEST_ASSERT_EQUAL_INT16(200, setup.size.y);
+    TEST_ASSERT_EQUAL(0, setup.palette.num_colors);
 
     sb_gcs_light_control_setup_destroy(&setup);
 }
@@ -310,11 +342,14 @@ void test_update_with_duplicate_tags_last_one_wins(void)
     sb_gcs_light_control_setup_t setup;
     uint8_t palette1[3] = { 0xff, 0x00, 0x00 };
     uint8_t palette2[3] = { 0x00, 0xff, 0x00 };
-    uint8_t body[7 + 7 + 9 + 9];
+    uint8_t body[7 + 7 + 7 + 7 + 9 + 9];
     size_t offset = 0;
 
     WRITE_COORDS(body, offset, 1, 2);
     WRITE_COORDS(body, offset, 3, 4);
+
+    WRITE_SIZE(body, offset, 10, 11);
+    WRITE_SIZE(body, offset, 12, 13);
 
     WRITE_PALETTE(body, offset, palette1, sizeof(palette1));
     WRITE_PALETTE(body, offset, palette2, sizeof(palette2));
@@ -325,6 +360,9 @@ void test_update_with_duplicate_tags_last_one_wins(void)
     TEST_ASSERT_EQUAL_INT16(3, setup.coords.x);
     TEST_ASSERT_EQUAL_INT16(4, setup.coords.y);
 
+    TEST_ASSERT_EQUAL_INT16(12, setup.size.x);
+    TEST_ASSERT_EQUAL_INT16(13, setup.size.y);
+
     TEST_ASSERT_EQUAL(1, setup.palette.num_colors);
     TEST_ASSERT_TRUE(
         sb_rgb_color_equals(sb_rgb_color_make(0, 255, 0), sb_color_palette_get_color(&setup.palette, 0)));
@@ -332,20 +370,59 @@ void test_update_with_duplicate_tags_last_one_wins(void)
     sb_gcs_light_control_setup_destroy(&setup);
 }
 
-void test_update_with_negative_coordinates(void)
+void test_update_with_out_of_range_values(void)
 {
     sb_gcs_light_control_setup_t setup;
-    uint8_t body[7];
-    size_t offset = 0;
-
-    /* x = -1 (0xffff), y = -32768 (0x8000) */
-    WRITE_COORDS(body, offset, -1, -32768);
+    uint8_t body[14];
+    size_t offset;
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_gcs_light_control_setup_init(&setup));
+
+    /* the largest allowed value (4095) is still okay for both the
+     * coordinates and the matrix size */
+    offset = 0;
+    WRITE_COORDS(body, offset, 4095, 4095);
+    WRITE_SIZE(body, offset, 4095, 4095);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
 
-    TEST_ASSERT_EQUAL_INT16(-1, setup.coords.x);
-    TEST_ASSERT_EQUAL_INT16(-32768, setup.coords.y);
+    TEST_ASSERT_EQUAL_INT16(4095, setup.coords.x);
+    TEST_ASSERT_EQUAL_INT16(4095, setup.coords.y);
+    TEST_ASSERT_EQUAL_INT16(4095, setup.size.x);
+    TEST_ASSERT_EQUAL_INT16(4095, setup.size.y);
+
+    /* negative coordinates are not allowed */
+    offset = 0;
+    WRITE_COORDS(body, offset, -1, -32768);
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
+
+    offset = 0;
+    WRITE_COORDS(body, offset, 4095, -1);
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
+
+    /* coordinates of 4096 or above are not allowed */
+    offset = 0;
+    WRITE_COORDS(body, offset, 4096, 0);
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
+
+    /* negative matrix size is not allowed */
+    offset = 0;
+    WRITE_SIZE(body, offset, -1, 0);
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
+
+    offset = 0;
+    WRITE_SIZE(body, offset, 4095, -1);
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
+
+    /* matrix size of 4096 or above is not allowed */
+    offset = 0;
+    WRITE_SIZE(body, offset, 0, 4096);
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
+
+    /* the setup must be left unmodified in each of the failed cases above */
+    TEST_ASSERT_EQUAL_INT16(4095, setup.coords.x);
+    TEST_ASSERT_EQUAL_INT16(4095, setup.coords.y);
+    TEST_ASSERT_EQUAL_INT16(4095, setup.size.x);
+    TEST_ASSERT_EQUAL_INT16(4095, setup.size.y);
 
     sb_gcs_light_control_setup_destroy(&setup);
 }
@@ -354,12 +431,13 @@ void test_update_with_corrupted_body(void)
 {
     sb_gcs_light_control_setup_t setup;
     uint8_t good_palette[3] = { 0xff, 0x00, 0x00 };
-    uint8_t good_body[16];
+    uint8_t good_body[7 + 9 + 7];
     size_t good_offset = 0;
     uint8_t body[16];
     size_t offset;
 
     WRITE_COORDS(good_body, good_offset, 10, 20);
+    WRITE_SIZE(good_body, good_offset, 30, 40);
     WRITE_PALETTE(good_body, good_offset, good_palette, sizeof(good_palette));
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_gcs_light_control_setup_init(&setup));
@@ -385,6 +463,11 @@ void test_update_with_corrupted_body(void)
     WRITE_ENTRY(body, offset, SB_GCS_LIGHT_CONTROL_SETUP_TAG_PALETTE, "\x01\x02\x03\x04", 4);
     TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
 
+    /* matrix size with an invalid length (3 bytes instead of 4) */
+    offset = 0;
+    WRITE_ENTRY(body, offset, SB_GCS_LIGHT_CONTROL_SETUP_TAG_MATRIX_SIZE, "\x01\x00\x02", 3);
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
+
     /* truncated tag-length-value header */
     offset = 0;
     body[offset++] = SB_GCS_LIGHT_CONTROL_SETUP_TAG_COORDINATES;
@@ -397,6 +480,8 @@ void test_update_with_corrupted_body(void)
     /* the setup must be left unmodified in each of the failed cases above */
     TEST_ASSERT_EQUAL_INT16(10, setup.coords.x);
     TEST_ASSERT_EQUAL_INT16(20, setup.coords.y);
+    TEST_ASSERT_EQUAL_INT16(30, setup.size.x);
+    TEST_ASSERT_EQUAL_INT16(40, setup.size.y);
     TEST_ASSERT_EQUAL(1, setup.palette.num_colors);
     TEST_ASSERT_TRUE(
         sb_rgb_color_equals(sb_rgb_color_make(255, 0, 0), sb_color_palette_get_color(&setup.palette, 0)));
@@ -572,7 +657,7 @@ int main(void)
     RUN_TEST(test_update_with_empty_palette_tag);
     RUN_TEST(test_update_skips_unknown_tags);
     RUN_TEST(test_update_with_duplicate_tags_last_one_wins);
-    RUN_TEST(test_update_with_negative_coordinates);
+    RUN_TEST(test_update_with_out_of_range_values);
     RUN_TEST(test_update_with_corrupted_body);
     RUN_TEST(test_update_from_binary_file_in_memory);
     RUN_TEST(test_update_from_binary_file);

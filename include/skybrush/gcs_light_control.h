@@ -44,36 +44,46 @@ __BEGIN_DECLS
  */
 typedef enum {
     /** X-Y coordinate pair of the pixel represented by the drone; the value
-     * is four bytes long: two signed 16-bit little-endian integers */
+     * is four bytes long: two signed 16-bit little-endian integers, each of
+     * which must be an unsigned value in the range [0; 4096) */
     SB_GCS_LIGHT_CONTROL_SETUP_TAG_COORDINATES = 0x00,
 
     /** Color palette for interactive light control; the value is a sequence
      * of packed \ref sb_rgb_color_t values and its length must be a
      * multiple of three */
-    SB_GCS_LIGHT_CONTROL_SETUP_TAG_PALETTE = 0x01
+    SB_GCS_LIGHT_CONTROL_SETUP_TAG_PALETTE = 0x01,
+
+    /** Size of the LED matrix in which the drone is being used; the value
+     * is four bytes long: two signed 16-bit little-endian integers (the
+     * width and the height of the matrix), each of which must be an
+     * unsigned value in the range [0; 4096) */
+    SB_GCS_LIGHT_CONTROL_SETUP_TAG_MATRIX_SIZE = 0x02
 } sb_gcs_light_control_setup_tag_t;
 
 /**
  * Struct representing the content of a GCS light control setup block.
  *
  * The struct contains the X-Y coordinate pair describing which pixel is
- * represented by the drone the setup belongs to, and the color palette that
- * the ground control station may use when controlling the lights of the
- * drone interactively.
+ * represented by the drone the setup belongs to, the size of the LED matrix
+ * in which the drone is being used, and the color palette that the ground
+ * control station may use when controlling the lights of the drone.
  *
  * When the block does not contain an X-Y coordinate pair, the default of
- * (0, 0) is used. When the block does not contain a color palette, the
- * default is an empty palette.
+ * (0, 0) is used. When the block does not contain a matrix size, the
+ * default of (0, 0) is used. When the block does not contain a color
+ * palette, the default is an empty palette.
  */
 typedef struct
 {
     sb_vector2_i16_t coords; /**< The pixel represented by the drone */
+    sb_vector2_i16_t size; /**< The size of the LED matrix in which the drone is being used (x = width, y = height) */
     sb_color_palette_t palette; /**< The color palette of the setup */
 } sb_gcs_light_control_setup_t;
 
 /**
  * Initializes a GCS light control setup object with its default values:
- * the X-Y coordinate pair is set to (0, 0) and the palette is empty.
+ * the X-Y coordinate pair and the matrix size are set to (0, 0) and the
+ * palette is empty.
  *
  * \param  setup  the setup object to initialize
  * \return \c SB_SUCCESS if the setup object was initialized successfully,
@@ -84,8 +94,9 @@ sb_error_t sb_gcs_light_control_setup_init(sb_gcs_light_control_setup_t* setup);
 
 /**
  * Clears the GCS light control setup object, resetting it to its default
- * values: the X-Y coordinate pair is set to (0, 0) and the palette is
- * reset to an empty palette that owns its (empty) internal buffer.
+ * values: the X-Y coordinate pair and the matrix size are set to (0, 0)
+ * and the palette is reset to an empty palette that owns its (empty)
+ * internal buffer.
  *
  * \param  setup  the setup object to clear
  * \return \c SB_SUCCESS if the setup object was cleared successfully,
@@ -113,10 +124,14 @@ void sb_gcs_light_control_setup_destroy(sb_gcs_light_control_setup_t* setup);
  * The body must be a tag-length-value stream. Tag 0x00 holds the X-Y
  * coordinate pair of the pixel represented by the drone as two signed
  * 16-bit little-endian integers; tag 0x01 holds the color palette as a
- * sequence of packed \ref sb_rgb_color_t values. Unknown tags are skipped.
- * When the same tag appears multiple times, the last occurrence wins.
- * Missing tags yield the default values: (0, 0) for the X-Y coordinate
- * pair and an empty palette.
+ * sequence of packed \ref sb_rgb_color_t values; tag 0x02 holds the size
+ * of the LED matrix in which the drone is being used as two signed
+ * 16-bit little-endian integers. Both components of the coordinate pair
+ * and the matrix size must be unsigned values in the range [0; 4096).
+ * Unknown tags are skipped. When the same tag appears multiple times, the
+ * last occurrence wins. Missing tags yield the default values: (0, 0) for
+ * the X-Y coordinate pair, (0, 0) for the matrix size and an empty
+ * palette.
  *
  * The palette of the setup will be backed by a view into the given buffer.
  * The caller keeps the ownership of the buffer and it is the responsibility
@@ -132,9 +147,10 @@ void sb_gcs_light_control_setup_destroy(sb_gcs_light_control_setup_t* setup);
  * \return \c SB_SUCCESS if the setup object was updated successfully,
  *         \c SB_EINVAL if the setup object is null or if the buffer is null
  *         and its size is not zero, \c SB_ECORRUPTED if the body of the
- *         block is not a valid tag-length-value stream or if a known tag
- *         has an invalid length. The setup object is left unmodified if
- *         the function returns an error.
+ *         block is not a valid tag-length-value stream, if a known tag
+ *         has an invalid length, or if the coordinates or the matrix size
+ *         contain values outside the range [0; 4096). The setup object is
+ *         left unmodified if the function returns an error.
  */
 sb_error_t sb_gcs_light_control_setup_update_from_buffer(
     sb_gcs_light_control_setup_t* setup, uint8_t* buf, size_t size);
@@ -158,9 +174,10 @@ sb_error_t sb_gcs_light_control_setup_update_from_buffer(
  * \return \c SB_SUCCESS if the setup object was updated successfully,
  *         \c SB_EINVAL if the setup object or the buffer is null,
  *         \c SB_ECORRUPTED if the body of the block is not a valid
- *         tag-length-value stream or if a known tag has an invalid length.
- *         The setup object is left unmodified if the function returns an
- *         error; the buffer is released in all cases.
+ *         tag-length-value stream, if a known tag has an invalid length,
+ *         or if the coordinates or the matrix size contain values outside
+ *         the range [0; 4096). The setup object is left unmodified if the
+ *         function returns an error; the buffer is released in all cases.
  */
 sb_error_t sb_gcs_light_control_setup_update_from_bytes(
     sb_gcs_light_control_setup_t* setup, uint8_t* buf, size_t size);
@@ -178,9 +195,10 @@ sb_error_t sb_gcs_light_control_setup_update_from_bytes(
  * \return \c SB_SUCCESS if the setup object was updated successfully,
  *         \c SB_ENOENT if the file did not contain a GCS light control
  *         setup block, \c SB_ECORRUPTED if the body of the block is not a
- *         valid tag-length-value stream or if a known tag has an invalid
- *         length, \c SB_EREAD for read errors. The setup object is left
- *         unmodified if the function returns an error.
+ *         valid tag-length-value stream, if a known tag has an invalid
+ *         length, or if the coordinates or the matrix size contain values
+ *         outside the range [0; 4096), \c SB_EREAD for read errors. The
+ *         setup object is left unmodified if the function returns an error.
  */
 sb_error_t sb_gcs_light_control_setup_update_from_binary_file(
     sb_gcs_light_control_setup_t* setup, int fd);
@@ -200,9 +218,10 @@ sb_error_t sb_gcs_light_control_setup_update_from_binary_file(
  * \return \c SB_SUCCESS if the setup object was updated successfully,
  *         \c SB_ENOENT if the file did not contain a GCS light control
  *         setup block, \c SB_ECORRUPTED if the body of the block is not a
- *         valid tag-length-value stream or if a known tag has an invalid
- *         length. The setup object is left unmodified if the function
- *         returns an error.
+ *         valid tag-length-value stream, if a known tag has an invalid
+ *         length, or if the coordinates or the matrix size contain values
+ *         outside the range [0; 4096). The setup object is left unmodified
+ *         if the function returns an error.
  */
 sb_error_t sb_gcs_light_control_setup_update_from_binary_file_in_memory(
     sb_gcs_light_control_setup_t* setup, uint8_t* buf, size_t length);
