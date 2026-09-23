@@ -10,6 +10,7 @@ endfunction()
 
 add_fixture(test.skyb)
 add_fixture(hover_3m.skyb)
+add_fixture(hover_3m_with_gcs_control_block.skyb)
 add_fixture(hover_3m_with_rth_plan.skyb)
 add_fixture(forward_left_back.skyb)
 add_fixture(forward_left_back_no_lights.skyb)

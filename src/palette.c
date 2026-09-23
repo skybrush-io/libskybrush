@@ -101,6 +101,16 @@ sb_rgb_color_t sb_color_palette_get_color(const sb_color_palette_t* palette, siz
     return sb_rgb_color_make(color[0], color[1], color[2]);
 }
 
+size_t sb_color_palette_size(const sb_color_palette_t* palette)
+{
+    return (palette == 0) ? 0 : palette->num_colors;
+}
+
+sb_bool_t sb_color_palette_is_empty(const sb_color_palette_t* palette)
+{
+    return sb_color_palette_size(palette) == 0;
+}
+
 static sb_error_t sb_i_color_palette_update_from_bytes(
     sb_color_palette_t* palette, uint8_t* bytes, size_t num_bytes, sb_bool_t owned)
 {

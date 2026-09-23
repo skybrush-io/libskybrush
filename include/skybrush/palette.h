@@ -156,6 +156,24 @@ void sb_color_palette_destroy(sb_color_palette_t* palette);
  */
 sb_rgb_color_t sb_color_palette_get_color(const sb_color_palette_t* palette, size_t index);
 
+/**
+ * Returns the number of colors in the palette.
+ *
+ * \param  palette  the palette to query; may be null, in which case the
+ *                  function returns zero
+ * \return the number of colors in the palette
+ */
+size_t sb_color_palette_size(const sb_color_palette_t* palette);
+
+/**
+ * Returns whether the palette is empty.
+ *
+ * \param  palette  the palette to query; may be null, in which case the
+ *                  function returns true
+ * \return whether the palette is empty
+ */
+sb_bool_t sb_color_palette_is_empty(const sb_color_palette_t* palette);
+
 __END_DECLS
 
 #endif

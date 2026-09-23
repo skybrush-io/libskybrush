@@ -625,6 +625,56 @@ void test_update_from_binary_file_without_setup_block(void)
     sb_gcs_light_control_setup_destroy(&setup);
 }
 
+/* Loads the contents of a fixture file from the test/fixtures directory
+ * into a newly allocated buffer */
+static uint8_t* load_fixture(const char* fname, size_t* size)
+{
+    FILE* fp = fopen(fname, "rb");
+    uint8_t* buf;
+
+    TEST_ASSERT_NOT_NULL(fp);
+
+    TEST_ASSERT_EQUAL(0, fseek(fp, 0, SEEK_END));
+    *size = (size_t)ftell(fp);
+    TEST_ASSERT_GREATER_THAN(0, *size);
+    TEST_ASSERT_EQUAL(0, fseek(fp, 0, SEEK_SET));
+
+    buf = malloc(*size);
+    TEST_ASSERT_NOT_NULL(buf);
+    TEST_ASSERT_EQUAL(*size, fread(buf, 1, *size, fp));
+
+    fclose(fp);
+
+    return buf;
+}
+
+void test_update_from_binary_file_fixture(void)
+{
+    sb_gcs_light_control_setup_t setup;
+    uint8_t* buf;
+    size_t size;
+
+    buf = load_fixture("fixtures/hover_3m_with_gcs_control_block.skyb", &size);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_gcs_light_control_setup_init(&setup));
+    TEST_ASSERT_EQUAL(
+        SB_SUCCESS, sb_gcs_light_control_setup_update_from_binary_file_in_memory(&setup, buf, size));
+
+    TEST_ASSERT_EQUAL_INT16(8, setup.size.x);
+    TEST_ASSERT_EQUAL_INT16(8, setup.size.y);
+
+    TEST_ASSERT_EQUAL_INT16(2, setup.coords.x);
+    TEST_ASSERT_EQUAL_INT16(3, setup.coords.y);
+
+    TEST_ASSERT_EQUAL(0, sb_color_palette_size(&setup.palette));
+    TEST_ASSERT_TRUE(sb_color_palette_is_empty(&setup.palette));
+
+    /* the palette borrows a view into the buffer, so the setup must be
+     * destroyed before the buffer is released */
+    sb_gcs_light_control_setup_destroy(&setup);
+    free(buf);
+}
+
 void test_destroy(void)
 {
     sb_gcs_light_control_setup_t setup;
@@ -661,6 +711,7 @@ int main(void)
     RUN_TEST(test_update_with_corrupted_body);
     RUN_TEST(test_update_from_binary_file_in_memory);
     RUN_TEST(test_update_from_binary_file);
+    RUN_TEST(test_update_from_binary_file_fixture);
     RUN_TEST(test_update_from_binary_file_without_setup_block);
     RUN_TEST(test_destroy);
 

@@ -223,6 +223,30 @@ void test_get_color_invalid_palette(void)
     TEST_ASSERT_TRUE(sb_rgb_color_equals(SB_COLOR_BLACK, sb_color_palette_get_color(0, 42)));
 }
 
+void test_size_and_is_empty(void)
+{
+    sb_color_palette_t palette;
+    uint8_t bytes[6] = { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff };
+
+    /* null palette has zero size and is considered empty */
+    TEST_ASSERT_EQUAL(0, sb_color_palette_size(0));
+    TEST_ASSERT_TRUE(sb_color_palette_is_empty(0));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_init(&palette));
+    TEST_ASSERT_EQUAL(0, sb_color_palette_size(&palette));
+    TEST_ASSERT_TRUE(sb_color_palette_is_empty(&palette));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_update_from_buffer(&palette, bytes, sizeof(bytes)));
+    TEST_ASSERT_EQUAL(2, sb_color_palette_size(&palette));
+    TEST_ASSERT_FALSE(sb_color_palette_is_empty(&palette));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_clear(&palette));
+    TEST_ASSERT_EQUAL(0, sb_color_palette_size(&palette));
+    TEST_ASSERT_TRUE(sb_color_palette_is_empty(&palette));
+
+    sb_color_palette_destroy(&palette);
+}
+
 void test_destroy(void)
 {
     sb_color_palette_t palette;
@@ -262,6 +286,7 @@ int main(void)
     RUN_TEST(test_update_replaces_previous_content);
     RUN_TEST(test_update_invalid_args);
     RUN_TEST(test_get_color_invalid_palette);
+    RUN_TEST(test_size_and_is_empty);
     RUN_TEST(test_destroy);
 
     return UNITY_END();
