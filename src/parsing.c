@@ -157,6 +157,22 @@ sb_error_t sb_parse_varuint32(const uint8_t* buf, const size_t num_bytes, size_t
 }
 
 /**
+ * Parses a 2D vector with signed 16-bit integer components from a buffer.
+ *
+ * The vector is encoded as two consecutive signed 16-bit little-endian
+ * integers. The offset is automatically advanced after reading the vector.
+ */
+sb_vector2_i16_t sb_parse_vector2_i16(const uint8_t* buf, size_t* offset)
+{
+    sb_vector2_i16_t result;
+
+    result.x = sb_parse_int16(buf, offset);
+    result.y = sb_parse_int16(buf, offset);
+
+    return result;
+}
+
+/**
  * Writes a signed 16-bit little-endian integer to a buffer.
  *
  * The offset is automatically advanced after writing the integer.

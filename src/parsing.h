@@ -20,6 +20,7 @@
 #ifndef PARSING_H
 #define PARSING_H
 
+#include <skybrush/basic_types.h>
 #include <skybrush/decls.h>
 #include <skybrush/error.h>
 #include <stdint.h>
@@ -43,6 +44,8 @@ uint16_t sb_parse_uint16(const uint8_t* buf, size_t* offset);
 int32_t sb_parse_int32(const uint8_t* buf, size_t* offset);
 uint32_t sb_parse_uint32(const uint8_t* buf, size_t* offset);
 sb_error_t sb_parse_varuint32(const uint8_t* buf, size_t num_bytes, size_t* offset, uint32_t* result);
+
+sb_vector2_i16_t sb_parse_vector2_i16(const uint8_t* buf, size_t* offset);
 
 __END_DECLS
 

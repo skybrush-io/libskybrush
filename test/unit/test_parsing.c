@@ -90,6 +90,25 @@ void test_parse_int16(void)
     TEST_ASSERT_EQUAL(7, offset);
 }
 
+void test_parse_vector2_i16(void)
+{
+    uint8_t buf[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0xff, 0xfe, 0xff };
+    sb_vector2_i16_t vec;
+    size_t offset;
+
+    offset = 0;
+    vec = sb_parse_vector2_i16(buf, &offset);
+    TEST_ASSERT_EQUAL_INT16(0x0201, vec.x);
+    TEST_ASSERT_EQUAL_INT16(0x0403, vec.y);
+    TEST_ASSERT_EQUAL(4, offset);
+
+    offset = 4;
+    vec = sb_parse_vector2_i16(buf, &offset);
+    TEST_ASSERT_EQUAL_INT16(-251, vec.x);
+    TEST_ASSERT_EQUAL_INT16(-2, vec.y);
+    TEST_ASSERT_EQUAL(8, offset);
+}
+
 void test_parse_uint16(void)
 {
     uint8_t buf[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0xff, 0xfe };
@@ -244,6 +263,7 @@ int main(int argc, char* argv[])
     UNITY_BEGIN();
 
     RUN_TEST(test_parse_int16);
+    RUN_TEST(test_parse_vector2_i16);
     RUN_TEST(test_parse_int32);
     RUN_TEST(test_parse_uint16);
     RUN_TEST(test_parse_uint32);
