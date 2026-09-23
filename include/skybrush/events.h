@@ -40,18 +40,44 @@ __BEGIN_DECLS
 typedef enum {
     SB_EVENT_TYPE_NONE = 0, /**< No event */
     SB_EVENT_TYPE_PYRO = 1, /**< Pyro trigger event */
+    SB_EVENT_TYPE_LIGHT = 2, /**< Light control event */
     SB_EVENT_TYPE_MAX /**< Maximum number of event types */
 } sb_event_type_t;
 
+/**
+ * @brief Subtypes of events that can be placed on the timeline.
+ *
+ * The semantics of the subtype depends on the event type:
+ *
+ * - SB_EVENT_TYPE_NONE: Subtype is undefined.
+ * - SB_EVENT_TYPE_PYRO: The index of the pyro channel that should be triggered.
+ * - SB_EVENT_TYPE_LIGHT: One of the following subtypes:
+ *   - SB_EVENT_SUBTYPE_LIGHT_SET_SOURCE: Sets the input source of a light output.
+ */
+typedef uint8_t sb_event_subtype_t;
+
+/**
+ * @brief Subtypes of light control events that can be placed on the timeline.
+ */
+typedef enum {
+    SB_EVENT_SUBTYPE_LIGHT_SET_SOURCE = 0, /**< Sets the input source of a light output */
+    SB_EVENT_SUBTYPE_LIGHT_MAX /**< Maximum number of light event subtypes */
+} sb_event_light_subtype_t;
+
 /*
- * Payload descriptions for the event types:
+ * Payload descriptions for the event types and subtypes:
  *
  * - SB_EVENT_TYPE_NONE: No payload.
  * - SB_EVENT_TYPE_PYRO: The payload is a 32-bit unsigned integer. If it is
  *   0xFFFFFFFF, the pyro channel is turned off. If it is 0x00000000, the pyro
  *   channel is turned on. Other values are not supported yet.
+ * - SB_EVENT_TYPE_LIGHT: Depends on the subtype, see below.
+ * - SB_EVENT_SUBTYPE_LIGHT_SET_SOURCE: First byte is the index of the light output to
+ *   affect. Second byte is the light source to apply for the given light output.
+ *   Sources are defined by the application; in light shows, source 0 is a fixed color
+ *   (defined by the remaining two bytes in RGB565 notation), source 1 is the current
+ *   light program from the show file, and source 2 is interactive GCS control mode.
  */
-typedef uint8_t sb_event_subtype_t;
 
 /**
  * @brief Structure describing a single event that is to be triggered at
@@ -64,17 +90,10 @@ typedef struct sb_event_s {
     /** The type of the event */
     sb_event_type_t type;
 
-    /**
-     * The subtype of the event.
-     *
-     * Its interpretation depends on the event type; for instance, for pyro
-     * events it is the index of the pyro channel that should be triggered.
-     */
+    /** The subtype of the event */
     sb_event_subtype_t subtype;
 
-    /**
-     * The payload of the event, if applicable.
-     */
+    /** The payload of the event, if applicable */
     union {
         /** The payload as an array of four bytes */
         uint8_t as_buf[4];

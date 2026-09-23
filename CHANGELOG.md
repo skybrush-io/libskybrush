@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [main]
+
+### Added
+
+- Added a new event type (light control) and a new subtype for light events (set
+  source). These will be used to implement interactive control of drone lights from a
+  ground station.
+
 ## [5.2.0] - 2026-09-16
 
 ### Added
