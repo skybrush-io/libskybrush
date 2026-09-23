@@ -46,7 +46,7 @@ void tearDown(void)
 void test_init(void)
 {
     sb_tlv_parser_t parser;
-    uint8_t buf[1];
+    uint8_t buf[1] = { 0x00 };
 
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_tlv_parser_init(0, buf, sizeof(buf)));
 
@@ -126,7 +126,7 @@ void test_empty_stream(void)
 {
     sb_tlv_parser_t parser;
     sb_tlv_entry_t entry;
-    uint8_t buf[8]; /* content does not matter, size does */
+    uint8_t buf[8] = { 0 }; /* content does not matter, size does */
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_tlv_parser_init(&parser, buf, 0));
     TEST_ASSERT_EQUAL(SB_ENOENT, sb_tlv_parser_next(&parser, &entry));
