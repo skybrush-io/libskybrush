@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   palette, and to get the i-th color of a palette. Will be used by the new
   GCS light control setup block.
 
+- Added a new GCS light control setup module (`skybrush/gcs_light_control.h`)
+  that parses the new GCS light control setup block of the Skybrush binary
+  show file format.
+
 ## [5.2.0] - 2026-09-16
 
 ### Added

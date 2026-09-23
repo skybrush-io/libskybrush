@@ -20,6 +20,9 @@
 #ifndef UNITY_TEST_UTILS_H
 #define UNITY_TEST_UTILS_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 /* Helper macros for unit tests */
 
 /* Color equality: uses the library helper */
@@ -73,5 +76,21 @@
         sb_vector3_t expected = { (x), (y), (z) };                \
         TEST_ASSERT_EQUAL_VECTOR3_EPS(expected, (actual), (eps)); \
     } while (0)
+
+/* Writes the header of a Skybrush binary show file (the magic word "skyb"
+ * followed by the version number 1) into the given buffer at the given
+ * offset and returns the offset right after the header. Useful when a unit
+ * test needs to prepare an in-memory Skybrush binary show file.
+ */
+static inline size_t make_skyb_header(uint8_t* buf, size_t offset)
+{
+    buf[offset++] = 0x73; /* "s" */
+    buf[offset++] = 0x6b; /* "k" */
+    buf[offset++] = 0x79; /* "y" */
+    buf[offset++] = 0x62; /* "b" */
+    buf[offset++] = 0x01; /* version */
+
+    return offset;
+}
 
 #endif

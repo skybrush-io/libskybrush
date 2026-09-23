@@ -61,6 +61,18 @@ typedef struct
 } sb_vector2_t;
 
 /**
+ * A simple 2D vector with signed 16-bit integer components.
+ */
+typedef struct
+{
+    /** The X coordinate of the vector */
+    int16_t x;
+
+    /** The Y coordinate of the vector */
+    int16_t y;
+} sb_vector2_i16_t;
+
+/**
  * A simple 3D vector.
  */
 typedef struct

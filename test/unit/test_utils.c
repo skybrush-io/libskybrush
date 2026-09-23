@@ -20,7 +20,10 @@
 #include <skybrush/trajectory.h>
 #include <skybrush/utils.h>
 
+#include <string.h>
+
 #include "unity.h"
+#include "utils.h"
 
 void setUp(void)
 {
@@ -293,6 +296,27 @@ void test_bezier_cut_at(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[3]);
 }
 
+void test_make_skyb_header(void)
+{
+    uint8_t buf[8];
+    const uint8_t expected[5] = { 0x73, 0x6b, 0x79, 0x62, 0x01 };
+    size_t offset;
+
+    memset(buf, 0xee, sizeof(buf));
+
+    offset = make_skyb_header(buf, 0);
+    TEST_ASSERT_EQUAL(5, offset);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, 5);
+
+    /* the rest of the buffer must be left untouched */
+    TEST_ASSERT_EQUAL_HEX8(0xee, buf[5]);
+
+    /* the function also works at a non-zero offset */
+    offset = make_skyb_header(buf, 3);
+    TEST_ASSERT_EQUAL(8, offset);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf + 3, 5);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -302,6 +326,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_scale_update_vector3_with_yaw);
     RUN_TEST(test_solve_quadratic);
     RUN_TEST(test_bezier_cut_at);
+    RUN_TEST(test_make_skyb_header);
 
     return UNITY_END();
 }

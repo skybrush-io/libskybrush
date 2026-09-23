@@ -56,8 +56,11 @@ typedef enum {
     /** Block that contains yaw control setpoints */
     SB_BINARY_BLOCK_YAW_CONTROL = 5,
 
-    /** Block that controls an event list */
-    SB_BINARY_BLOCK_EVENT_LIST = 6
+    /** Block that contains an event list */
+    SB_BINARY_BLOCK_EVENT_LIST = 6,
+
+    /** Block that contains setup instructions for interactive GCS light control */
+    SB_BINARY_BLOCK_GCS_LIGHT_CONTROL_SETUP = 7
 } sb_binary_block_type_t;
 
 /**

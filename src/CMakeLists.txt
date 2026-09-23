@@ -19,6 +19,7 @@ add_library(
     lights/colors.c
     lights/error_handler.cpp
     lights/executor.cpp
+    lights/gcs_light_control.c
     lights/loop_stack.cpp
     lights/program.cpp
     lights/transition.cpp
