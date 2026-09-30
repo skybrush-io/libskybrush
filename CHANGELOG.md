@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source). These will be used to implement interactive control of drone lights from a
   ground station.
 
+- Added two new subtypes for light events: `SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_X` and
+  `SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_Y`. They carry the X and Y coordinates of the pixel
+  represented by the drone in interactive GCS-controlled mode as a 12-bit unsigned
+  integer.
+
 - Added a new, self-contained tag-length-value (TLV) parser module
   (`skybrush/formats/tlv.h`) that will be used to parse the bodies of certain
   block types in the Skybrush binary show file format, starting with the new

@@ -53,6 +53,8 @@ typedef enum {
  * - SB_EVENT_TYPE_PYRO: The index of the pyro channel that should be triggered.
  * - SB_EVENT_TYPE_LIGHT: One of the following subtypes:
  *   - SB_EVENT_SUBTYPE_LIGHT_SET_SOURCE: Sets the input source of a light output.
+ *   - SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_X: Sets the X coordinate of the pixel represented by the drone.
+ *   - SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_Y: Sets the Y coordinate of the pixel represented by the drone.
  */
 typedef uint8_t sb_event_subtype_t;
 
@@ -61,6 +63,8 @@ typedef uint8_t sb_event_subtype_t;
  */
 typedef enum {
     SB_EVENT_SUBTYPE_LIGHT_SET_SOURCE = 0, /**< Sets the input source of a light output */
+    SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_X = 1, /**< Sets the X coordinate of the pixel represented by the drone */
+    SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_Y = 2, /**< Sets the Y coordinate of the pixel represented by the drone */
     SB_EVENT_SUBTYPE_LIGHT_MAX /**< Maximum number of light event subtypes */
 } sb_event_light_subtype_t;
 
@@ -77,6 +81,14 @@ typedef enum {
  *   Sources are defined by the application; in light shows, source 0 is a fixed color
  *   (defined by the remaining two bytes in RGB565 notation), source 1 is the current
  *   light program from the show file, and source 2 is interactive GCS control mode.
+ * - SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_X: The payload is a 12-bit unsigned integer
+ *   in the least significant bits, holding the X coordinate of the pixel
+ *   represented by the drone in interactive GCS control mode. The remaining
+ *   bits of the payload should be set to zeros but this is not enforced by
+ *   libskybrush, so that these bits can be repurposed in the future.
+ * - SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_Y: Same as
+ *   SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_X, except that the value is the Y
+ *   coordinate of the pixel represented by the drone.
  */
 
 /**
