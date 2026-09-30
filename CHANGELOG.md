@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.0] - 2026-09-30
+
+- Added two new subtypes for light events: `SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_X` and
+  `SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_Y`. They carry the X and Y coordinates of the pixel
+  represented by the drone in interactive GCS-controlled mode as a 12-bit unsigned
+  integer.
+
+- Added a new show metadata module (`skybrush/metadata.h`) that parses
+  the new show metadata block of the Skybrush binary show file format. The
+  body of the block is a tag-length-value stream that currently carries the
+  unique ID of the show (a four-byte binary blob) and the index of the drone
+  within the show (an unsigned 16-bit little-endian integer).
+
 ## [5.2.0] - 2026-09-23
 
 ### Added
@@ -17,11 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a new event type (light control) and a new subtype for light events (set
   source). These will be used to implement interactive control of drone lights from a
   ground station.
-
-- Added two new subtypes for light events: `SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_X` and
-  `SB_EVENT_SUBTYPE_LIGHT_SET_PIXEL_Y`. They carry the X and Y coordinates of the pixel
-  represented by the drone in interactive GCS-controlled mode as a 12-bit unsigned
-  integer.
 
 - Added a new, self-contained tag-length-value (TLV) parser module
   (`skybrush/formats/tlv.h`) that will be used to parse the bodies of certain
@@ -38,12 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a new GCS light control setup module (`skybrush/gcs_light_control.h`)
   that parses the new GCS light control setup block of the Skybrush binary
   show file format.
-
-- Added a new show metadata module (`skybrush/metadata.h`) that parses
-  the new show metadata block of the Skybrush binary show file format. The
-  body of the block is a tag-length-value stream that currently carries the
-  unique ID of the show (a four-byte binary blob) and the index of the drone
-  within the show (an unsigned 16-bit little-endian integer).
 
 ## [5.1.0] - 2026-09-15
 
