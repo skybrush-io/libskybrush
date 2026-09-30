@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that parses the new GCS light control setup block of the Skybrush binary
   show file format.
 
+- Added a new show metadata module (`skybrush/metadata.h`) that parses
+  the new show metadata block of the Skybrush binary show file format. The
+  body of the block is a tag-length-value stream that currently carries the
+  unique ID of the show (a four-byte binary blob) and the index of the drone
+  within the show (an unsigned 16-bit little-endian integer).
+
 ## [5.1.0] - 2026-09-15
 
 ### Added

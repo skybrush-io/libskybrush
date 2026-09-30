@@ -60,7 +60,10 @@ typedef enum {
     SB_BINARY_BLOCK_EVENT_LIST = 6,
 
     /** Block that contains setup instructions for interactive GCS light control */
-    SB_BINARY_BLOCK_GCS_LIGHT_CONTROL_SETUP = 7
+    SB_BINARY_BLOCK_GCS_LIGHT_CONTROL_SETUP = 7,
+
+    /** Block that contains metadata of the show (unique show ID, index of the drone) */
+    SB_BINARY_BLOCK_SHOW_METADATA = 8
 } sb_binary_block_type_t;
 
 /**
