@@ -31,7 +31,9 @@
 #include <skybrush/control.h>
 #include <skybrush/error.h>
 #include <skybrush/events.h>
+#include <skybrush/gcs_light_control.h>
 #include <skybrush/lights.h>
+#include <skybrush/metadata.h>
 #include <skybrush/motion.h>
 #include <skybrush/poly.h>
 #include <skybrush/refcount.h>
