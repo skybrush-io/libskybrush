@@ -273,6 +273,99 @@ void test_destroy(void)
     sb_color_palette_destroy(&palette);
 }
 
+void test_update_from_owned_palette(void)
+{
+    sb_color_palette_t src, dest;
+    uint8_t* bytes = malloc(6);
+    bytes[0] = 0xff;
+    bytes[1] = 0x00;
+    bytes[2] = 0x00;
+    bytes[3] = 0x00;
+    bytes[4] = 0xff;
+    bytes[5] = 0x00;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_init(&src));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_update_from_bytes(&src, bytes, 6));
+    TEST_ASSERT_EQUAL(2, sb_color_palette_size(&src));
+    TEST_ASSERT(!sb_buffer_is_view(&src.buffer));
+
+    /* dest is an initialized, owned palette */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_init(&dest));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_update(&dest, &src));
+
+    TEST_ASSERT_EQUAL(2, sb_color_palette_size(&dest));
+    TEST_ASSERT(!sb_buffer_is_view(&dest.buffer));
+    TEST_ASSERT((void*)SB_BUFFER(src.buffer) != (void*)SB_BUFFER(dest.buffer));
+    TEST_ASSERT_TRUE(
+        sb_rgb_color_equals(sb_rgb_color_make(255, 0, 0), sb_color_palette_get_color(&dest, 0)));
+    TEST_ASSERT_TRUE(
+        sb_rgb_color_equals(sb_rgb_color_make(0, 255, 0), sb_color_palette_get_color(&dest, 1)));
+
+    /* source must be left unmodified */
+    TEST_ASSERT_EQUAL(2, sb_color_palette_size(&src));
+    TEST_ASSERT(!sb_buffer_is_view(&src.buffer));
+    TEST_ASSERT_TRUE(
+        sb_rgb_color_equals(sb_rgb_color_make(255, 0, 0), sb_color_palette_get_color(&src, 0)));
+
+    sb_color_palette_destroy(&dest);
+    sb_color_palette_destroy(&src);
+}
+
+void test_update_from_view_palette(void)
+{
+    sb_color_palette_t src, dest;
+    uint8_t bytes[6] = {
+        0xff, 0x00, 0x00, /* red */
+        0x00, 0xff, 0x00 /* green */
+    };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_init(&src));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_update_from_buffer(&src, bytes, sizeof(bytes)));
+    TEST_ASSERT(sb_buffer_is_view(&src.buffer));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_init(&dest));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_update(&dest, &src));
+
+    /* dest becomes a view of the same memory area */
+    TEST_ASSERT_EQUAL(2, sb_color_palette_size(&dest));
+    TEST_ASSERT(sb_buffer_is_view(&dest.buffer));
+    TEST_ASSERT_EQUAL((void*)bytes, (void*)SB_BUFFER(dest.buffer));
+    TEST_ASSERT_TRUE(
+        sb_rgb_color_equals(sb_rgb_color_make(255, 0, 0), sb_color_palette_get_color(&dest, 0)));
+    TEST_ASSERT_TRUE(
+        sb_rgb_color_equals(sb_rgb_color_make(0, 255, 0), sb_color_palette_get_color(&dest, 1)));
+
+    /* modifying the underlying buffer is visible through both palettes */
+    bytes[1] = 0xff;
+    TEST_ASSERT_TRUE(
+        sb_rgb_color_equals(sb_rgb_color_make(255, 255, 0), sb_color_palette_get_color(&dest, 0)));
+    TEST_ASSERT_TRUE(
+        sb_rgb_color_equals(sb_rgb_color_make(255, 255, 0), sb_color_palette_get_color(&src, 0)));
+
+    sb_color_palette_destroy(&dest);
+    sb_color_palette_destroy(&src); /* must not free the borrowed buffer */
+}
+
+void test_update_with_self_and_invalid_args(void)
+{
+    sb_color_palette_t palette;
+    uint8_t bytes[3] = { 0xff, 0x00, 0x00 };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_init(&palette));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_update_from_buffer(&palette, bytes, sizeof(bytes)));
+
+    /* updating a palette with itself is a no-op */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_update(&palette, &palette));
+    TEST_ASSERT_EQUAL(1, sb_color_palette_size(&palette));
+    TEST_ASSERT(sb_buffer_is_view(&palette.buffer));
+
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_color_palette_update(0, &palette));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_color_palette_update(&palette, 0));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_color_palette_update(0, 0));
+
+    sb_color_palette_destroy(&palette);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -288,6 +381,10 @@ int main(void)
     RUN_TEST(test_get_color_invalid_palette);
     RUN_TEST(test_size_and_is_empty);
     RUN_TEST(test_destroy);
+
+    RUN_TEST(test_update_from_owned_palette);
+    RUN_TEST(test_update_from_view_palette);
+    RUN_TEST(test_update_with_self_and_invalid_args);
 
     return UNITY_END();
 }

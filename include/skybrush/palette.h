@@ -131,6 +131,27 @@ sb_error_t sb_color_palette_update_from_bytes(
     sb_color_palette_t* palette, uint8_t* bytes, size_t num_bytes);
 
 /**
+ * Updates a color palette from another, already initialized color palette.
+ *
+ * When the source palette is backed by a borrowed view, the destination
+ * palette becomes backed by a view of the same memory area. When the
+ * source palette owns its internal buffer, the destination palette becomes
+ * the owner of a copy of the contents of the internal buffer of the source
+ * palette. The source palette is left unmodified in both cases.
+ *
+ * Passing the same palette as both the destination and the source is a
+ * no-op.
+ *
+ * \param  dest  the palette to update
+ * \param  src   the palette to copy from
+ * \return \c SB_SUCCESS if the palette was updated successfully, \c SB_EINVAL
+ *         if either palette is null. The destination palette is left
+ *         unmodified if the function returns an error.
+ */
+sb_error_t sb_color_palette_update(
+    sb_color_palette_t* dest, const sb_color_palette_t* src);
+
+/**
  * Destroys a color palette, releasing all the resources that it holds.
  *
  * Calling this function multiple times on the same palette is safe. If the

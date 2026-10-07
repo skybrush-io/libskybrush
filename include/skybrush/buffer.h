@@ -70,6 +70,7 @@ void sb_buffer_fill(sb_buffer_t* buf, uint8_t value);
 sb_error_t sb_buffer_append_byte(sb_buffer_t* buf, uint8_t byte);
 sb_error_t sb_buffer_append_bytes(sb_buffer_t* buf, const void* bytes, size_t num_bytes);
 sb_error_t sb_buffer_concat(sb_buffer_t* buf, const sb_buffer_t* other);
+sb_error_t sb_buffer_update(sb_buffer_t* dest, const sb_buffer_t* src);
 sb_error_t sb_buffer_extend_with_zeros(sb_buffer_t* buf, size_t num_zeros);
 
 __END_DECLS

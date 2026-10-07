@@ -330,6 +330,85 @@ sb_error_t sb_buffer_concat(sb_buffer_t* buf, const sb_buffer_t* other)
 }
 
 /**
+ * @brief Updates a buffer with the contents of another one.
+ *
+ * Both buffers must be initialized.
+ *
+ * When the source buffer is a view, the destination buffer becomes a view of
+ * the same memory area; the storage area of the destination buffer is released
+ * if it owned one. When the source buffer is an owned buffer, the destination
+ * buffer becomes an owned buffer holding a copy of the contents of the source
+ * buffer.
+ *
+ * Passing the same buffer as both the destination and the source is a no-op.
+ *
+ * It is an error to call this function when the source buffer is a view into
+ * the storage area of the destination buffer; in this case the destination
+ * buffer is left unchanged and SB_EINVAL is returned.
+ *
+ * @param dest  the destination buffer to update
+ * @param src   the source buffer to copy from
+ * @return error code
+ */
+sb_error_t sb_buffer_update(sb_buffer_t* dest, const sb_buffer_t* src)
+{
+    size_t size;
+
+    if (dest == src) {
+        return SB_SUCCESS;
+    }
+
+    if (sb_buffer_is_view(src)) {
+        if (dest->owned) {
+            if (src->stor_begin >= dest->stor_begin && src->stor_end <= dest->stor_end) {
+                /* src is a view into the storage area of dest; we cannot
+                 * release the storage of dest without invalidating src */
+                return SB_EINVAL;
+            }
+
+            sb_free(dest->stor_begin);
+        }
+
+        dest->stor_begin = src->stor_begin;
+        dest->end = src->end;
+        dest->stor_end = src->stor_end;
+        dest->owned = 0;
+
+        return SB_SUCCESS;
+    }
+
+    /* src is an owned buffer so it is backed by its own storage area, which
+     * is distinct from the storage area of dest; it is thus safe to modify
+     * the storage area of dest while reading from src */
+    size = sb_buffer_size(src);
+
+    if (!dest->owned) {
+        uint8_t* storage = sb_calloc(uint8_t, size > 0 ? size : 1);
+        if (!storage) {
+            return SB_ENOMEM; /* LCOV_EXCL_LINE */
+        }
+
+        memcpy(storage, src->stor_begin, size);
+
+        dest->stor_begin = storage;
+        dest->stor_end = storage + (size > 0 ? size : 1);
+        dest->end = storage + size;
+        dest->owned = 1;
+
+        return SB_SUCCESS;
+    }
+
+    if (size > sb_buffer_capacity(dest)) {
+        SB_CHECK(sb_i_buffer_realloc(dest, size));
+    }
+
+    memcpy(dest->stor_begin, src->stor_begin, size);
+    dest->end = dest->stor_begin + size;
+
+    return SB_SUCCESS;
+}
+
+/**
  * @brief Extends the buffer with the given number of zero bytes at the end,
  * growing the buffer as needed.
  *

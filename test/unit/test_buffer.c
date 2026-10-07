@@ -419,6 +419,99 @@ void test_ensure_owned(void)
     sb_buffer_destroy(&buf);
 }
 
+void test_update_from_owned_buffer(void)
+{
+    sb_buffer_t src, dest;
+    char* str = "hello world";
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init(&src, 0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_append_bytes(&src, str, strlen(str)));
+
+    /* dest is an owned buffer with enough capacity; storage should be reused */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init(&dest, 32));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_update(&dest, &src));
+    TEST_ASSERT(!sb_buffer_is_view(&dest));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&dest));
+    TEST_ASSERT_EQUAL(0, memcmp(str, SB_BUFFER(dest), strlen(str)));
+    sb_buffer_destroy(&dest);
+
+    /* dest is an owned buffer that needs to grow */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init(&dest, 2));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_update(&dest, &src));
+    TEST_ASSERT(!sb_buffer_is_view(&dest));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&dest));
+    TEST_ASSERT_GREATER_OR_EQUAL(strlen(str), sb_buffer_capacity(&dest));
+    TEST_ASSERT_EQUAL(0, memcmp(str, SB_BUFFER(dest), strlen(str)));
+    sb_buffer_destroy(&dest);
+
+    /* dest is a view */
+    char other[16] = "xxxxxxxxxxxxxxxx";
+    sb_buffer_init_view(&dest, other, sizeof(other));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_update(&dest, &src));
+    TEST_ASSERT(!sb_buffer_is_view(&dest));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&dest));
+    TEST_ASSERT_EQUAL(0, memcmp(str, SB_BUFFER(dest), strlen(str)));
+    TEST_ASSERT((void*)other != (void*)SB_BUFFER(dest));
+    TEST_ASSERT_EQUAL(0, memcmp("xxxxxxxxxxxxxxxx", other, sizeof(other)));
+    sb_buffer_destroy(&dest);
+
+    /* updating a buffer with itself is a no-op */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_update(&src, &src));
+    TEST_ASSERT(!sb_buffer_is_view(&src));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&src));
+    TEST_ASSERT_EQUAL(0, memcmp(str, SB_BUFFER(src), strlen(str)));
+
+    sb_buffer_destroy(&src);
+}
+
+void test_update_from_view(void)
+{
+    sb_buffer_t src, dest;
+    char* str = "hello world";
+
+    sb_buffer_init_view(&src, str, strlen(str));
+
+    /* dest is an owned buffer */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init(&dest, 8));
+    SB_BUFFER(dest)
+    [0] = 42;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_update(&dest, &src));
+    TEST_ASSERT(sb_buffer_is_view(&dest));
+    TEST_ASSERT_EQUAL((void*)str, (void*)SB_BUFFER(dest));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&dest));
+    sb_buffer_destroy(&dest); /* must not free the storage of the view */
+
+    /* dest is a view too */
+    char other[16] = "xxxxxxxxxxxxxxxx";
+    sb_buffer_init_view(&dest, other, sizeof(other));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_update(&dest, &src));
+    TEST_ASSERT(sb_buffer_is_view(&dest));
+    TEST_ASSERT_EQUAL((void*)str, (void*)SB_BUFFER(dest));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&dest));
+    sb_buffer_destroy(&dest);
+
+    sb_buffer_destroy(&src);
+}
+
+void test_update_from_view_of_dest(void)
+{
+    sb_buffer_t buf, view;
+    char* str = "hello world";
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init(&buf, 0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_append_bytes(&buf, str, strlen(str)));
+
+    sb_buffer_init_view(&view, SB_BUFFER(buf), sb_buffer_size(&buf));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_buffer_update(&buf, &view));
+
+    /* buf must be left unchanged */
+    TEST_ASSERT(!sb_buffer_is_view(&buf));
+    TEST_ASSERT_EQUAL(strlen(str), sb_buffer_size(&buf));
+    TEST_ASSERT_EQUAL(0, memcmp(str, SB_BUFFER(buf), strlen(str)));
+
+    sb_buffer_destroy(&buf);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -445,6 +538,10 @@ int main(int argc, char* argv[])
     RUN_TEST(test_init_from_bytes_zero_size);
 
     RUN_TEST(test_ensure_owned);
+
+    RUN_TEST(test_update_from_owned_buffer);
+    RUN_TEST(test_update_from_view);
+    RUN_TEST(test_update_from_view_of_dest);
 
     return UNITY_END();
 }

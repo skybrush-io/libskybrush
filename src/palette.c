@@ -73,6 +73,27 @@ sb_error_t sb_color_palette_update_from_bytes(
     return sb_i_color_palette_update_from_bytes(palette, bytes, num_bytes, /* owned = */ 1);
 }
 
+sb_error_t sb_color_palette_update(sb_color_palette_t* dest, const sb_color_palette_t* src)
+{
+    if (dest == 0 || src == 0) {
+        return SB_EINVAL;
+    }
+
+    if (dest == src) {
+        return SB_SUCCESS;
+    }
+
+    /* sb_buffer_update() ensures that the destination buffer becomes a view
+     * if the source buffer is a view, and that it becomes an owned copy of
+     * the contents if the source buffer is owned. The destination buffer is
+     * left unmodified if the function fails, so the palette stays in a
+     * consistent state */
+    SB_CHECK(sb_buffer_update(&dest->buffer, &src->buffer));
+    dest->num_colors = src->num_colors;
+
+    return SB_SUCCESS;
+}
+
 void sb_color_palette_destroy(sb_color_palette_t* palette)
 {
     if (palette == 0) {

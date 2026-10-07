@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added `sb_buffer_update()` to replace the contents of an already initialized
+  buffer with the contents of another one; the destination buffer becomes a
+  view if the source buffer is a view and it becomes an owned buffer holding
+  a copy of the contents if the source buffer is owned.
+
+- Added `sb_color_palette_update()` to replace the contents of an already
+  initialized color palette with the contents of another one; the destination
+  palette is backed by a view if the source palette is backed by a view and it
+  owns a copy of the colors if the source palette owns its colors.
+
 ## [5.3.1] - 2026-09-30
 
 ### Fixed
