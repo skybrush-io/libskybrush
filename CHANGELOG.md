@@ -34,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   loops more than four levels deep. Loops beyond the fourth nesting level are now
   ignored.
 
+- Fixed the light player returning the color of the previous segment of a light
+  program when queried exactly at a timestamp where multiple commands that take
+  no time (e.g., loop markers) were due.
+
+- Fixed the light player hanging forever on light programs containing an infinite
+  loop whose body takes no time. Such loops now stop the execution of the light
+  program when the end of their body is reached.
+
 ## [5.3.1] - 2026-09-30
 
 ### Fixed
