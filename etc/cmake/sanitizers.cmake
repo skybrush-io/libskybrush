@@ -40,6 +40,9 @@ if(USE_SANITIZER)
        OR USE_SANITIZER MATCHES "([Uu]ndefined);([Aa]ddress)")
       message(STATUS "Building with Address, Undefined sanitizers")
       append("-fsanitize=address,undefined" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      # float-cast-overflow is not part of -fsanitize=undefined; failures
+      # must abort the tests instead of being reported only
+      append("-fsanitize=float-cast-overflow -fno-sanitize-recover=all" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     elseif("${USE_SANITIZER}" MATCHES "([Aa]ddress)")
       # Optional: -fno-optimize-sibling-calls -fsanitize-address-use-after-scope
       message(STATUS "Building with Address sanitizer")
@@ -56,6 +59,9 @@ if(USE_SANITIZER)
     elseif(USE_SANITIZER MATCHES "([Uu]ndefined)")
       message(STATUS "Building with Undefined sanitizer")
       append("-fsanitize=undefined" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      # float-cast-overflow is not part of -fsanitize=undefined; failures
+      # must abort the tests instead of being reported only
+      append("-fsanitize=float-cast-overflow -fno-sanitize-recover=all" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
       if(EXISTS "${BLACKLIST_FILE}")
         append("-fsanitize-blacklist=${BLACKLIST_FILE}" CMAKE_C_FLAGS
                CMAKE_CXX_FLAGS)

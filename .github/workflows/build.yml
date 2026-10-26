@@ -69,3 +69,47 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+
+  # Short coverage-guided fuzzing session of the parsers and players, seeded
+  # with the test fixtures. Crashing inputs are uploaded as an artifact.
+  fuzz:
+    # Pinned because the name of the libFuzzer runtime package contains the
+    # major version of Clang
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: sudo apt-get install -y clang-18 libclang-rt-18-dev ninja-build
+
+      - name: Configure CMake
+        run: >
+          cmake -B ${{github.workspace}}/build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DCMAKE_C_COMPILER=clang-18
+          -DCMAKE_CXX_COMPILER=clang++-18
+          -DBUILD_TESTING=ON
+          -DLIBSKYBRUSH_ENABLE_FUZZING=ON
+          -DUSE_SANITIZER=Address\;Undefined
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --target fuzz_show fuzz_block
+
+      - name: Fuzz
+        working-directory: ${{github.workspace}}/build
+        run: |
+          mkdir -p corpus_show corpus_block crashes
+          cp ${{github.workspace}}/test/fixtures/*.skyb corpus_show/
+          python3 ${{github.workspace}}/test/fuzz/make_block_seeds.py corpus_block ${{github.workspace}}/test/fixtures/*.skyb
+          for target in show block; do
+            ./test/fuzz/fuzz_$target corpus_$target -artifact_prefix=crashes/${target}_ \
+              -max_total_time=120 -timeout=10 -rss_limit_mb=2048 -max_len=65536
+          done
+
+      - name: Upload crashing inputs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-crashes
+          path: ${{github.workspace}}/build/crashes

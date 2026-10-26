@@ -78,6 +78,17 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND LIBSKYBRUSH_ENABLE_CODE_ANALYSIS
     endif()
 endif()
 
+# Build the fuzz targets with libFuzzer (Clang only). The library itself is
+# instrumented for coverage-guided fuzzing as well. Without this option, the
+# fuzz targets are built as standalone programs that replay a corpus.
+option(LIBSKYBRUSH_ENABLE_FUZZING "Build the fuzz targets with libFuzzer" OFF)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND LIBSKYBRUSH_ENABLE_FUZZING)
+    if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+        message(FATAL_ERROR "LIBSKYBRUSH_ENABLE_FUZZING requires Clang")
+    endif()
+    add_compile_options(-fsanitize=fuzzer-no-link)
+endif()
+
 # Traverse source code
 add_subdirectory(src)
 add_subdirectory(vendor)
