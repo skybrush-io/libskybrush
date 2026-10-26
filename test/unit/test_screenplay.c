@@ -236,6 +236,28 @@ void test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_mis
     sb_screenplay_destroy(&screenplay);
 }
 
+void test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_missing_tag_finite_scenes(void)
+{
+    /* All the scenes are finite so the search reaches the end of the scene
+     * list (in the test above, the search stops at the infinite scene) */
+    sb_screenplay_t screenplay;
+    sb_screenplay_scene_t* scene = NULL;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
+
+    for (int i = 0; i < 2; i++) {
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene));
+        sb_screenplay_scene_set_tag(scene, 1);
+        sb_screenplay_scene_set_duration_msec(scene, 10000);
+    }
+
+    TEST_ASSERT_EQUAL_UINT32(
+        UINT32_MAX,
+        sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 2, 0.0f));
+
+    sb_screenplay_destroy(&screenplay);
+}
+
 void test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_infinite_preceding(void)
 {
     sb_screenplay_t screenplay;
@@ -478,6 +500,14 @@ void test_sb_screenplay_contains_scene(void)
     /* A stack-allocated scene pointer must not be considered part of the screenplay */
     TEST_ASSERT_FALSE(sb_screenplay_contains_scene(&screenplay, &external_scene));
 
+    /* Fill the screenplay up to its capacity so that the search would read
+     * beyond the allocated storage if it went past the last scene */
+    while (sb_screenplay_size(&screenplay) < sb_screenplay_capacity(&screenplay)) {
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene_ptr));
+    }
+    TEST_ASSERT_TRUE(sb_screenplay_contains_scene(&screenplay, scene_ptr));
+    TEST_ASSERT_FALSE(sb_screenplay_contains_scene(&screenplay, &external_scene));
+
     sb_screenplay_destroy(&screenplay);
 }
 
@@ -527,6 +557,7 @@ int main(void)
     RUN_TEST(test_sb_screenplay_get_scene_ptr_at_time_msec_finite_offsets_and_overflow);
     RUN_TEST(test_sb_screenplay_get_scene_ptr_at_time_msec_with_infinite_later_scene);
     RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_missing_tag);
+    RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_missing_tag_finite_scenes);
     RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_infinite_preceding);
     RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_success_and_bounds);
     RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_with_nonlinear_preceding_scene);

@@ -141,6 +141,8 @@ sb_error_t sb_trajectory_stats_calculator_run(
     float last_vertical_section_start_altitude = 0.0f;
     float last_vertical_section_end_altitude = 0.0f;
     float to_descend;
+    sb_bool_t landing_found;
+    sb_bool_t landing_recorded = 0;
     sb_error_t retval = SB_SUCCESS;
 
     if (result == 0 || trajectory == 0) {
@@ -223,6 +225,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
                 result->pos_at_landing_time = segment->end;
                 poly = sb_trajectory_segment_get_dpoly(segment);
                 result->vel_at_landing_time = sb_poly_4d_eval(poly, 1);
+                landing_recorded = 1;
                 state_valid = 0;
             }
         }
@@ -285,8 +288,14 @@ sb_error_t sb_trajectory_stats_calculator_run(
                 (last_vertical_section_end_altitude + calc->preferred_descent)
                 /* clang-format on */
             );
+            landing_found = 0;
         } else {
+            /* The trajectory does not end with a vertical section. If it has
+             * any segments, the main loop has already recorded the end of the
+             * last (non-vertical) segment as the landing point, along with the
+             * velocity that the drone really has there */
             to_descend = 0;
+            landing_found = landing_recorded;
         }
 
         if (to_descend > 0) {
@@ -303,9 +312,17 @@ sb_error_t sb_trajectory_stats_calculator_run(
                     /* Segment is ascending, this should not happen */
                     goto cleanup;
                 } else if (delta <= to_descend) {
-                    /* We can consume the entire segment */
+                    /* We can consume the entire segment. Record its end as the
+                     * landing point in case this turns out to be the last
+                     * segment that we consume, along with the velocity that
+                     * the drone really has there */
                     to_descend -= delta;
                     altitude = segment->end.z;
+                    result->landing_time_sec = segment->end_time_sec;
+                    result->pos_at_landing_time = segment->end;
+                    poly = sb_trajectory_segment_get_dpoly(segment);
+                    result->vel_at_landing_time = sb_poly_4d_eval(poly, 1);
+                    landing_found = 1;
                 } else {
                     /* We can consume only part of the segment */
                     poly = sb_trajectory_segment_get_poly(segment);
@@ -318,6 +335,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
                     result->pos_at_landing_time = sb_poly_4d_eval(poly, rel_t);
                     poly = sb_trajectory_segment_get_dpoly(segment);
                     result->vel_at_landing_time = sb_poly_4d_eval(poly, rel_t);
+                    landing_found = 1;
                     break;
                 }
 
@@ -326,9 +344,16 @@ sb_error_t sb_trajectory_stats_calculator_run(
                     goto cleanup;
                 }
             }
-        } else {
-            /* The last vertical section is too short so we just trigger
-             * landing at its beginning */
+
+            /* If we consumed the entire vertical section (which happens when
+             * the preferred descent is zero), the end of the last segment is
+             * already recorded as the landing point */
+        }
+
+        if (!landing_found) {
+            /* Either the last vertical section is too short and we trigger
+             * landing at its beginning, or the trajectory has no segments at
+             * all and we trigger landing at its start */
             result->landing_time_sec = segment->start_time_sec;
             result->pos_at_landing_time = segment->start;
             poly = sb_trajectory_segment_get_dpoly(segment);

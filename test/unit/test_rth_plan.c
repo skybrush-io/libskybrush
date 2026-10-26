@@ -610,6 +610,40 @@ void assert_trajectory_is_descending_vertically_between(
     sb_trajectory_player_destroy(&player);
 }
 
+void test_convert_to_trajectory_with_large_neck(void)
+{
+    /* The scale of the generated trajectory must be chosen such that the
+     * altitude at the end of the neck also fits into the trajectory. Here the
+     * drone starts at 20m and the neck takes it up to 40m, which does not
+     * fit into a 16-bit integer with a scale of 1 */
+    sb_rth_plan_entry_t entry;
+    sb_trajectory_t* trajectory;
+    sb_trajectory_player_t player;
+    sb_vector3_t start = { 0, 0, 20000 };
+    sb_vector3_with_yaw_t vec;
+
+    TEST_ASSERT_NOT_NULL(trajectory = sb_trajectory_new());
+
+    sb_rth_plan_entry_clear(&entry, plan, 0);
+    entry.flags |= SB_RTH_PLAN_ENTRY_HAS_NECK;
+    entry.pre_neck = 20000;
+    entry.pre_neck_duration_sec = 10;
+    entry.landing_velocity = NAN;
+    entry.max_acceleration = INFINITY;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
+    TEST_ASSERT_TRUE(trajectory->scale >= 2);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 0, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(20000, vec.z);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 10, &vec));
+    TEST_ASSERT_EQUAL_FLOAT(40000, vec.z);
+    sb_trajectory_player_destroy(&player);
+
+    SB_XDECREF(trajectory);
+}
+
 void test_convert_to_trajectory(void)
 {
     sb_rth_plan_entry_t entry;
@@ -883,6 +917,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_update_with_corrupted_body);
     RUN_TEST(test_plan_duration_too_large);
     RUN_TEST(test_convert_to_trajectory);
+    RUN_TEST(test_convert_to_trajectory_with_large_neck);
 
     return UNITY_END();
 }

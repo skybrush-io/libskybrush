@@ -574,7 +574,12 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
  *         Zero means that the drone arrives at the landing position with zero
  *         velocity.
  *
- * \return error code
+ * \return \c SB_SUCCESS if the trajectory was modified successfully,
+ *         \c SB_EINVAL if the statistics do not contain the landing time, if
+ *         the velocities are invalid or if the new landing position is not
+ *         below the position of the drone at the landing time (so the landing
+ *         segment would have zero duration). Neither the trajectory nor the
+ *         statistics are modified in this case.
  */
 sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
     sb_trajectory_t* trajectory,
@@ -587,6 +592,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
     sb_vector3_with_yaw_t new_end, c1, c2, end_vel;
     sb_trajectory_builder_t builder;
     float duration_sec;
+    uint32_t duration_msec;
 
     if (!(stats->valid_components & SB_TRAJECTORY_STATS_LANDING_TIME)) {
         return SB_EINVAL;
@@ -604,6 +610,14 @@ sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
     // limits on the segment length
     if (duration_sec > 60) {
         duration_sec = 60;
+    }
+
+    // The landing segment must last at least one millisecond; this is not
+    // the case if the new landing position is not below the position at the
+    // landing time. Check this before we start modifying the trajectory.
+    duration_msec = (uint32_t)(duration_sec * 1000.0f); /* [s] --> [ms] */
+    if (duration_msec == 0) {
+        return SB_EINVAL;
     }
 
     // Construct the new landing position with yaw such that it takes the
@@ -650,9 +664,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
 
     // Add the final segment
     retval = sb_trajectory_builder_append_cubic_bezier(
-        &builder, c1, c2, new_end,
-        (uint32_t)(duration_sec * 1000.0f) /* [s] --> [ms] */
-    );
+        &builder, c1, c2, new_end, duration_msec);
     if (retval) {
         goto cleanup;
     }
@@ -666,7 +678,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
     stats->vel_at_landing_time = end_vel;
     if (stats->valid_components & SB_TRAJECTORY_STATS_DURATION) {
         stats->duration_sec += duration_sec;
-        stats->duration_msec += (uint32_t)(duration_sec * 1000);
+        stats->duration_msec += duration_msec;
     }
     if (stats->valid_components & SB_TRAJECTORY_STATS_START_END_DISTANCE) {
         stats->start_to_end_distance_xy = hypotf(

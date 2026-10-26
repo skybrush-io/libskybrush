@@ -707,6 +707,30 @@ void test_replace_end_to_land_at_nonzero_landing_altitude(void)
     sb_trajectory_player_destroy(&player);
 }
 
+void test_replace_end_to_land_at_not_below(void)
+{
+    /* Regression test: when the landing position was not below the position
+     * at the landing time, the landing segment had zero duration and the
+     * function failed only after it had already cut the trajectory */
+    sb_vector3_t level = { 1000, 0, 5000 };
+    sb_vector3_t above = { 0, 0, 6000 };
+    sb_trajectory_stats_t stats;
+    uint32_t duration_msec = sb_trajectory_get_total_duration_msec(trajectory);
+
+    prepare_stats_for_replace_end_to_land_at(trajectory, &stats);
+    TEST_ASSERT_EQUAL(45, stats.landing_time_sec);
+    TEST_ASSERT_EQUAL(5000, stats.pos_at_landing_time.z);
+
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at(trajectory, &stats, level, 500));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at(trajectory, &stats, above, 500));
+
+    /* Neither the trajectory nor the statistics may be modified on error */
+    TEST_ASSERT_EQUAL_UINT32(duration_msec, sb_trajectory_get_total_duration_msec(trajectory));
+    TEST_ASSERT_EQUAL(45, stats.landing_time_sec);
+    TEST_ASSERT_EQUAL(50, stats.duration_sec);
+    TEST_ASSERT_EQUAL(50000, stats.duration_msec);
+}
+
 void test_replace_end_to_land_at_missing_stats(void)
 {
     sb_vector3_t origin = { 1000, 0, 0 };
@@ -876,6 +900,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_cut_at);
     RUN_TEST(test_replace_end_to_land_at);
     RUN_TEST(test_replace_end_to_land_at_missing_stats);
+    RUN_TEST(test_replace_end_to_land_at_not_below);
     RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity);
     RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity_invalid);
     RUN_TEST(test_replace_end_to_land_at_nonzero_landing_altitude);

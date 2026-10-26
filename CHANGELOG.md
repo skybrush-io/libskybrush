@@ -71,6 +71,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the declaration of `sb_yaw_player_dump_current_setpoint()` in the public
   header, which used to refer to a non-existent function.
 
+- Fixed the trajectory statistics calculator reporting the start of the final
+  descent as the landing time when the preferred descent was zero. The landing
+  time is now the end of the trajectory in this case, consistently with
+  `sb_trajectory_propose_landing_time_sec()`.
+
+- Fixed the trajectory statistics calculator reporting zero velocity at the
+  landing time when the landing time is the end of the trajectory and the drone
+  is still moving there. The velocity is now the terminal velocity of the last
+  segment, so `sb_trajectory_replace_end_to_land_at()` stitches the landing
+  segment smoothly to the end of such trajectories.
+
+- Fixed `sb_trajectory_replace_end_to_land_at()` and its variant with a terminal
+  velocity cutting the trajectory and modifying the statistics before failing
+  when the new landing position is not below the position at the landing time.
+  Such calls now fail with `SB_EINVAL` without modifying anything.
+
 - Fixed the light player returning the color of the previous segment of a light
   program when queried exactly at a timestamp where multiple commands that take
   no time (e.g., loop markers) were due.
