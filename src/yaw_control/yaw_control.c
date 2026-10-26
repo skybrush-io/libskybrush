@@ -35,7 +35,6 @@
 #include "../parsing.h"
 
 #define SIZE_OF_DELTA (sizeof(uint16_t) + sizeof(int16_t))
-#define OFFSET_OF_DELTA(index) (ctrl->header_length + (index) * SIZE_OF_DELTA)
 
 void sb_yaw_player_dump_current_setpoint(const sb_yaw_player_t* player);
 
