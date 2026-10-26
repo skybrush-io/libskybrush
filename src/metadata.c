@@ -232,7 +232,14 @@ static sb_error_t sb_i_show_metadata_update_from_parser(
     size_t size;
     sb_bool_t owned;
 
-    SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_SHOW_METADATA));
+    retval = sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_SHOW_METADATA);
+    if (retval == SB_ENOENT) {
+        /* A missing metadata block is equivalent to an empty one; we still
+         * report to the caller that the block was missing */
+        SB_CHECK(sb_show_metadata_clear(metadata));
+    }
+    SB_CHECK(retval);
+
     SB_CHECK(sb_binary_file_read_current_block_ex(parser, &buf, &size, &owned));
 
     /* the body of the block does not outlive this function because the

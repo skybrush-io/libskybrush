@@ -25,8 +25,6 @@
 
 __BEGIN_DECLS
 
-sb_error_t sb_i_trajectory_builder_write_angle(
-    sb_trajectory_builder_t* builder, size_t* offset, float angle);
 sb_error_t sb_i_trajectory_builder_write_coordinate(
     sb_trajectory_builder_t* builder, size_t* offset, float coordinate);
 

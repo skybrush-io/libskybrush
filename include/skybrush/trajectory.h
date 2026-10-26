@@ -67,6 +67,12 @@ typedef enum {
     SB_YAW_POLY7D = 0xC0,
 } sb_trajectory_segment_format_flags_t;
 
+/**
+ * Flags of a trajectory.
+ *
+ * \deprecated Trajectories do not carry yaw information any more; yaw is
+ * encoded in yaw control blocks instead. \c SB_TRAJECTORY_USE_YAW is ignored.
+ */
 typedef enum {
     SB_TRAJECTORY_USE_YAW = 1
 } sb_trajectory_flags_t;
@@ -163,7 +169,7 @@ typedef struct sb_trajectory_s {
     sb_buffer_t buffer; /**< The buffer holding the trajectory */
     sb_vector3_with_yaw_t start; /**< The start coordinate of the trajectory */
     float scale; /**< Scaling factor for the coordinates */
-    sb_bool_t use_yaw; /**< Whether the yaw coordinates are relevant */
+    sb_bool_t use_yaw; /**< Deprecated, always false; yaw is encoded in yaw control blocks */
     size_t header_length; /**< Number of bytes in the header of the buffer */
 } sb_trajectory_t;
 

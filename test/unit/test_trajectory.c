@@ -22,6 +22,7 @@
 #include <skybrush/trajectory.h>
 
 #include "unity.h"
+#include "utils.h"
 
 uint8_t* buf;
 sb_trajectory_t* trajectory;
@@ -723,6 +724,118 @@ void test_load_truncated_file(void)
         loadFixture("fixtures/forward_left_back_truncated.skyb"));
 }
 
+void test_load_truncated_file_in_memory(void)
+{
+    /* Regression test: truncated in-memory files used to be accepted */
+    closeFixture();
+    TEST_ASSERT_EQUAL(
+        SB_EREAD,
+        loadFixtureInMemory("fixtures/forward_left_back_truncated.skyb"));
+}
+
+void test_load_truncated_header(void)
+{
+    /* Regression test: the header used to be read past the end of the buffer */
+    static uint8_t buf[] = { 0x0a, 0, 0, 0, 0 };
+
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_trajectory_update_from_buffer(trajectory, buf, 0));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_trajectory_update_from_buffer(trajectory, buf, sizeof(buf)));
+}
+
+void test_load_truncated_segment(void)
+{
+    /* Regression test: a segment truncated by the end of the block used to be
+     * read past the end of the buffer */
+    static uint8_t truncated_coordinate[] = {
+        0x0a, 0, 0, 0, 0, 0, 0, 0, 0,
+        0x01, 0xe8, 0x03, 0x64
+    };
+    static uint8_t truncated_segment_header[] = {
+        0x0a, 0, 0, 0, 0, 0, 0, 0, 0,
+        0x01, 0xe8
+    };
+    uint32_t duration_msec = sb_trajectory_get_total_duration_msec(trajectory);
+
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_trajectory_update_from_buffer(trajectory, truncated_coordinate, sizeof(truncated_coordinate)));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_trajectory_update_from_buffer(trajectory, truncated_segment_header, sizeof(truncated_segment_header)));
+
+    /* The trajectory must be left intact on error */
+    TEST_ASSERT_EQUAL_UINT32(duration_msec, sb_trajectory_get_total_duration_msec(trajectory));
+}
+
+void test_load_zero_scale_ignores_segments(void)
+{
+    /* Segments of a trajectory with zero scale are ignored, even if they are
+     * not well-formed */
+    static uint8_t buf[] = {
+        0x00, 0, 0, 0, 0, 0, 0, 0, 0,
+        0x03, 0x01
+    };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_buffer(trajectory, buf, sizeof(buf)));
+    TEST_ASSERT_TRUE(sb_trajectory_is_empty(trajectory));
+}
+
+void test_load_legacy_yaw_track(void)
+{
+    /* Old files may contain a yaw track embedded in the trajectory block.
+     * The yaw values must be ignored, but the bytes of the yaw coordinates
+     * must be skipped so the subsequent segments are parsed correctly. */
+    static uint8_t buf[] = {
+        /* legacy "use yaw" flag + scale 10, start (10, 20, 30), start yaw 90 degrees */
+        0x8a, 0x0a, 0x00, 0x14, 0x00, 0x1e, 0x00, 0x84, 0x03,
+        /* linear X, Y, Z and yaw, 1000 msec, to (100, 200, 300), yaw 180 degrees */
+        0x55, 0xe8, 0x03, 0x64, 0x00, 0xc8, 0x00, 0x2c, 0x01, 0x08, 0x07,
+        /* linear X, 1000 msec, to X = 50 */
+        0x01, 0xe8, 0x03, 0x32, 0x00
+    };
+    sb_trajectory_player_t player;
+    sb_vector3_with_yaw_t pos;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_buffer(trajectory, buf, sizeof(buf)));
+    TEST_ASSERT_FALSE(trajectory->use_yaw);
+    TEST_ASSERT_EQUAL_UINT32(2000, sb_trajectory_get_total_duration_msec(trajectory));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 0, &pos));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ(100, 200, 300, pos);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 1, &pos));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ(1000, 2000, 3000, pos);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.yaw);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 2, &pos));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ(500, 2000, 3000, pos);
+    TEST_ASSERT_EQUAL_FLOAT(0, pos.yaw);
+
+    sb_trajectory_player_destroy(&player);
+}
+
+void test_load_poly7_segment(void)
+{
+    /* Seventh-degree Bezier curve along the X axis, scale 1 */
+    static uint8_t buf[] = {
+        0x01, 0, 0, 0, 0, 0, 0, 0, 0,
+        0x03, 0xe8, 0x03,
+        0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00
+    };
+    sb_trajectory_player_t player;
+    sb_vector3_with_yaw_t pos;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_buffer(trajectory, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+
+    /* Control points 0, 1, ..., 7 are evenly spaced so the curve is linear */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 0.5, &pos));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 3.5, pos.x);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 1, &pos));
+    TEST_ASSERT_EQUAL_VECTOR3_XYZ_EPS(7, 0, 0, pos, 1e-4);
+
+    sb_trajectory_player_destroy(&player);
+}
+
 void test_load_file_with_zero_scale(void)
 {
     closeFixture();
@@ -751,6 +864,12 @@ int main(int argc, char* argv[])
 
     /* additional tests with other files */
     RUN_TEST(test_load_truncated_file);
+    RUN_TEST(test_load_truncated_file_in_memory);
+    RUN_TEST(test_load_truncated_header);
+    RUN_TEST(test_load_truncated_segment);
+    RUN_TEST(test_load_zero_scale_ignores_segments);
+    RUN_TEST(test_load_legacy_yaw_track);
+    RUN_TEST(test_load_poly7_segment);
     RUN_TEST(test_load_file_with_zero_scale);
 
     /* editing tests */

@@ -81,14 +81,10 @@ sb_poly_4d_t* sb_trajectory_segment_get_poly(sb_trajectory_segment_t* segment)
     segment->end.z = coords[num_coords - 1];
     sb_poly_make_bezier(&segment->poly.z, 1, coords, num_coords);
 
-    /* Parse yaw coordinates */
-    num_coords = sb_i_get_num_coords(header >> 6);
-    coords[0] = segment->start.yaw;
-    for (i = 1; i < num_coords; i++) {
-        coords[i] = sb_i_parse_angle(buf, &offset);
-    }
-    segment->end.yaw = coords[num_coords - 1];
-    sb_poly_make_bezier(&segment->poly.yaw, 1, coords, num_coords);
+    /* Legacy yaw coordinates are ignored; they come last so we do not need
+     * to skip them */
+    segment->end.yaw = segment->start.yaw;
+    sb_poly_make_constant(&segment->poly.yaw, segment->start.yaw);
 
     segment->flags |= SB_TRAJECTORY_SEGMENT_POLY_VALID;
 

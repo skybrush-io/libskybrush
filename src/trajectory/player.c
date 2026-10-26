@@ -407,14 +407,10 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
         segment->end.z = segment->start.z;
     }
 
-    /* Read the last yaw coordinate and store it */
+    /* Skip the legacy yaw coordinates; they are ignored */
     num_coords = sb_i_get_num_coords(header >> 6);
-    if (num_coords > 1) {
-        offset += 2 * (num_coords - 2);
-        segment->end.yaw = sb_i_trajectory_parse_angle(trajectory, &offset);
-    } else {
-        segment->end.yaw = segment->start.yaw;
-    }
+    offset += 2 * (num_coords - 1);
+    segment->end.yaw = segment->start.yaw;
 
     /* Store that the polynomials are not calculated yet */
     segment->flags = 0;

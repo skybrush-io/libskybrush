@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unknown commands and stops the execution of the light program when it encounters
   one.
 
+- The legacy yaw track that old show files may embed in trajectory blocks is now
+  ignored; the yaw of the drone is encoded in yaw control blocks instead. The yaw
+  component of positions and velocities evaluated from a trajectory is always zero,
+  `sb_trajectory_t.use_yaw` is always false, and the trajectory builder does not
+  write yaw information any more. `SB_TRAJECTORY_USE_YAW` is deprecated and ignored.
+
+- `sb_show_metadata_update_from_binary_file()`,
+  `sb_gcs_light_control_setup_update_from_binary_file()` and their in-memory
+  variants now reset the object to its defaults when the show file contains no
+  corresponding block, as a missing block is equivalent to an empty one. They
+  still return `SB_ENOENT` in this case.
+
+- Event list blocks whose events are not sorted by timestamp are now rejected with
+  `SB_ECORRUPTED` instead of `SB_EINVAL`, and the event list is left intact.
+  Events with unknown types are not rejected any more; they are kept as opaque
+  events.
+
 ### Added
 
 - Added `sb_buffer_update()` to replace the contents of an already initialized
@@ -28,11 +45,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   palette is backed by a view if the source palette is backed by a view and it
   owns a copy of the colors if the source palette owns its colors.
 
+- Added `sb_event_list_update_from_buffer()`, which was declared in the public
+  header but never implemented.
+
 ### Fixed
 
 - Fixed an out-of-bounds write in the light player when a light program nests
-  loops more than four levels deep. Loops beyond the fourth nesting level are now
-  ignored.
+  loops more than four levels deep. Exceeding the maximum nesting depth now stops
+  the execution of the light program.
+
+- Fixed out-of-bounds reads when a show file loaded into memory is shorter than
+  the length declared in one of its block headers; such files are now rejected
+  with `SB_EREAD`, consistently with show files read from a file descriptor.
+
+- Fixed out-of-bounds reads on truncated trajectory, yaw control and RTH plan
+  blocks. Such blocks are now rejected with `SB_ECORRUPTED` and the object being
+  updated is left intact.
+
+- Fixed a light program fade following a zero-duration fade starting from the
+  color before the zero-duration fade.
+
+- Fixed event lists being left half-loaded when an event list block could not be
+  parsed.
+
+- Fixed the declaration of `sb_yaw_player_dump_current_setpoint()` in the public
+  header, which used to refer to a non-existent function.
 
 - Fixed the light player returning the color of the previous segment of a light
   program when queried exactly at a timestamp where multiple commands that take

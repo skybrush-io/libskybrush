@@ -222,6 +222,30 @@ void test_zero_duration_fade(void)
     sb_light_player_destroy(&player);
 }
 
+void test_fade_after_zero_duration_fade(void)
+{
+    /* Regression test: a fade following a zero-duration fade used to start
+     * from the color before the zero-duration fade */
+    uint8_t bytecode[] = {
+        CMD_SET_COLOR, 255, 0, 0, MS_1000,
+        CMD_FADE_TO_COLOR, 0, 255, 0, 0,
+        CMD_FADE_TO_BLACK, MS_1000,
+        CMD_END
+    };
+    unsigned long t_ms[] = { 999, 1000, 1500, 2000 };
+    sb_rgb_color_t expected[] = {
+        { 255, 0, 0 },
+        { 0, 255, 0 },
+        { 0, 127, 0 },
+        { 0, 0, 0 }
+    };
+
+    loadBytecode(bytecode, sizeof(bytecode));
+    assertColorsAt(t_ms, expected, sizeof(t_ms) / sizeof(t_ms[0]));
+
+    sb_light_player_destroy(&player);
+}
+
 void test_finite_loop(void)
 {
     uint8_t bytecode[] = {
@@ -340,11 +364,62 @@ void test_zero_duration_commands_at_boundary(void)
     sb_light_player_destroy(&player);
 }
 
+void test_loop_end_without_loop_begin(void)
+{
+    /* A LOOP_END without a matching LOOP_BEGIN is a no-op */
+    uint8_t bytecode[] = {
+        CMD_LOOP_END,
+        CMD_SET_COLOR, 255, 0, 0, MS_1000,
+        CMD_LOOP_END,
+        CMD_SET_COLOR, 0, 255, 0, MS_1000,
+        CMD_END
+    };
+
+    loadBytecode(bytecode, sizeof(bytecode));
+
+    TEST_ASSERT_EQUAL_COLOR_RGB(255, 0, 0, sb_light_player_get_color_at(&player, 500));
+    TEST_ASSERT_EQUAL_COLOR_RGB(0, 255, 0, sb_light_player_get_color_at(&player, 1500));
+    TEST_ASSERT_FALSE(sb_light_player_seek(&player, 1999, 0));
+    TEST_ASSERT_TRUE(sb_light_player_seek(&player, 2000, 0));
+
+    sb_light_player_destroy(&player);
+}
+
+void test_loops_nested_four_levels_deep(void)
+{
+    /* Four levels of nesting is the maximum that the player supports */
+    uint8_t bytecode[] = {
+        CMD_LOOP_BEGIN, 2,
+        CMD_LOOP_BEGIN, 2,
+        CMD_LOOP_BEGIN, 2,
+        CMD_LOOP_BEGIN, 2,
+        CMD_SET_COLOR, 255, 0, 0, MS_1000,
+        CMD_LOOP_END,
+        CMD_LOOP_END,
+        CMD_LOOP_END,
+        CMD_LOOP_END,
+        CMD_SET_COLOR, 0, 255, 0, MS_1000,
+        CMD_END
+    };
+
+    loadBytecode(bytecode, sizeof(bytecode));
+
+    /* 2^4 iterations of 1 second each */
+    TEST_ASSERT_EQUAL_COLOR_RGB(255, 0, 0, sb_light_player_get_color_at(&player, 15999));
+    TEST_ASSERT_EQUAL_COLOR_RGB(0, 255, 0, sb_light_player_get_color_at(&player, 16000));
+    TEST_ASSERT_FALSE(sb_light_player_seek(&player, 16999, 0));
+    TEST_ASSERT_TRUE(sb_light_player_seek(&player, 17000, 0));
+
+    sb_light_player_destroy(&player);
+}
+
 void test_loops_nested_too_deep(void)
 {
     /* Regression test: the fifth nested loop used to be written past the end
-     * of the loop stack */
+     * of the loop stack. Exceeding the maximum nesting depth now stops the
+     * execution of the program. */
     uint8_t bytecode[] = {
+        CMD_SET_COLOR, 0, 0, 255, MS_1000,
         CMD_LOOP_BEGIN, 2,
         CMD_LOOP_BEGIN, 2,
         CMD_LOOP_BEGIN, 2,
@@ -361,9 +436,9 @@ void test_loops_nested_too_deep(void)
 
     loadBytecode(bytecode, sizeof(bytecode));
 
-    TEST_ASSERT_EQUAL_COLOR_RGB(255, 0, 0, sb_light_player_get_color_at(&player, 0));
-    TEST_ASSERT_EQUAL_COLOR_RGB(255, 0, 0, sb_light_player_get_color_at(&player, 1500));
-    TEST_ASSERT_TRUE(sb_light_player_seek(&player, 1000000, 0));
+    TEST_ASSERT_FALSE(sb_light_player_seek(&player, 999, 0));
+    TEST_ASSERT_TRUE(sb_light_player_seek(&player, 1000, 0));
+    TEST_ASSERT_EQUAL_COLOR_RGB(0, 0, 255, sb_light_player_get_color_at(&player, 1500));
 
     sb_light_player_destroy(&player);
 }
@@ -475,10 +550,13 @@ int main(int argc, char* argv[])
     RUN_TEST(test_empty_program);
     RUN_TEST(test_fade_commands);
     RUN_TEST(test_zero_duration_fade);
+    RUN_TEST(test_fade_after_zero_duration_fade);
     RUN_TEST(test_finite_loop);
     RUN_TEST(test_infinite_loop);
     RUN_TEST(test_nested_loops);
     RUN_TEST(test_zero_duration_commands_at_boundary);
+    RUN_TEST(test_loop_end_without_loop_begin);
+    RUN_TEST(test_loops_nested_four_levels_deep);
     RUN_TEST(test_loops_nested_too_deep);
     RUN_TEST(test_infinite_zero_duration_loops_are_rejected);
     RUN_TEST(test_finite_zero_duration_loops_are_allowed);

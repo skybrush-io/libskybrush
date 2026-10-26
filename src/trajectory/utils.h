@@ -27,7 +27,6 @@
 __BEGIN_DECLS
 
 uint8_t sb_i_get_num_coords(uint8_t header_bits);
-float sb_i_parse_angle(const uint8_t* buf, size_t* offset);
 float sb_i_parse_coordinate(const uint8_t* buf, size_t* offset, float scale);
 
 __END_DECLS

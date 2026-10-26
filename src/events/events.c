@@ -33,9 +33,16 @@
 static int sb_i_event_cmp_timestamps(const void* first, const void* second);
 
 static void sb_i_event_list_destroy(sb_event_list_t* events);
-static sb_error_t sb_i_event_list_extend_from_bytes(sb_event_list_t* events, uint8_t* buf, size_t nbytes, sb_bool_t owned);
-static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events, sb_binary_file_parser_t* parser);
+static sb_error_t sb_i_event_list_update_from_bytes(sb_event_list_t* events, const uint8_t* buf, size_t nbytes);
+static sb_error_t sb_i_event_list_update_from_parser(sb_event_list_t* events, sb_binary_file_parser_t* parser);
 static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events);
+static sb_error_t sb_i_event_list_reserve(sb_event_list_t* events, size_t capacity);
+static sb_error_t sb_i_event_list_validate_bytes(const uint8_t* buf, size_t nbytes);
+
+/**
+ * Size of a single event in the serialized representation of an event list.
+ */
+#define SIZE_OF_EVENT 10
 
 /**
  * \brief Allocates a new event list on the heap and initializes it.
@@ -319,7 +326,10 @@ sb_error_t sb_event_list_remove(sb_event_list_t* events, size_t index)
  * \param fd  handle to the low-level file object to initialize the list from
  *
  * \return \c SB_SUCCESS if the list was initialized successfully,
- *         \c SB_ENOENT if the file did not contain an event list block,
+ *         \c SB_ENOENT if the file did not contain an event list block (the
+ *            list is cleared in this case),
+ *         \c SB_ECORRUPTED if the events in the block are not sorted by
+ *            timestamp (the list is left intact in this case),
  *         \c SB_EREAD for read errors
  */
 sb_error_t sb_event_list_update_from_binary_file(sb_event_list_t* events, int fd)
@@ -328,8 +338,7 @@ sb_error_t sb_event_list_update_from_binary_file(sb_event_list_t* events, int fd
     sb_error_t retval;
 
     SB_CHECK(sb_binary_file_parser_init_from_file(&parser, fd));
-    sb_event_list_clear(events);
-    retval = sb_i_event_list_extend_from_parser(events, &parser);
+    retval = sb_i_event_list_update_from_parser(events, &parser);
     sb_binary_file_parser_destroy(&parser);
 
     return retval;
@@ -345,6 +354,9 @@ sb_error_t sb_event_list_update_from_binary_file(sb_event_list_t* events, int fd
  *
  * \return \c SB_SUCCESS if the object was initialized successfully,
  *         \c SB_ENOENT if the memory block did not contain an event list block
+ *            (the list is cleared in this case),
+ *         \c SB_ECORRUPTED if the events in the block are not sorted by
+ *            timestamp (the list is left intact in this case)
  */
 sb_error_t sb_event_list_update_from_binary_file_in_memory(
     sb_event_list_t* events, uint8_t* buf, size_t nbytes)
@@ -353,11 +365,29 @@ sb_error_t sb_event_list_update_from_binary_file_in_memory(
     sb_error_t retval;
 
     SB_CHECK(sb_binary_file_parser_init_from_buffer(&parser, buf, nbytes));
-    sb_event_list_clear(events);
-    retval = sb_i_event_list_extend_from_parser(events, &parser);
+    retval = sb_i_event_list_update_from_parser(events, &parser);
     sb_binary_file_parser_destroy(&parser);
 
     return retval;
+}
+
+/**
+ * Updates an event list from the contents of an event list block, already
+ * loaded into memory. The events are copied into the list, so the buffer may
+ * be freed after the function returns.
+ *
+ * \param events  the event list to update
+ * \param buf     the buffer holding the body of the event list block
+ * \param nbytes  the length of the buffer
+ *
+ * \return \c SB_SUCCESS if the list was updated successfully,
+ *         \c SB_ECORRUPTED if the events in the buffer are not sorted by
+ *            timestamp (the list is left intact in this case),
+ *         \c SB_ENOMEM if memory allocation failed
+ */
+sb_error_t sb_event_list_update_from_buffer(sb_event_list_t* events, uint8_t* buf, size_t nbytes)
+{
+    return sb_i_event_list_update_from_bytes(events, buf, nbytes);
 }
 
 static int sb_i_event_cmp_timestamps(const void* first, const void* second)
@@ -515,10 +545,26 @@ void sb_event_list_adjust_timestamps_by_type(
  */
 static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events)
 {
-    size_t free_space = events->max_entries - events->num_entries;
+    return sb_i_event_list_reserve(events, events->num_entries + 1);
+}
 
-    if (free_space == 0) {
+/**
+ * \brief Ensures that the event list can hold at least the given number of
+ * events without further memory allocations.
+ *
+ * \param events    the event list to resize if needed
+ * \param capacity  the desired minimum capacity
+ * \return \c SB_SUCCESS if the list has the desired capacity,
+ *         \c SB_ENOMEM if memory allocation failed
+ */
+static sb_error_t sb_i_event_list_reserve(sb_event_list_t* events, size_t capacity)
+{
+    if (events->max_entries < capacity) {
         size_t new_capacity = events->max_entries * 2;
+        if (new_capacity < capacity) {
+            new_capacity = capacity;
+        }
+
         sb_event_t* new_entries = sb_realloc(
             events->entries, sb_event_t,
             events->num_entries, new_capacity);
@@ -533,39 +579,73 @@ static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events)
     return SB_SUCCESS;
 }
 
-static sb_error_t sb_i_event_list_extend_from_bytes(sb_event_list_t* events,
-    uint8_t* buf, size_t nbytes, sb_bool_t owned)
+/**
+ * Checks whether the given memory block is a well-formed event list, i.e. its
+ * events are sorted by timestamp.
+ *
+ * Trailing bytes at the end of the block that do not form a complete event are
+ * ignored.
+ *
+ * \return \c SB_SUCCESS if the block is well-formed, \c SB_ECORRUPTED otherwise
+ */
+static sb_error_t sb_i_event_list_validate_bytes(const uint8_t* buf, size_t nbytes)
+{
+    size_t start, offset;
+    uint32_t time_msec, last_time_msec = 0;
+
+    for (start = 0; start + SIZE_OF_EVENT <= nbytes; start += SIZE_OF_EVENT) {
+        offset = start;
+        time_msec = sb_parse_uint32(buf, &offset);
+        if (time_msec < last_time_msec) {
+            return SB_ECORRUPTED;
+        }
+        last_time_msec = time_msec;
+    }
+
+    return SB_SUCCESS;
+}
+
+/**
+ * Replaces the contents of the event list with the events encoded in the given
+ * memory block. The event list is left intact if the block is not well-formed.
+ */
+static sb_error_t sb_i_event_list_update_from_bytes(sb_event_list_t* events,
+    const uint8_t* buf, size_t nbytes)
 {
     /* Each entry in the serialized representation of the event list is 10 bytes
      * as follows:
      * - timestamp (4 bytes, little endian)
      * - event type (1 byte)
      * - event subtype (1 byte)
-     * - payload (4 bytes) */
-    uint8_t* end = buf + nbytes;
+     * - payload (4 bytes)
+     *
+     * Event types and subtypes that we do not know are kept as opaque events. */
+    size_t start, offset;
+    sb_event_t event;
 
-    while (buf + 10 <= end) {
-        sb_event_t event;
-        size_t offset = 0;
+    SB_CHECK(sb_i_event_list_validate_bytes(buf, nbytes));
 
+    /* Allocate all the memory that we need up front so the update cannot fail
+     * half-way */
+    SB_CHECK(sb_i_event_list_reserve(events, nbytes / SIZE_OF_EVENT));
+
+    sb_event_list_clear(events);
+
+    for (start = 0; start + SIZE_OF_EVENT <= nbytes; start += SIZE_OF_EVENT) {
+        offset = start;
         event.time_msec = sb_parse_uint32(buf, &offset);
         event.type = (sb_event_type_t)sb_parse_uint8(buf, &offset);
-        if (event.type >= SB_EVENT_TYPE_MAX) {
-            return SB_EINVAL;
-        }
-
         event.subtype = (sb_event_subtype_t)sb_parse_uint8(buf, &offset);
         memcpy(event.payload.as_buf, buf + offset, sizeof(event.payload.as_buf));
 
-        SB_CHECK(sb_event_list_append(events, &event));
-
-        buf += 10;
+        events->entries[events->num_entries] = event;
+        events->num_entries++;
     }
 
     return SB_SUCCESS;
 }
 
-static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events,
+static sb_error_t sb_i_event_list_update_from_parser(sb_event_list_t* events,
     sb_binary_file_parser_t* parser)
 {
     sb_error_t retval;
@@ -573,10 +653,16 @@ static sb_error_t sb_i_event_list_extend_from_parser(sb_event_list_t* events,
     size_t size;
     sb_bool_t owned;
 
-    SB_CHECK(sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_EVENT_LIST));
+    retval = sb_binary_file_find_first_block_by_type(parser, SB_BINARY_BLOCK_EVENT_LIST);
+    if (retval == SB_ENOENT) {
+        /* A missing event list block is equivalent to an empty one */
+        sb_event_list_clear(events);
+    }
+    SB_CHECK(retval);
+
     SB_CHECK(sb_binary_file_read_current_block_ex(parser, &buf, &size, &owned));
 
-    retval = sb_i_event_list_extend_from_bytes(events, buf, size, owned);
+    retval = sb_i_event_list_update_from_bytes(events, buf, size);
 
     if (owned) {
         sb_free(buf);

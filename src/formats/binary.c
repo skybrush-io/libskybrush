@@ -138,6 +138,12 @@ sb_error_t sb_binary_file_read_current_block_ex(
         } else {
             sb_free(buf_alloc);
         }
+    } else if (!sb_binary_file_is_current_block_valid(parser)) {
+        /* end of file reached */
+        retval = SB_EREAD;
+    } else if ((size_t)block.start_of_body + block.length > (size_t)(parser->buf_end - parser->buf)) {
+        /* the file is shorter than the length declared in the block header */
+        retval = SB_EREAD;
     } else {
         /* we already have the entire block in memory so we return a view into it */
         retval = SB_SUCCESS;

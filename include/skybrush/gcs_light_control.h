@@ -194,7 +194,9 @@ sb_error_t sb_gcs_light_control_setup_update_from_bytes(
  * \param  fd     handle to the low-level file object to read the setup from
  * \return \c SB_SUCCESS if the setup object was updated successfully,
  *         \c SB_ENOENT if the file did not contain a GCS light control
- *         setup block, \c SB_ECORRUPTED if the body of the block is not a
+ *         setup block (the setup object is reset to its defaults in this
+ *         case, as a missing block is equivalent to an empty one),
+ *         \c SB_ECORRUPTED if the body of the block is not a
  *         valid tag-length-value stream, if a known tag has an invalid
  *         length, or if the coordinates or the matrix size contain values
  *         outside the range [0; 4096), \c SB_EREAD for read errors. The
@@ -217,7 +219,9 @@ sb_error_t sb_gcs_light_control_setup_update_from_binary_file(
  * \param  length  the length of the buffer
  * \return \c SB_SUCCESS if the setup object was updated successfully,
  *         \c SB_ENOENT if the file did not contain a GCS light control
- *         setup block, \c SB_ECORRUPTED if the body of the block is not a
+ *         setup block (the setup object is reset to its defaults in this
+ *         case, as a missing block is equivalent to an empty one),
+ *         \c SB_ECORRUPTED if the body of the block is not a
  *         valid tag-length-value stream, if a known tag has an invalid
  *         length, or if the coordinates or the matrix size contain values
  *         outside the range [0; 4096). The setup object is left unmodified

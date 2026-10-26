@@ -44,6 +44,12 @@
  */
 #define MAX_DURATION 16777216
 
+/**
+ * Length of the header of an RTH plan block: flags, scale, acceleration,
+ * landing velocity, default landing altitude and the number of points.
+ */
+#define SIZE_OF_HEADER 10
+
 #define OFFSET_OF_POINT(index) (plan->header_length + (index) * 2 * sizeof(int16_t))
 #define OFFSET_OF_ENTRY_TABLE (OFFSET_OF_POINT(plan->num_points))
 #define OFFSET_OF_FIRST_ENTRY (OFFSET_OF_ENTRY_TABLE + sizeof(uint16_t))
@@ -651,9 +657,111 @@ static sb_error_t sb_i_rth_plan_parse_duration(const sb_rth_plan_t* plan, size_t
     return SB_SUCCESS;
 }
 
+/**
+ * Skips a signed 16-bit integer while validating an RTH plan.
+ */
+static sb_error_t sb_i_rth_plan_skip_int16(size_t nbytes, size_t* offset)
+{
+    if (nbytes - *offset < sizeof(int16_t)) {
+        return SB_ECORRUPTED;
+    }
+
+    *offset += sizeof(int16_t);
+    return SB_SUCCESS;
+}
+
+/**
+ * Skips a variable-length unsigned integer while validating an RTH plan.
+ * Values that do not fit into 32 bits are not rejected here; they are reported
+ * when the entry is evaluated.
+ */
+static sb_error_t sb_i_rth_plan_skip_varuint(const uint8_t* buf, size_t nbytes, size_t* offset)
+{
+    uint32_t value;
+    sb_error_t retval = sb_parse_varuint32(buf, nbytes, offset, &value);
+    return retval == SB_EPARSE ? SB_ECORRUPTED : SB_SUCCESS;
+}
+
+/**
+ * Checks whether the given memory block is a well-formed RTH plan, i.e. its
+ * header, its point array and all its entries fit in the block.
+ *
+ * The entries are parsed in the same order as in \ref sb_rth_plan_evaluate_at().
+ *
+ * \return \c SB_SUCCESS if the block is well-formed, \c SB_ECORRUPTED otherwise
+ */
+static sb_error_t sb_i_rth_plan_validate_bytes(const uint8_t* buf, size_t nbytes)
+{
+    size_t offset, num_points, num_entries, i;
+    uint8_t flags;
+
+    if (nbytes < SIZE_OF_HEADER) {
+        return SB_ECORRUPTED;
+    }
+
+    offset = SIZE_OF_HEADER - sizeof(uint16_t);
+    num_points = sb_parse_uint16(buf, &offset);
+    if (nbytes - offset < num_points * 2 * sizeof(int16_t)) {
+        return SB_ECORRUPTED;
+    }
+    offset += num_points * 2 * sizeof(int16_t);
+
+    if (offset == nbytes) {
+        /* No entry table; the plan has no entries */
+        return SB_SUCCESS;
+    }
+
+    if (nbytes - offset < sizeof(uint16_t)) {
+        return SB_ECORRUPTED;
+    }
+    num_entries = sb_parse_uint16(buf, &offset);
+
+    for (i = 0; i < num_entries; i++) {
+        if (offset >= nbytes) {
+            return SB_ECORRUPTED;
+        }
+
+        flags = buf[offset++];
+        SB_CHECK(sb_i_rth_plan_skip_varuint(buf, nbytes, &offset));
+
+        if (flags & SB_RTH_PLAN_ENTRY_HAS_NECK) {
+            SB_CHECK(sb_i_rth_plan_skip_int16(nbytes, &offset));
+            SB_CHECK(sb_i_rth_plan_skip_varuint(buf, nbytes, &offset));
+        }
+
+        if (flags & SB_RTH_PLAN_ENTRY_HAS_TARGET_XY) {
+            SB_CHECK(sb_i_rth_plan_skip_varuint(buf, nbytes, &offset));
+        }
+
+        if (flags & SB_RTH_PLAN_ENTRY_HAS_TARGET_Z) {
+            SB_CHECK(sb_i_rth_plan_skip_int16(nbytes, &offset));
+        }
+
+        if (flags & (SB_RTH_PLAN_ENTRY_HAS_TARGET_XY | SB_RTH_PLAN_ENTRY_HAS_TARGET_Z)) {
+            SB_CHECK(sb_i_rth_plan_skip_varuint(buf, nbytes, &offset));
+        }
+
+        if (flags & SB_RTH_PLAN_ENTRY_HAS_LANDING_ALTITUDE) {
+            SB_CHECK(sb_i_rth_plan_skip_int16(nbytes, &offset));
+        }
+
+        if (flags & SB_RTH_PLAN_ENTRY_HAS_PRE_DELAY) {
+            SB_CHECK(sb_i_rth_plan_skip_varuint(buf, nbytes, &offset));
+        }
+
+        if (flags & SB_RTH_PLAN_ENTRY_HAS_POST_DELAY) {
+            SB_CHECK(sb_i_rth_plan_skip_varuint(buf, nbytes, &offset));
+        }
+    }
+
+    return SB_SUCCESS;
+}
+
 static sb_error_t sb_i_rth_plan_update_from_bytes(sb_rth_plan_t* plan, uint8_t* buf, size_t nbytes, sb_bool_t owned)
 {
     sb_buffer_t new_buffer;
+
+    SB_CHECK(sb_i_rth_plan_validate_bytes(buf, nbytes));
 
     if (owned) {
         SB_CHECK(sb_buffer_init_from_bytes(&new_buffer, buf, nbytes));

@@ -40,8 +40,9 @@ static sb_error_t sb_i_trajectory_builder_scale_coordinate(
  *
  * @param builder The builder to initialize
  * @param scale The scale of the trajectory
- * @param flags Additional flags to be written in the trajectory header; see
- *     \ref sb_trajectory_flags_t for more details
+ * @param flags Additional flags for the trajectory; see \ref sb_trajectory_flags_t
+ *     for more details. Currently unused; the only flag that used to exist
+ *     (\c SB_TRAJECTORY_USE_YAW) is deprecated and ignored.
  * @return \c SB_EINVAL if the scale is too large or zero, \c SB_SUCCESS otherwise
  */
 sb_error_t sb_trajectory_builder_init(sb_trajectory_builder_t* builder, uint8_t scale, uint8_t flags)
@@ -58,9 +59,6 @@ sb_error_t sb_trajectory_builder_init(sb_trajectory_builder_t* builder, uint8_t 
 
     header = SB_BUFFER(builder->buffer);
     header[0] = scale;
-    if (flags & SB_TRAJECTORY_USE_YAW) {
-        header[0] |= 128;
-    }
 
     return SB_SUCCESS;
 }
@@ -140,9 +138,11 @@ sb_error_t sb_trajectory_builder_set_start_position(
     SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, start.x));
     SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, start.y));
     SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, start.z));
-    SB_CHECK(sb_i_trajectory_builder_write_angle(builder, &offset, start.yaw));
+    sb_write_int16(SB_BUFFER(builder->buffer), &offset, 0); /* retired */
 
+    /* Trajectories do not carry yaw information */
     builder->last_position = start;
+    builder->last_position.yaw = 0;
 
     return SB_SUCCESS;
 }
@@ -200,17 +200,13 @@ sb_error_t sb_trajectory_builder_append_cubic_bezier(
         SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, control2.z));
         SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, target.z));
     }
-    if (builder->last_position.yaw != control1.yaw || control1.yaw != control2.yaw || control2.yaw != target.yaw) {
-        *flags_ptr |= SB_YAW_BEZIER;
-        SB_CHECK(sb_i_trajectory_builder_write_angle(builder, &offset, control1.yaw));
-        SB_CHECK(sb_i_trajectory_builder_write_angle(builder, &offset, control2.yaw));
-        SB_CHECK(sb_i_trajectory_builder_write_angle(builder, &offset, target.yaw));
-    }
 
     /* Trim the unneeded bytes from the end */
     SB_CHECK(sb_buffer_resize(&builder->buffer, offset));
 
+    /* Trajectories do not carry yaw information */
     builder->last_position = target;
+    builder->last_position.yaw = 0;
 
     return SB_SUCCESS;
 }
@@ -276,15 +272,13 @@ sb_error_t sb_trajectory_builder_append_line(
         *flags_ptr |= SB_Z_LINEAR;
         SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, target.z));
     }
-    if (builder->last_position.yaw != target.yaw) {
-        *flags_ptr |= SB_YAW_LINEAR;
-        SB_CHECK(sb_i_trajectory_builder_write_angle(builder, &offset, target.yaw));
-    }
 
     /* Trim the unneeded bytes from the end */
     SB_CHECK(sb_buffer_resize(&builder->buffer, offset));
 
+    /* Trajectories do not carry yaw information */
     builder->last_position = target;
+    builder->last_position.yaw = 0;
 
     return SB_SUCCESS;
 }
@@ -483,18 +477,6 @@ static sb_error_t sb_i_trajectory_builder_scale_coordinate(
         *scaled_coordinate = scaled;
         return SB_SUCCESS;
     }
-}
-
-sb_error_t sb_i_trajectory_builder_write_angle(
-    sb_trajectory_builder_t* builder, size_t* offset, float angle)
-{
-    int16_t scaled = fmodf(angle, 360) * 10.0f;
-    if (scaled < 0) {
-        scaled += 3600;
-    }
-
-    sb_write_int16(SB_BUFFER(builder->buffer), offset, scaled);
-    return SB_SUCCESS;
 }
 
 sb_error_t sb_i_trajectory_builder_write_coordinate(

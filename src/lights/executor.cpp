@@ -146,7 +146,11 @@ void CommandExecutor::fadeColorOfLEDStrip(sb_rgb_color_t color)
 
     m_transitionHandler.endColor = color;
     m_transition.start(actualDuration, m_currentCommandStartTime);
-    m_transition.step(m_transitionHandler, now);
+    if (!m_transition.step(m_transitionHandler, now)) {
+        // Transition ended immediately (zero duration); make sure that the
+        // next transition starts from the current end color
+        m_transitionHandler.startColor = m_transitionHandler.endColor;
+    }
 }
 
 unsigned long CommandExecutor::handleDelayByte()
@@ -313,7 +317,11 @@ void CommandExecutor::handleLoopBeginCommand()
         /* LCOV_EXCL_STOP */
     }
 
-    m_loopStack.begin(location, iterations, m_cumulativeDurationSinceStart);
+    if (!m_loopStack.begin(location, iterations, m_cumulativeDurationSinceStart)) {
+        /* Loops are nested too deep; stop the execution of the program
+         * instead of silently executing it incorrectly */
+        stop();
+    }
 }
 
 void CommandExecutor::handleLoopEndCommand()

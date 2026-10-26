@@ -197,6 +197,48 @@ void test_find_first_block_by_type(void)
     fclose(fp);
 }
 
+void test_read_truncated_block_from_memory(void)
+{
+    /* Regression test: a block that declares more bytes than the in-memory
+     * buffer holds used to be returned as a view extending past the buffer */
+    uint8_t buf[] = {
+        's', 'k', 'y', 'b', 1,
+        SB_BINARY_BLOCK_COMMENT, 5, 0, 'a', 'b'
+    };
+    sb_binary_file_parser_t parser;
+    uint8_t* block_buf;
+    size_t size;
+    sb_bool_t owned;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init_from_buffer(&parser, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL(SB_BINARY_BLOCK_COMMENT, sb_binary_file_get_current_block(&parser).type);
+    TEST_ASSERT_EQUAL(SB_EREAD, sb_binary_file_read_current_block_ex(&parser, &block_buf, &size, &owned));
+    sb_binary_file_parser_destroy(&parser);
+}
+
+void test_read_block_past_end_from_memory(void)
+{
+    uint8_t buf[] = {
+        's', 'k', 'y', 'b', 1,
+        SB_BINARY_BLOCK_COMMENT, 2, 0, 'a', 'b'
+    };
+    sb_binary_file_parser_t parser;
+    uint8_t* block_buf;
+    size_t size;
+    sb_bool_t owned;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init_from_buffer(&parser, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_read_current_block_ex(&parser, &block_buf, &size, &owned));
+    TEST_ASSERT_EQUAL(2, size);
+    TEST_ASSERT_FALSE(owned);
+    TEST_ASSERT_EQUAL_MEMORY("ab", block_buf, 2);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_seek_to_next_block(&parser));
+    TEST_ASSERT_FALSE(sb_binary_file_is_current_block_valid(&parser));
+    TEST_ASSERT_EQUAL(SB_EREAD, sb_binary_file_read_current_block_ex(&parser, &block_buf, &size, &owned));
+    sb_binary_file_parser_destroy(&parser);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -205,6 +247,8 @@ int main(int argc, char* argv[])
     RUN_TEST(test_read_blocks_from_file);
     RUN_TEST(test_read_blocks_from_memory);
     RUN_TEST(test_find_first_block_by_type);
+    RUN_TEST(test_read_truncated_block_from_memory);
+    RUN_TEST(test_read_block_past_end_from_memory);
 
     return UNITY_END();
 }

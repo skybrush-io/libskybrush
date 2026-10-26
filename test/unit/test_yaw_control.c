@@ -25,6 +25,7 @@
 #include "unity.h"
 
 sb_yaw_control_t* ctrl;
+uint8_t* buf;
 
 sb_error_t loadFixture(const char* fname);
 void closeFixture(void);
@@ -32,11 +33,17 @@ void closeFixture(void);
 void setUp(void)
 {
     ctrl = sb_yaw_control_new();
+    buf = 0;
 }
 
 void tearDown(void)
 {
     SB_XDECREF(ctrl);
+
+    /* The yaw control object may hold a view into this buffer so it can be
+     * freed only after the yaw control object was destroyed */
+    free(buf);
+    buf = 0;
 }
 
 sb_error_t loadFixture(const char* fname)
@@ -67,7 +74,6 @@ sb_error_t loadFixture(const char* fname)
 sb_error_t loadFixtureInMemory(const char* fname)
 {
     FILE* fp;
-    uint8_t* buf;
     ssize_t num_bytes;
     sb_error_t retval;
 
@@ -93,9 +99,8 @@ sb_error_t loadFixtureInMemory(const char* fname)
 
     retval = sb_yaw_control_update_from_binary_file_in_memory(ctrl, buf, num_bytes);
 
-    /* sb_yaw_control_init_from_binary_file_in_memory() copied the data so we
-     * must free it */
-    free(buf);
+    /* sb_yaw_control_update_from_binary_file_in_memory() created a view so we
+     * need to keep buf around; it is freed in tearDown() */
 
     return retval;
 }
@@ -142,6 +147,56 @@ void test_loaded_deltas_in_memory(void)
     TEST_ASSERT_EQUAL(2, ctrl->num_deltas);
 }
 
+void test_update_with_corrupted_body(void)
+{
+    /* Regression test: short headers and partial deltas used to be read past
+     * the end of the buffer */
+    static uint8_t valid[] = { 0x00, 0x28, 0x00, 0xe8, 0x03, 0x10, 0x27 };
+    static uint8_t partial_delta[] = { 0x00, 0x28, 0x00, 0xe8, 0x03, 0x10 };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_update_from_buffer(ctrl, valid, sizeof(valid)));
+    TEST_ASSERT_EQUAL(1, ctrl->num_deltas);
+
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_yaw_control_update_from_buffer(ctrl, valid, 0));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_yaw_control_update_from_buffer(ctrl, valid, 1));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_yaw_control_update_from_buffer(ctrl, valid, 2));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_yaw_control_update_from_buffer(ctrl, partial_delta, sizeof(partial_delta)));
+
+    /* The yaw control object must be left intact on error */
+    TEST_ASSERT_EQUAL(1, ctrl->num_deltas);
+    TEST_ASSERT_EQUAL(40, ctrl->yaw_offset_ddeg);
+
+    /* A header without deltas is valid */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_update_from_buffer(ctrl, valid, 3));
+    TEST_ASSERT_TRUE(sb_yaw_control_is_empty(ctrl));
+}
+
+void test_auto_yaw_and_negative_values(void)
+{
+    /* Auto yaw flag set, yaw offset of -355.6 degrees, followed by a single
+     * delta of -100 degrees in 1 second. The auto yaw flag is interpreted by
+     * the firmware and the offset is used as-is, without taking it modulo 3600 */
+    static uint8_t data[] = { 0x01, 0x1c, 0xf2, 0xe8, 0x03, 0x18, 0xfc };
+    sb_yaw_player_t player;
+    float value;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_update_from_buffer(ctrl, data, sizeof(data)));
+    TEST_ASSERT_TRUE(ctrl->auto_yaw);
+    TEST_ASSERT_EQUAL(-3556, ctrl->yaw_offset_ddeg);
+    TEST_ASSERT_EQUAL(1, ctrl->num_deltas);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_player_init(&player, ctrl));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_player_get_yaw_at(&player, 0, &value));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, -355.6f, value);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_player_get_yaw_at(&player, 1, &value));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, -455.6f, value);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_player_get_yaw_rate_at(&player, 0.5, &value));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, -100.0f, value);
+
+    sb_yaw_player_destroy(&player);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -149,6 +204,8 @@ int main(int argc, char* argv[])
     /* basic tests with test.skyb */
     RUN_TEST(test_new);
     RUN_TEST(test_loaded_deltas_in_memory);
+    RUN_TEST(test_update_with_corrupted_body);
+    RUN_TEST(test_auto_yaw_and_negative_values);
 
     return UNITY_END();
 }

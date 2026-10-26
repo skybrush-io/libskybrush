@@ -461,7 +461,8 @@ void test_update_from_binary_file_without_metadata_block(void)
     TEST_ASSERT_EQUAL(sizeof(file), offset);
 
     /* fill the object with some values first so that we can check that it
-     * is left unmodified when the block is not found */
+     * is reset to the defaults when the block is not found, as a missing
+     * block is equivalent to an empty one */
     {
         uint8_t body[7 + 5];
         size_t offset = 0;
@@ -476,10 +477,14 @@ void test_update_from_binary_file_without_metadata_block(void)
     TEST_ASSERT_EQUAL(
         SB_ENOENT, sb_show_metadata_update_from_binary_file_in_memory(&metadata, file, sizeof(file)));
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_metadata_get_show_id(&metadata, result));
-    TEST_ASSERT_EQUAL_MEMORY(show_id, result, sizeof(show_id));
-    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_metadata_get_drone_index(&metadata, &drone_index));
-    TEST_ASSERT_EQUAL_UINT16(7, drone_index);
+    {
+        uint8_t zero_show_id[SB_SHOW_METADATA_SHOW_ID_LENGTH] = { 0 };
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_metadata_get_show_id(&metadata, result));
+        TEST_ASSERT_EQUAL_MEMORY(zero_show_id, result, sizeof(zero_show_id));
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_metadata_get_drone_index(&metadata, &drone_index));
+        TEST_ASSERT_EQUAL_UINT16(0, drone_index);
+    }
 
     sb_show_metadata_destroy(&metadata);
 }

@@ -117,7 +117,7 @@ typedef struct sb_yaw_player_s {
 sb_error_t sb_yaw_player_init(sb_yaw_player_t* player, sb_yaw_control_t* ctrl);
 void sb_yaw_player_destroy(sb_yaw_player_t* player);
 sb_error_t sb_yaw_player_build_next_setpoint(sb_yaw_player_t* player);
-void sb_yaw_player_dump_current_segment(const sb_yaw_player_t* player);
+void sb_yaw_player_dump_current_setpoint(const sb_yaw_player_t* player);
 const sb_yaw_setpoint_t* sb_yaw_player_get_current_setpoint(const sb_yaw_player_t* player);
 sb_error_t sb_yaw_player_get_yaw_at(sb_yaw_player_t* player, float t, float* result);
 sb_error_t sb_yaw_player_get_yaw_rate_at(sb_yaw_player_t* player, float t, float* result);

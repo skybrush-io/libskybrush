@@ -25,7 +25,13 @@
 
 __BEGIN_DECLS
 
-float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size_t* offset);
+/**
+ * Length of the header of a trajectory block: a flags byte and four 16-bit
+ * start coordinates (the last one being retired; it used to hold the start
+ * yaw of the legacy embedded yaw track).
+ */
+#define SB_I_TRAJECTORY_HEADER_LENGTH 9
+
 float sb_i_trajectory_parse_coordinate(const sb_trajectory_t* trajectory, size_t* offset);
 
 __END_DECLS

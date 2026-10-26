@@ -167,7 +167,9 @@ sb_error_t sb_show_metadata_update_from_buffer(
  * \param  metadata  the show metadata object to update
  * \param  fd        handle to the low-level file object to read from
  * \return \c SB_SUCCESS if the object was updated successfully,
- *         \c SB_ENOENT if the file did not contain a show metadata block,
+ *         \c SB_ENOENT if the file did not contain a show metadata block
+ *         (the object is reset to its defaults in this case, as a missing
+ *         block is equivalent to an empty one),
  *         \c SB_ECORRUPTED if the body of the block is not a valid
  *         tag-length-value stream or if a known tag has an invalid
  *         length, \c SB_EREAD for read errors. The object is left
@@ -185,7 +187,9 @@ sb_error_t sb_show_metadata_update_from_binary_file(sb_show_metadata_t* metadata
  * \param  buf       the buffer holding the loaded Skybrush binary show file
  * \param  length    the length of the buffer
  * \return \c SB_SUCCESS if the object was updated successfully,
- *         \c SB_ENOENT if the file did not contain a show metadata block,
+ *         \c SB_ENOENT if the file did not contain a show metadata block
+ *         (the object is reset to its defaults in this case, as a missing
+ *         block is equivalent to an empty one),
  *         \c SB_ECORRUPTED if the body of the block is not a valid
  *         tag-length-value stream or if a known tag has an invalid
  *         length. The object is left unmodified if the function returns

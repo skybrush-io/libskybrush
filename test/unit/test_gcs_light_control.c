@@ -603,7 +603,8 @@ void test_update_from_binary_file_without_setup_block(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_gcs_light_control_setup_init(&setup));
 
     /* fill the setup with some values first so that we can check that it
-     * is left unmodified when the block is not found */
+     * is reset to the defaults when the block is not found, as a missing
+     * block is equivalent to an empty one */
     {
         uint8_t palette[3] = { 0xff, 0x00, 0x00 };
         uint8_t body[13];
@@ -618,9 +619,9 @@ void test_update_from_binary_file_without_setup_block(void)
     TEST_ASSERT_EQUAL(
         SB_ENOENT, sb_gcs_light_control_setup_update_from_binary_file_in_memory(&setup, file, sizeof(file)));
 
-    TEST_ASSERT_EQUAL_INT16(7, setup.coords.x);
-    TEST_ASSERT_EQUAL_INT16(8, setup.coords.y);
-    TEST_ASSERT_EQUAL(1, setup.palette.num_colors);
+    TEST_ASSERT_EQUAL_INT16(0, setup.coords.x);
+    TEST_ASSERT_EQUAL_INT16(0, setup.coords.y);
+    TEST_ASSERT_EQUAL(0, setup.palette.num_colors);
 
     sb_gcs_light_control_setup_destroy(&setup);
 }

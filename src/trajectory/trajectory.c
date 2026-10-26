@@ -39,6 +39,7 @@ static void sb_i_trajectory_destroy(sb_trajectory_t* trajectory);
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory);
 static sb_error_t sb_i_trajectory_update_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_trajectory_update_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser);
+static sb_error_t sb_i_trajectory_validate_bytes(const uint8_t* buf, size_t nbytes);
 
 /**
  * \brief Allocates a new trajectory on the heap and initializes it.
@@ -171,7 +172,8 @@ sb_error_t sb_trajectory_update_from_binary_file_in_memory(
  * \param nbytes  the length of the buffer
  *
  * \return \c SB_SUCCESS if the object was updated successfully,
- *         \c SB_ENOENT if the memory buffer did not contain a trajectory
+ *         \c SB_ECORRUPTED if the memory buffer does not contain a well-formed
+ *            trajectory (the trajectory is left intact in this case)
  */
 sb_error_t sb_trajectory_update_from_buffer(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
 {
@@ -187,7 +189,11 @@ sb_error_t sb_trajectory_update_from_buffer(sb_trajectory_t* trajectory, uint8_t
  * \param nbytes  the length of the buffer
  *
  * \return \c SB_SUCCESS if the object was updated successfully,
- *         \c SB_ENOENT if the memory buffer did not contain a trajectory
+ *         \c SB_ECORRUPTED if the memory buffer does not contain a well-formed
+ *            trajectory (the trajectory is left intact in this case),
+ *         \c SB_ENOMEM if memory allocation failed. Ownership of the buffer is
+ *            taken only if the function succeeds; the caller remains
+ *            responsible for freeing it otherwise.
  */
 sb_error_t sb_trajectory_update_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes)
 {
@@ -266,17 +272,9 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
             SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
         }
 
-        /* cut along yaw coordinate */
+        /* skip the legacy yaw coordinates; they are ignored */
         num_coords = sb_i_get_num_coords(header >> 6);
-        src[0] = start.yaw;
-        for (i = 1; i < num_coords; i++) {
-            src[i] = sb_i_trajectory_parse_angle(trajectory, &offset);
-        }
-        SB_CHECK(sb_bezier_cut_at(dst, src, num_coords, rel_time));
-        offset -= 2 * (num_coords - 1);
-        for (i = 1; i < num_coords; i++) {
-            SB_CHECK(sb_i_trajectory_builder_write_angle(&builder, &offset, dst[i]));
-        }
+        offset += 2 * (num_coords - 1);
 
         /* cut buffer at end of the re-written segment */
         SB_CHECK(sb_buffer_resize(&trajectory->buffer, offset));
@@ -696,6 +694,8 @@ static sb_error_t sb_i_trajectory_update_from_bytes(sb_trajectory_t* trajectory,
 {
     sb_buffer_t new_buffer;
 
+    SB_CHECK(sb_i_trajectory_validate_bytes(buf, nbytes));
+
     if (owned) {
         SB_CHECK(sb_buffer_init_from_bytes(&new_buffer, buf, nbytes));
     } else {
@@ -743,26 +743,60 @@ static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory)
 
     assert(buf != 0);
 
-    trajectory->use_yaw = (buf[0] & 0x80) ? 1 : 0;
+    /* The MSB of the flags byte and the fourth start coordinate belong to the
+     * legacy yaw track embedded in old files; they are ignored */
+    trajectory->use_yaw = 0;
     trajectory->scale = (float)((buf[0] & 0x7f));
 
     offset = 1;
     trajectory->start.x = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     trajectory->start.y = sb_i_trajectory_parse_coordinate(trajectory, &offset);
     trajectory->start.z = sb_i_trajectory_parse_coordinate(trajectory, &offset);
-    trajectory->start.yaw = sb_i_trajectory_parse_angle(trajectory, &offset);
+    trajectory->start.yaw = 0;
+    offset += 2;
 
     return offset; /* size of the header */
 }
 
 /**
- * Parses an angle from the memory block that defines the trajectory.
+ * Checks whether the given memory block is a well-formed trajectory, i.e. it
+ * has a complete header and every segment fits in the block.
  *
- * The offset is automatically advanced after reading the angle.
+ * \return \c SB_SUCCESS if the block is well-formed, \c SB_ECORRUPTED otherwise
  */
-float sb_i_trajectory_parse_angle(const sb_trajectory_t* trajectory, size_t* offset)
+static sb_error_t sb_i_trajectory_validate_bytes(const uint8_t* buf, size_t nbytes)
 {
-    return sb_i_parse_angle(SB_BUFFER(trajectory->buffer), offset);
+    size_t offset, num_coords;
+    uint8_t header;
+
+    if (nbytes < SB_I_TRAJECTORY_HEADER_LENGTH) {
+        return SB_ECORRUPTED;
+    }
+
+    if ((buf[0] & 0x7f) == 0) {
+        /* Scale is zero; the trajectory is empty and the segments are ignored */
+        return SB_SUCCESS;
+    }
+
+    offset = SB_I_TRAJECTORY_HEADER_LENGTH;
+    while (offset < nbytes) {
+        if (nbytes - offset < 3) {
+            return SB_ECORRUPTED;
+        }
+
+        header = buf[offset];
+        num_coords = sb_i_get_num_coords(header >> 0) - 1;
+        num_coords += sb_i_get_num_coords(header >> 2) - 1;
+        num_coords += sb_i_get_num_coords(header >> 4) - 1;
+        num_coords += sb_i_get_num_coords(header >> 6) - 1;
+
+        offset += 3 + 2 * num_coords;
+        if (offset > nbytes) {
+            return SB_ECORRUPTED;
+        }
+    }
+
+    return SB_SUCCESS;
 }
 
 /**

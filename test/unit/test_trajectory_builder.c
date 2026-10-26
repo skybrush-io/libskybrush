@@ -48,7 +48,7 @@ void test_init(void)
 
     buf = SB_BUFFER(builder.buffer);
     TEST_ASSERT_EQUAL(9, sb_buffer_size(&builder.buffer));
-    TEST_ASSERT_EQUAL(128 + 4, buf[0]);
+    TEST_ASSERT_EQUAL(4, buf[0]); /* SB_TRAJECTORY_USE_YAW is ignored */
 
     sb_trajectory_builder_destroy(&builder);
 }
@@ -63,7 +63,7 @@ void test_set_start_position(void)
 {
     uint8_t* buf;
     uint8_t expected_before[] = { 2, 0, 0, 0, 0, 0, 0, 0, 0 };
-    uint8_t expected_after[] = { 2, 5, 0, 10, 0, 7, 0, 146, 4 };
+    uint8_t expected_after[] = { 2, 5, 0, 10, 0, 7, 0, 0, 0 };
     sb_vector3_with_yaw_t vec;
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 2, 0));
@@ -83,7 +83,7 @@ void test_set_start_position(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     sb_trajectory_builder_destroy(&builder);
 }
@@ -95,24 +95,63 @@ void test_append_cubic_bezier(void)
     uint8_t expected1[] = { 2, 0, 0, 0, 0, 0, 0, 0, 0 };
     uint8_t expected2[] = {
         2, 0, 0, 0, 0, 0, 0, 0, 0,
-        0xaa, 0x10, 0x27,
+        0x2a, 0x10, 0x27,
         0, 0, 25, 0, 25, 0,
         0, 0, 30, 0, 30, 0,
         0, 0, 35, 0, 35, 0,
-        0, 0, 0x20, 0x03, 0x20, 0x03
     }; // clang-format on
     uint8_t expected3[] = {
-        2, 0, 0, 0, 0, 0, 0, 0, 0,
-        0xaa, 0x10, 0x27,
-        0, 0, 25, 0, 25, 0,
-        0, 0, 30, 0, 30, 0,
-        0, 0, 35, 0, 35, 0,
-        0, 0, 0x20, 0x03, 0x20, 0x03,
-        0xaa, 0x88, 0x13,
-        50, 0, 100, 0, 150, 0,
-        100, 0, 150, 0, 200, 0,
-        150, 0, 200, 0, 250, 0,
-        0x90, 0x01, 0x78, 0x05, 0x60, 0x09
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0x2a,
+        0x10,
+        0x27,
+        0,
+        0,
+        25,
+        0,
+        25,
+        0,
+        0,
+        0,
+        30,
+        0,
+        30,
+        0,
+        0,
+        0,
+        35,
+        0,
+        35,
+        0,
+        0x2a,
+        0x88,
+        0x13,
+        50,
+        0,
+        100,
+        0,
+        150,
+        0,
+        100,
+        0,
+        150,
+        0,
+        200,
+        0,
+        150,
+        0,
+        200,
+        0,
+        250,
+        0,
     }; // clang-format on
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 2, 0));
@@ -151,7 +190,7 @@ void test_append_cubic_bezier(void)
     TEST_ASSERT_EQUAL(target.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(target.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(target.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(target.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     ctrl1.x = 100;
     ctrl1.y = 200;
@@ -174,7 +213,7 @@ void test_append_cubic_bezier(void)
     TEST_ASSERT_EQUAL(target.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(target.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(target.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(target.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     /* test zero duration */
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_cubic_bezier(&builder, ctrl1, ctrl2, target, 0));
@@ -189,37 +228,37 @@ void test_append_line(void)
 {
     sb_vector3_with_yaw_t vec;
     // clang-format off
-    uint8_t expected1[] = { 2, 5, 0, 10, 0, 7, 0, 146, 4 };
+    uint8_t expected1[] = { 2, 5, 0, 10, 0, 7, 0, 0, 0 };
     uint8_t expected2[] = {
-        2, 5, 0, 10, 0, 7, 0, 146, 4,
-        0x55, 0x10, 0x27, 10, 0, 20, 0, 15, 0, 0x34, 8
+        2, 5, 0, 10, 0, 7, 0, 0, 0,
+        0x15, 0x10, 0x27, 10, 0, 20, 0, 15, 0
     };
     uint8_t expected3[] = {
-        2, 5, 0, 10, 0, 7, 0, 146, 4,
-        0x55, 0x10, 0x27, 10, 0, 20, 0, 15, 0, 0x34, 8,
-        0x41, 0x88, 0x13, 15, 0, 0xe4, 0x0c,
+        2, 5, 0, 10, 0, 7, 0, 0, 0,
+        0x15, 0x10, 0x27, 10, 0, 20, 0, 15, 0,
+        0x01, 0x88, 0x13, 15, 0,
     };
     uint8_t expected4[] = {
-        2, 5, 0, 10, 0, 7, 0, 146, 4,
-        0x55, 0x10, 0x27, 10, 0, 20, 0, 15, 0, 0x34, 8,
-        0x41, 0x88, 0x13, 15, 0, 0xe4, 0x0c,
+        2, 5, 0, 10, 0, 7, 0, 0, 0,
+        0x15, 0x10, 0x27, 10, 0, 20, 0, 15, 0,
+        0x01, 0x88, 0x13, 15, 0,
         0x04, 0x88, 0x13, 25, 0,
     };
     uint8_t expected5[] = {
-        2, 5, 0, 10, 0, 7, 0, 146, 4,
-        0x55, 0x10, 0x27, 10, 0, 20, 0, 15, 0, 0x34, 8,
-        0x41, 0x88, 0x13, 15, 0, 0xe4, 0x0c,
+        2, 5, 0, 10, 0, 7, 0, 0, 0,
+        0x15, 0x10, 0x27, 10, 0, 20, 0, 15, 0,
+        0x01, 0x88, 0x13, 15, 0,
         0x04, 0x88, 0x13, 25, 0,
         0x10, 0x98, 0x3a, 0, 0,
     };
     uint8_t expected6[] = {
-        2, 5, 0, 10, 0, 7, 0, 146, 4,
-        0x55, 0x10, 0x27, 10, 0, 20, 0, 15, 0, 0x34, 8,
-        0x41, 0x88, 0x13, 15, 0, 0xe4, 0x0c,
+        2, 5, 0, 10, 0, 7, 0, 0, 0,
+        0x15, 0x10, 0x27, 10, 0, 20, 0, 15, 0,
+        0x01, 0x88, 0x13, 15, 0,
         0x04, 0x88, 0x13, 25, 0,
         0x10, 0x98, 0x3a, 0, 0,
-        0x51, 0xc8, 0xaf, 0xca, 0x0d, 0xe8, 0x03, 0x2c, 0x01,
-        0x51, 0xc8, 0xaf, 0x76, 0x1b, 0xd0, 0x07, 0x84, 0x03,
+        0x11, 0xc8, 0xaf, 0xca, 0x0d, 0xe8, 0x03,
+        0x11, 0xc8, 0xaf, 0x76, 0x1b, 0xd0, 0x07,
     }; // clang-format on
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 2, 0));
@@ -234,7 +273,7 @@ void test_append_line(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     vec.x = 20;
     vec.y = 40;
@@ -246,7 +285,7 @@ void test_append_line(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     vec.x = 30;
     vec.yaw = -30;
@@ -256,7 +295,7 @@ void test_append_line(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     vec.y = 50;
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_line(&builder, vec, 5000));
@@ -265,7 +304,7 @@ void test_append_line(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     vec.z = 0;
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_line(&builder, vec, 15000));
@@ -274,7 +313,7 @@ void test_append_line(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     /* test zero duration */
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_line(&builder, vec, 0));
@@ -289,7 +328,7 @@ void test_append_line(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     sb_trajectory_builder_destroy(&builder);
 }
@@ -335,23 +374,23 @@ void test_hold_position_for(void)
     sb_vector3_with_yaw_t vec;
     // clang-format off
     uint8_t expected1[] = {
-        2, 5, 0, 10, 0, 7, 0, 146, 4,
-        0x55, 0x10, 0x27, 10, 0, 20, 0, 15, 0, 0x34, 8
+        2, 5, 0, 10, 0, 7, 0, 0, 0,
+        0x15, 0x10, 0x27, 10, 0, 20, 0, 15, 0
     };
     uint8_t expected2[] = {
-        2, 5, 0, 10, 0, 7, 0, 146, 4,
-        0x55, 0x10, 0x27, 10, 0, 20, 0, 15, 0, 0x34, 8,
+        2, 5, 0, 10, 0, 7, 0, 0, 0,
+        0x15, 0x10, 0x27, 10, 0, 20, 0, 15, 0,
         0, 0xe8, 0x03,
     };
     uint8_t expected3[] = {
-        2, 5, 0, 10, 0, 7, 0, 146, 4,
-        0x55, 0x10, 0x27, 10, 0, 20, 0, 15, 0, 0x34, 8,
+        2, 5, 0, 10, 0, 7, 0, 0, 0,
+        0x15, 0x10, 0x27, 10, 0, 20, 0, 15, 0,
         0, 0xe8, 0x03,
         0, 0xb0, 0x36,
     };
     uint8_t expected4[] = {
-        2, 5, 0, 10, 0, 7, 0, 146, 4,
-        0x55, 0x10, 0x27, 10, 0, 20, 0, 15, 0, 0x34, 8,
+        2, 5, 0, 10, 0, 7, 0, 0, 0,
+        0x15, 0x10, 0x27, 10, 0, 20, 0, 15, 0,
         0, 0xe8, 0x03,
         0, 0xb0, 0x36,
         0, 0x60, 0xea,
@@ -378,7 +417,7 @@ void test_hold_position_for(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_hold_position_for(&builder, 0));
     TEST_ASSERT_EQUAL(sizeof(expected1), sb_buffer_size(&builder.buffer));
@@ -386,7 +425,7 @@ void test_hold_position_for(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_hold_position_for(&builder, 1000));
     TEST_ASSERT_EQUAL(sizeof(expected2), sb_buffer_size(&builder.buffer));
@@ -394,7 +433,7 @@ void test_hold_position_for(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_hold_position_for(&builder, 14000));
     TEST_ASSERT_EQUAL(sizeof(expected3), sb_buffer_size(&builder.buffer));
@@ -402,7 +441,7 @@ void test_hold_position_for(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_hold_position_for(&builder, 120000));
     TEST_ASSERT_EQUAL(sizeof(expected4), sb_buffer_size(&builder.buffer));
@@ -410,7 +449,7 @@ void test_hold_position_for(void)
     TEST_ASSERT_EQUAL(vec.x, builder.last_position.x);
     TEST_ASSERT_EQUAL(vec.y, builder.last_position.y);
     TEST_ASSERT_EQUAL(vec.z, builder.last_position.z);
-    TEST_ASSERT_EQUAL(vec.yaw, builder.last_position.yaw);
+    TEST_ASSERT_EQUAL(0, builder.last_position.yaw);
 
     sb_trajectory_builder_destroy(&builder);
 }
@@ -438,7 +477,7 @@ void test_get_last_position(void)
     TEST_ASSERT_EQUAL(vec.x, last.x);
     TEST_ASSERT_EQUAL(vec.y, last.y);
     TEST_ASSERT_EQUAL(vec.z, last.z);
-    TEST_ASSERT_EQUAL(vec.yaw, last.yaw);
+    TEST_ASSERT_EQUAL(0, last.yaw);
 
     vec.x = 20;
     vec.y = 40;
@@ -450,7 +489,7 @@ void test_get_last_position(void)
     TEST_ASSERT_EQUAL(vec.x, last.x);
     TEST_ASSERT_EQUAL(vec.y, last.y);
     TEST_ASSERT_EQUAL(vec.z, last.z);
-    TEST_ASSERT_EQUAL(vec.yaw, last.yaw);
+    TEST_ASSERT_EQUAL(0, last.yaw);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_hold_position_for(&builder, 1000));
 
@@ -458,7 +497,7 @@ void test_get_last_position(void)
     TEST_ASSERT_EQUAL(vec.x, last.x);
     TEST_ASSERT_EQUAL(vec.y, last.y);
     TEST_ASSERT_EQUAL(vec.z, last.z);
-    TEST_ASSERT_EQUAL(vec.yaw, last.yaw);
+    TEST_ASSERT_EQUAL(0, last.yaw);
 
     sb_trajectory_builder_destroy(&builder);
 }
@@ -504,13 +543,13 @@ void test_conversion_to_trajectory(void)
     TEST_ASSERT_EQUAL(10, vec.x);
     TEST_ASSERT_EQUAL(20, vec.y);
     TEST_ASSERT_EQUAL(14, vec.z); /* not 15, due to rounding */
-    TEST_ASSERT_EQUAL(117, vec.yaw);
+    TEST_ASSERT_EQUAL(0, vec.yaw);
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 12.5, &vec));
     TEST_ASSERT_EQUAL(25, vec.x);
     TEST_ASSERT_EQUAL(40, vec.y);
     TEST_ASSERT_EQUAL(30, vec.z);
-    TEST_ASSERT_EQUAL(270, vec.yaw);
+    TEST_ASSERT_EQUAL(0, vec.yaw);
 
     sb_trajectory_player_destroy(&player);
     SB_XDECREF(trajectory);

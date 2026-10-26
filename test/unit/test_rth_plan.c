@@ -367,6 +367,59 @@ void test_evaluate_at(void)
     TEST_ASSERT_EQUAL(0, entry.pre_neck);
 }
 
+void test_update_with_corrupted_body(void)
+{
+    /* Regression test: truncated RTH plans used to be read past the end of
+     * the buffer */
+    static uint8_t header_only[] = {
+        0x00, 0x0A, 0xD0, 0x07, 0xE8, 0x03, 0x00, 0x00, 0x00, 0x00
+    };
+    static uint8_t truncated_points[] = {
+        0x00, 0x0A, 0xD0, 0x07, 0xE8, 0x03, 0x00, 0x00, 0x02, 0x00,
+        0xB8, 0x0B, 0xA0, 0x0F,
+        0x60, 0xF0, 0x48
+    };
+    static uint8_t truncated_entry_count[] = {
+        0x00, 0x0A, 0xD0, 0x07, 0xE8, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x01
+    };
+    static uint8_t truncated_int16[] = {
+        0x00, 0x0A, 0xD0, 0x07, 0xE8, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0x00,
+        /* Entry with a neck, truncated in the middle of the neck length */
+        SB_RTH_PLAN_ENTRY_HAS_NECK, 0x00, 0x10
+    };
+    static uint8_t truncated_varuint[] = {
+        0x00, 0x0A, 0xD0, 0x07, 0xE8, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0x00,
+        /* Entry with a pre-delay, truncated in the middle of the pre-delay */
+        SB_RTH_PLAN_ENTRY_HAS_PRE_DELAY, 0x00, 0x80
+    };
+    static uint8_t missing_entry[] = {
+        0x00, 0x0A, 0xD0, 0x07, 0xE8, 0x03, 0x00, 0x00, 0x00, 0x00,
+        0x02, 0x00,
+        0x00, 0x00
+    };
+    size_t num_points = sb_rth_plan_get_num_points(plan);
+    size_t num_entries = sb_rth_plan_get_num_entries(plan);
+
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_rth_plan_update_from_buffer(plan, header_only, sizeof(header_only) - 1));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_rth_plan_update_from_buffer(plan, truncated_points, sizeof(truncated_points)));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_rth_plan_update_from_buffer(plan, truncated_entry_count, sizeof(truncated_entry_count)));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_rth_plan_update_from_buffer(plan, truncated_int16, sizeof(truncated_int16)));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_rth_plan_update_from_buffer(plan, truncated_varuint, sizeof(truncated_varuint)));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_rth_plan_update_from_buffer(plan, missing_entry, sizeof(missing_entry)));
+
+    /* The RTH plan must be left intact on error */
+    TEST_ASSERT_EQUAL(num_points, sb_rth_plan_get_num_points(plan));
+    TEST_ASSERT_EQUAL(num_entries, sb_rth_plan_get_num_entries(plan));
+
+    /* A header without points and without an entry table is valid */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_update_from_buffer(plan, header_only, sizeof(header_only)));
+    TEST_ASSERT_EQUAL(0, sb_rth_plan_get_num_points(plan));
+    TEST_ASSERT_EQUAL(0, sb_rth_plan_get_num_entries(plan));
+}
+
 void test_plan_duration_too_large(void)
 {
     sb_rth_plan_entry_t entry;
@@ -375,8 +428,8 @@ void test_plan_duration_too_large(void)
     uint8_t buf[] = {
         /* header */
         0x73, 0x6b, 0x79, 0x62, 0x01,
-        /* RTH plan block */
-        0x04, 0x2D, 0x00,
+        /* RTH plan block (46 bytes) */
+        0x04, 0x2E, 0x00,
         /* Flags */
         0x00,
         /* Scale */
@@ -827,6 +880,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_default_landing_velocity);
     RUN_TEST(test_default_landing_altitude);
     RUN_TEST(test_evaluate_at);
+    RUN_TEST(test_update_with_corrupted_body);
     RUN_TEST(test_plan_duration_too_large);
     RUN_TEST(test_convert_to_trajectory);
 

@@ -34,9 +34,8 @@
 
 #include "../parsing.h"
 
+#define SIZE_OF_HEADER (sizeof(uint8_t) + sizeof(int16_t))
 #define SIZE_OF_DELTA (sizeof(uint16_t) + sizeof(int16_t))
-
-void sb_yaw_player_dump_current_setpoint(const sb_yaw_player_t* player);
 
 static sb_error_t sb_i_yaw_control_update_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_yaw_control_update_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
@@ -268,9 +267,26 @@ static int16_t sb_i_yaw_control_parse_yaw(const sb_yaw_control_t* ctrl, size_t* 
     return sb_parse_int16(SB_BUFFER(ctrl->buffer), offset);
 }
 
+/**
+ * Checks whether the given memory block is a well-formed yaw control block,
+ * i.e. it has a complete header followed by complete yaw deltas only.
+ *
+ * \return \c SB_SUCCESS if the block is well-formed, \c SB_ECORRUPTED otherwise
+ */
+static sb_error_t sb_i_yaw_control_validate_bytes(size_t nbytes)
+{
+    if (nbytes < SIZE_OF_HEADER || (nbytes - SIZE_OF_HEADER) % SIZE_OF_DELTA != 0) {
+        return SB_ECORRUPTED;
+    }
+
+    return SB_SUCCESS;
+}
+
 static sb_error_t sb_i_yaw_control_update_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned)
 {
     sb_buffer_t new_buffer;
+
+    SB_CHECK(sb_i_yaw_control_validate_bytes(nbytes));
 
     if (owned) {
         SB_CHECK(sb_buffer_init_from_bytes(&new_buffer, buf, nbytes));

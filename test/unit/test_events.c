@@ -465,6 +465,82 @@ void test_add_pyro_off_events_overlapping(void)
     TEST_ASSERT_EQUAL(UINT32_MAX, sb_event_list_get_ptr(events, 7)->payload.as_uint32);
 }
 
+void test_update_from_buffer(void)
+{
+    /* Unknown event types and subtypes are kept as opaque events; trailing
+     * bytes that do not form a complete event are ignored */
+    static uint8_t buf[] = {
+        /* T = 1000 msec, pyro event on channel 2 */
+        0xe8, 0x03, 0x00, 0x00, SB_EVENT_TYPE_PYRO, 0x02, 0x00, 0x00, 0x00, 0x00,
+        /* T = 2000 msec, unknown event type and subtype */
+        0xd0, 0x07, 0x00, 0x00, 0x7f, 0x09, 0x01, 0x02, 0x03, 0x04,
+        /* trailing bytes */
+        0x01, 0x02, 0x03
+    };
+    const uint8_t expected_payload[] = { 0x01, 0x02, 0x03, 0x04 };
+    const sb_event_t* event;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_update_from_buffer(events, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL(2, sb_event_list_size(events));
+
+    event = sb_event_list_get_ptr_const(events, 0);
+    TEST_ASSERT_EQUAL_UINT32(1000, event->time_msec);
+    TEST_ASSERT_EQUAL(SB_EVENT_TYPE_PYRO, event->type);
+    TEST_ASSERT_EQUAL(2, event->subtype);
+
+    event = sb_event_list_get_ptr_const(events, 1);
+    TEST_ASSERT_EQUAL_UINT32(2000, event->time_msec);
+    TEST_ASSERT_EQUAL(0x7f, event->type);
+    TEST_ASSERT_EQUAL(0x09, event->subtype);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected_payload, event->payload.as_buf, sizeof(expected_payload));
+
+    /* Updating again replaces the contents of the list */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_update_from_buffer(events, buf, 10));
+    TEST_ASSERT_EQUAL(1, sb_event_list_size(events));
+}
+
+void test_update_with_unsorted_events(void)
+{
+    /* Regression test: unsorted events used to leave the list half-loaded */
+    static uint8_t unsorted[] = {
+        0x10, 0x27, 0x00, 0x00, SB_EVENT_TYPE_PYRO, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0xe8, 0x03, 0x00, 0x00, SB_EVENT_TYPE_PYRO, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+    static uint8_t file[] = {
+        's', 'k', 'y', 'b', 1,
+        SB_BINARY_BLOCK_EVENT_LIST, 20, 0,
+        0x10, 0x27, 0x00, 0x00, SB_EVENT_TYPE_PYRO, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0xe8, 0x03, 0x00, 0x00, SB_EVENT_TYPE_PYRO, 0x02, 0x00, 0x00, 0x00, 0x00
+    };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
+    size_t num_events = sb_event_list_size(events);
+    uint32_t first_timestamp = sb_event_list_get_ptr_const(events, 0)->time_msec;
+    TEST_ASSERT_TRUE(num_events > 0);
+
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_event_list_update_from_buffer(events, unsorted, sizeof(unsorted)));
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_event_list_update_from_binary_file_in_memory(events, file, sizeof(file)));
+
+    /* The event list must be left intact on error */
+    TEST_ASSERT_EQUAL(num_events, sb_event_list_size(events));
+    TEST_ASSERT_EQUAL_UINT32(first_timestamp, sb_event_list_get_ptr_const(events, 0)->time_msec);
+}
+
+void test_update_without_event_list_block(void)
+{
+    /* A missing event list block is equivalent to an empty block */
+    static uint8_t file[] = {
+        's', 'k', 'y', 'b', 1,
+        SB_BINARY_BLOCK_COMMENT, 1, 0, 'x'
+    };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/pyro_events.skyb"));
+    TEST_ASSERT_FALSE(sb_event_list_is_empty(events));
+
+    TEST_ASSERT_EQUAL(SB_ENOENT, sb_event_list_update_from_binary_file_in_memory(events, file, sizeof(file)));
+    TEST_ASSERT_TRUE(sb_event_list_is_empty(events));
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -473,6 +549,9 @@ int main(int argc, char* argv[])
     RUN_TEST(test_new);
     RUN_TEST(test_loaded_events);
     RUN_TEST(test_loaded_events_in_memory);
+    RUN_TEST(test_update_from_buffer);
+    RUN_TEST(test_update_with_unsorted_events);
+    RUN_TEST(test_update_without_event_list_block);
     RUN_TEST(test_append_with_earlier_timestamp);
     RUN_TEST(test_insertion);
     RUN_TEST(test_is_sorted);
