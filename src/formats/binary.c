@@ -124,8 +124,10 @@ sb_error_t sb_binary_file_read_current_block_ex(
     block = sb_binary_file_get_current_block(parser);
 
     if (parser->buf == 0) {
-        /* no in-memory buffer, allocate a new buffer and read the block into it */
-        buf_alloc = sb_calloc(uint8_t, block.length);
+        /* no in-memory buffer, allocate a new buffer and read the block into it.
+         * We allocate at least one byte because the behaviour of zero-sized
+         * allocations is implementation-defined */
+        buf_alloc = sb_calloc(uint8_t, block.length > 0 ? block.length : 1);
         if (buf_alloc == 0) {
             return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }
@@ -412,7 +414,14 @@ static sb_error_t sb_i_binary_file_seek(sb_binary_file_parser_t* parser, off_t o
         parser->buf_ptr = parser->buf + offset;
         return SB_SUCCESS;
     } else {
-        /* Seeking file descriptor */
+        /* Seeking file descriptor. lseek() allows seeking beyond the end of
+         * the file, but for us it means that the file is truncated, so we
+         * check it explicitly, consistently with in-memory buffers */
+        off_t end = lseek(parser->fd, 0, SEEK_END);
+        if (end < 0 || offset < 0 || offset > end) {
+            return SB_EREAD;
+        }
+
         return lseek(parser->fd, offset, SEEK_SET) == offset ? SB_SUCCESS : SB_EREAD;
     }
 }

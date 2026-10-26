@@ -393,9 +393,30 @@ void test_init_from_bytes(void)
 void test_init_from_bytes_zero_size(void)
 {
     sb_buffer_t buf;
-    char* str = "hello world";
+    char* bytes = malloc(1);
 
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_buffer_init_from_bytes(&buf, str, 0));
+    TEST_ASSERT_NOT_NULL(bytes);
+
+    /* The buffer takes ownership of the array even if it is empty */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init_from_bytes(&buf, bytes, 0));
+    TEST_ASSERT(!sb_buffer_is_view(&buf));
+    TEST_ASSERT_EQUAL(0, sb_buffer_size(&buf));
+    TEST_ASSERT_EQUAL(0, sb_buffer_capacity(&buf));
+
+    /* The buffer can grow from zero capacity */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_append_bytes(&buf, "abc", 3));
+    TEST_ASSERT_EQUAL(3, sb_buffer_size(&buf));
+    TEST_ASSERT_EQUAL(0, memcmp("abc", SB_BUFFER(buf), 3));
+
+    sb_buffer_destroy(&buf);
+}
+
+void test_init_from_bytes_null(void)
+{
+    sb_buffer_t buf;
+
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_buffer_init_from_bytes(&buf, NULL, 0));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_buffer_init_from_bytes(&buf, NULL, 10));
 }
 
 void test_ensure_owned(void)
@@ -536,6 +557,7 @@ int main(int argc, char* argv[])
 
     RUN_TEST(test_init_from_bytes);
     RUN_TEST(test_init_from_bytes_zero_size);
+    RUN_TEST(test_init_from_bytes_null);
 
     RUN_TEST(test_ensure_owned);
 

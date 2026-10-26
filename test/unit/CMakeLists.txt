@@ -56,3 +56,27 @@ add_unity_test(trajectory_stats)
 add_unity_test(utils)
 add_unity_test(yaw_control)
 add_unity_test(yaw_player)
+
+# Conformance tests of the binary show file format. The test cases are
+# maintained together with the specification of the file format and are
+# converted into C test functions at build time.
+set(LIBSKYBRUSH_SKYB_CONFORMANCE_CASES
+    "${PROJECT_SOURCE_DIR}/../skybrush-file-formats-doc/spec/skyb/conformance/cases.json"
+    CACHE FILEPATH "Path to the conformance test cases of the Skybrush binary show file format")
+find_program(LIBSKYBRUSH_PYTHON3 NAMES python3 python)
+if(LIBSKYBRUSH_PYTHON3 AND EXISTS "${LIBSKYBRUSH_SKYB_CONFORMANCE_CASES}")
+    set(CONFORMANCE_GENERATOR ${CMAKE_CURRENT_SOURCE_DIR}/../conformance/generate_tests.py)
+    set(CONFORMANCE_CASES_INC ${CMAKE_CURRENT_BINARY_DIR}/conformance_cases.inc)
+    add_custom_command(
+        OUTPUT ${CONFORMANCE_CASES_INC}
+        COMMAND ${LIBSKYBRUSH_PYTHON3} ${CONFORMANCE_GENERATOR} ${LIBSKYBRUSH_SKYB_CONFORMANCE_CASES} ${CONFORMANCE_CASES_INC}
+        DEPENDS ${CONFORMANCE_GENERATOR} ${LIBSKYBRUSH_SKYB_CONFORMANCE_CASES}
+        COMMENT "Generating conformance tests of the binary show file format"
+    )
+    add_executable(test_conformance test_conformance.c ${CONFORMANCE_CASES_INC})
+    target_include_directories(test_conformance PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    target_link_libraries(test_conformance PUBLIC skybrush unity)
+    add_test(conformance test_conformance)
+else()
+    message(STATUS "Conformance test cases of the binary show file format not found; conformance tests will be skipped")
+endif()

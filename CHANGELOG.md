@@ -48,6 +48,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `sb_event_list_update_from_buffer()`, which was declared in the public
   header but never implemented.
 
+### Changed
+
+- `sb_buffer_init_from_bytes()` now accepts an empty array (the buffer takes
+  ownership of it and can grow later) and rejects a null pointer with
+  `SB_EINVAL`. It used to reject empty arrays and accept null pointers.
+
+- `sb_color_palette_update_from_bytes()` now accepts an empty buffer; the
+  palette becomes empty and takes ownership of the buffer. It used to reject
+  empty buffers with `SB_EINVAL`.
+
 ### Fixed
 
 - Fixed an out-of-bounds write in the light player when a light program nests
@@ -57,6 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed out-of-bounds reads when a show file loaded into memory is shorter than
   the length declared in one of its block headers; such files are now rejected
   with `SB_EREAD`, consistently with show files read from a file descriptor.
+
+- Fixed looking up a block in a show file read from a file descriptor when the
+  file ends in the middle of a preceding block; this now fails with `SB_EREAD`
+  instead of reporting that the block does not exist, consistently with show
+  files loaded into memory.
+
+- Fixed empty light program blocks being rejected when the show file is read
+  from a file descriptor.
 
 - Fixed out-of-bounds reads on truncated trajectory, yaw control and RTH plan
   blocks. Such blocks are now rejected with `SB_ECORRUPTED` and the object being

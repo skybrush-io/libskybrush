@@ -57,13 +57,15 @@ sb_error_t sb_buffer_init(sb_buffer_t* buf, size_t initial_size)
  * responsible for destroying it and the caller may not free it any more.
  *
  * @param buf  the buffer to initialize
- * @param bytes  the bytes to take ownership of
- * @param num_bytes  the number of bytes in the array; must be positive
- * @return Error code.
+ * @param bytes  the bytes to take ownership of; must not be \c NULL
+ * @param num_bytes  the number of bytes in the array; may be zero, in which
+ *        case the buffer is empty but it still takes ownership of the array
+ * @return \c SB_SUCCESS if the buffer was initialized successfully,
+ *         \c SB_EINVAL if \p bytes is \c NULL
  */
 sb_error_t sb_buffer_init_from_bytes(sb_buffer_t* buf, void* bytes, size_t num_bytes)
 {
-    if (num_bytes == 0) {
+    if (bytes == 0) {
         return SB_EINVAL;
     }
 
@@ -445,7 +447,12 @@ static sb_error_t sb_i_buffer_ensure_free_space(sb_buffer_t* buf, size_t min_spa
         return SB_SUCCESS;
     }
 
+    /* Buffers that took ownership of an empty array have zero capacity; we
+     * need to start from a positive capacity for the doubling below */
     desired_capacity = sb_buffer_capacity(buf);
+    if (desired_capacity == 0) {
+        desired_capacity = 1;
+    }
     old_size = sb_buffer_size(buf);
     new_size = old_size + min_space;
     if (new_size < old_size) {

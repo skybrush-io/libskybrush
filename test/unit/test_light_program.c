@@ -17,6 +17,9 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <unistd.h>
+
 #include <skybrush/formats/binary.h>
 #include <skybrush/lights.h>
 #include <skybrush/refcount.h>
@@ -92,6 +95,32 @@ void test_new(void)
     test_light_program_is_really_empty();
 }
 
+void test_empty_light_program_from_file(void)
+{
+    /* Regression test: an empty light program block used to be rejected when
+     * it was read from a file descriptor, while it was accepted when it was
+     * read from memory */
+    uint8_t buf[] = { 's', 'k', 'y', 'b', 1, SB_BINARY_BLOCK_LIGHT_PROGRAM, 0, 0 };
+    sb_light_player_t player;
+    FILE* fp;
+
+    fp = tmpfile();
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_EQUAL(sizeof(buf), fwrite(buf, 1, sizeof(buf), fp));
+    TEST_ASSERT_EQUAL(0, fflush(fp));
+    TEST_ASSERT_EQUAL(0, lseek(fileno(fp), 0, SEEK_SET));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file(program, fileno(fp)));
+    fclose(fp);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_player_init(&player, program));
+    TEST_ASSERT_EQUAL_COLOR_RGB(0, 0, 0, sb_light_player_get_color_at(&player, 1000));
+    TEST_ASSERT_TRUE(sb_light_player_seek(&player, 0, 0));
+    sb_light_player_destroy(&player);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_program_update_from_binary_file_in_memory(program, buf, sizeof(buf)));
+}
+
 void test_file_without_light_program(void)
 {
     TEST_ASSERT_EQUAL(SB_ENOENT, loadFixture("fixtures/forward_left_back_no_lights.skyb"));
@@ -141,6 +170,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_new);
     RUN_TEST(test_clear);
     RUN_TEST(test_file_without_light_program);
+    RUN_TEST(test_empty_light_program_from_file);
     RUN_TEST(test_light_program_with_wait_until_command);
 
     return UNITY_END();

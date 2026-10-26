@@ -163,6 +163,29 @@ void test_update_from_bytes_takes_ownership(void)
     sb_color_palette_destroy(&palette);
 }
 
+void test_update_from_bytes_with_zero_size(void)
+{
+    sb_color_palette_t palette;
+    uint8_t colors[3] = { 0xff, 0x00, 0x00 };
+    uint8_t* bytes = malloc(1);
+
+    TEST_ASSERT_NOT_NULL(bytes);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_init(&palette));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_update_from_buffer(&palette, colors, sizeof(colors)));
+    TEST_ASSERT_EQUAL(1, palette.num_colors);
+
+    /* Taking over an empty buffer makes the palette empty; the palette still
+     * takes ownership of the buffer and destroying the palette releases it */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_color_palette_update_from_bytes(&palette, bytes, 0));
+    TEST_ASSERT_EQUAL(0, palette.num_colors);
+    TEST_ASSERT_TRUE(sb_color_palette_is_empty(&palette));
+    TEST_ASSERT(!sb_buffer_is_view(&palette.buffer));
+    TEST_ASSERT_TRUE(sb_rgb_color_equals(SB_COLOR_BLACK, sb_color_palette_get_color(&palette, 0)));
+
+    sb_color_palette_destroy(&palette);
+}
+
 void test_update_replaces_previous_content(void)
 {
     sb_color_palette_t palette;
@@ -206,9 +229,6 @@ void test_update_invalid_args(void)
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_color_palette_update_from_buffer(&palette, 0, 3));
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_color_palette_update_from_bytes(&palette, 0, 3));
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_color_palette_update_from_bytes(&palette, 0, 0));
-
-    /* update_from_bytes() cannot take over a zero-size buffer */
-    TEST_ASSERT_EQUAL(SB_EINVAL, sb_color_palette_update_from_bytes(&palette, bytes, 0));
 
     /* the palette must not be modified on failure */
     TEST_ASSERT_EQUAL(0, palette.num_colors);
@@ -376,6 +396,7 @@ int main(void)
     RUN_TEST(test_update_from_buffer_uses_a_borrowed_view);
     RUN_TEST(test_update_from_buffer_null_buffer_with_zero_size);
     RUN_TEST(test_update_from_bytes_takes_ownership);
+    RUN_TEST(test_update_from_bytes_with_zero_size);
     RUN_TEST(test_update_replaces_previous_content);
     RUN_TEST(test_update_invalid_args);
     RUN_TEST(test_get_color_invalid_palette);

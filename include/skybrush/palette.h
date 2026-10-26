@@ -119,13 +119,14 @@ sb_error_t sb_color_palette_update_from_buffer(
  * \param  palette    the palette to update
  * \param  bytes      the raw buffer containing the packed colors; must not
  *                    be null
- * \param  num_bytes  the number of bytes in the raw buffer; must be positive
- *                    and a multiple of three
+ * \param  num_bytes  the number of bytes in the raw buffer; must be a
+ *                    multiple of three. Zero is allowed; the palette becomes
+ *                    empty and it still takes ownership of the buffer.
  * \return \c SB_SUCCESS if the palette was updated successfully,
  *         \c SB_EINVAL if the palette is null, if the buffer is null, or if
- *         the number of bytes is zero or not a multiple of three. The buffer
- *         is not taken over and the palette is left unmodified if the
- *         function returns an error.
+ *         the number of bytes is not a multiple of three. The buffer is not
+ *         taken over and the palette is left unmodified if the function
+ *         returns an error.
  */
 sb_error_t sb_color_palette_update_from_bytes(
     sb_color_palette_t* palette, uint8_t* bytes, size_t num_bytes);

@@ -17,6 +17,9 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <unistd.h>
+
 #include <skybrush/formats/binary.h>
 
 #include "unity.h"
@@ -239,6 +242,35 @@ void test_read_block_past_end_from_memory(void)
     sb_binary_file_parser_destroy(&parser);
 }
 
+void test_skip_truncated_block(void)
+{
+    /* Regression test: skipping a block that extends beyond the end of the
+     * file used to succeed for file descriptors (and report that there are
+     * no more blocks) while it failed for in-memory buffers */
+    uint8_t buf[] = {
+        's', 'k', 'y', 'b', 1,
+        SB_BINARY_BLOCK_COMMENT, 5, 0, 'a', 'b'
+    };
+    sb_binary_file_parser_t parser;
+    FILE* fp;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init_from_buffer(&parser, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL(SB_EREAD, sb_binary_file_find_first_block_by_type(&parser, SB_BINARY_BLOCK_TRAJECTORY));
+    sb_binary_file_parser_destroy(&parser);
+
+    fp = tmpfile();
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_EQUAL(sizeof(buf), fwrite(buf, 1, sizeof(buf), fp));
+    TEST_ASSERT_EQUAL(0, fflush(fp));
+    TEST_ASSERT_EQUAL(0, lseek(fileno(fp), 0, SEEK_SET));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init_from_file(&parser, fileno(fp)));
+    TEST_ASSERT_EQUAL(SB_EREAD, sb_binary_file_find_first_block_by_type(&parser, SB_BINARY_BLOCK_TRAJECTORY));
+    sb_binary_file_parser_destroy(&parser);
+
+    fclose(fp);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -249,6 +281,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_find_first_block_by_type);
     RUN_TEST(test_read_truncated_block_from_memory);
     RUN_TEST(test_read_block_past_end_from_memory);
+    RUN_TEST(test_skip_truncated_block);
 
     return UNITY_END();
 }
