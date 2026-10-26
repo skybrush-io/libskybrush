@@ -10,6 +10,10 @@ endif()
 
 project(libskybrush C CXX)
 
+# Write compile_commands.json into the build directory. clangd finds it
+# without further configuration if the build directory is called build/
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Set the path where we look for additional CMake modules
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/etc/cmake)
 
