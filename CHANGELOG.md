@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking changes
+
+- Removed support for light program opcodes 0x0E to 0x15 (reset clock, set or fade
+  to a color taken from input channels, jump, triggered jump, and setting pyro
+  channels). These opcodes originate from the legacy Arduino-based light controller
+  and were never used in Skybrush drone shows. The light player now treats them as
+  unknown commands and stops the execution of the light program when it encounters
+  one.
+
 ### Added
 
 - Added `sb_buffer_update()` to replace the contents of an already initialized
@@ -18,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   initialized color palette with the contents of another one; the destination
   palette is backed by a view if the source palette is backed by a view and it
   owns a copy of the colors if the source palette owns its colors.
+
+### Fixed
+
+- Fixed an out-of-bounds write in the light player when a light program nests
+  loops more than four levels deep. Loops beyond the fourth nesting level are now
+  ignored.
 
 ## [5.3.1] - 2026-09-30
 
