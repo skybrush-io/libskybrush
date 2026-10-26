@@ -113,6 +113,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   loop whose body takes no time. Such loops now stop the execution of the light
   program when the end of their body is reached.
 
+- Fixed `sb_trajectory_builder_move_to_in_time()` generating a trajectory that
+  shoots far beyond the target when the maximum acceleration is so large that
+  the acceleration phase is shorter than one millisecond.
+
 ## [5.3.1] - 2026-09-30
 
 ### Fixed

@@ -378,7 +378,7 @@ sb_error_t sb_trajectory_builder_move_to_in_time(
     t1_msec = (uint32_t)(t1 * 1000);
     if (t1_msec < 1) {
         t1_msec = 1;
-        t1 = t1_msec * 1000.0f;
+        t1 = t1_msec / 1000.0f;
     }
 
     /* add segment to accelerate smoothly from zero to travel velocity */
