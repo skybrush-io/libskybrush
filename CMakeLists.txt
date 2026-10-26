@@ -23,8 +23,16 @@ set(CMAKE_CXX_STANDARD 11)
 
 # Turn on all compiler warnings and ensure that frame pointers are not omitted
 # so we can debug properly even when the binary is compiled with optimizations
-set(CMAKE_C_FLAGS "-Wall -Werror -pedantic -Wno-unknown-pragmas -Wno-float-equal -fno-omit-frame-pointer -funwind-tables")
-set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic -Wno-unknown-pragmas -Wno-float-equal -fno-omit-frame-pointer -funwind-tables")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic -Wno-unknown-pragmas -Wno-float-equal -fno-omit-frame-pointer -funwind-tables")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic -Wno-unknown-pragmas -Wno-float-equal -fno-omit-frame-pointer -funwind-tables")
+
+# Do not fuse multiplications and additions into FMA instructions. Whether the
+# compiler does this by default depends on the compiler and the target
+# architecture, and the different rounding makes results that are converted to
+# integers (e.g., light colors in the middle of a fade) differ by one between
+# platforms
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffp-contract=off")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffp-contract=off")
 
 # Force colored output when using Ninja
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
