@@ -117,6 +117,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shoots far beyond the target when the maximum acceleration is so large that
   the acceleration phase is shorter than one millisecond.
 
+- Fixed `sb_uint32_msec_duration_from_float_seconds()` accepting durations
+  within a fraction of a second of `UINT32_MAX / 1000` seconds, whose
+  conversion to milliseconds then overflowed a 32-bit unsigned integer. Such
+  durations are now rejected with `SB_EOVERFLOW`. Generating a trajectory from
+  an RTH plan entry was affected when the entry started near the end of the
+  representable time range.
+
 ## [5.3.1] - 2026-09-30
 
 ### Fixed

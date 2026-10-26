@@ -20,6 +20,7 @@
 #include <skybrush/trajectory.h>
 #include <skybrush/utils.h>
 
+#include <math.h>
 #include <string.h>
 
 #include "unity.h"
@@ -341,6 +342,30 @@ void test_make_skyb_header(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf + 3, 5);
 }
 
+void test_uint32_msec_duration_from_float_seconds(void)
+{
+    uint32_t value;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_uint32_msec_duration_from_float_seconds(&value, 0.0f));
+    TEST_ASSERT_EQUAL_UINT32(0, value);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_uint32_msec_duration_from_float_seconds(&value, 1.5f));
+    TEST_ASSERT_EQUAL_UINT32(1500, value);
+
+    /* close to the limit; floats are 512 apart at this magnitude */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_uint32_msec_duration_from_float_seconds(&value, 4294967.0f));
+    TEST_ASSERT_UINT32_WITHIN(512, 4294967000u, value);
+
+    /* UINT32_MAX / 1000 rounds up to 2^32 milliseconds, which does not fit */
+    TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_uint32_msec_duration_from_float_seconds(&value, ((float)UINT32_MAX) / 1000.0f));
+    TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_uint32_msec_duration_from_float_seconds(&value, 4294968.0f));
+    TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_uint32_msec_duration_from_float_seconds(&value, INFINITY));
+
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_uint32_msec_duration_from_float_seconds(&value, -1.0f));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_uint32_msec_duration_from_float_seconds(&value, -INFINITY));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_uint32_msec_duration_from_float_seconds(&value, NAN));
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -352,6 +377,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_bezier_cut_at);
     RUN_TEST(test_bezier_cut_at_seventh_degree);
     RUN_TEST(test_make_skyb_header);
+    RUN_TEST(test_uint32_msec_duration_from_float_seconds);
 
     return UNITY_END();
 }

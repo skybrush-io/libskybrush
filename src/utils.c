@@ -207,17 +207,21 @@ sb_error_t sb_i_scale_update(uint8_t* scale, float x, float y, float z)
  */
 sb_error_t sb_uint32_msec_duration_from_float_seconds(uint32_t* result_msec, float duration_sec)
 {
-    const float MAX_DURATION_SEC = ((float)UINT32_MAX) / 1000.0f;
+    /* 2^32 is exactly representable as a float, unlike UINT32_MAX, which
+     * would be rounded up to 2^32 */
+    const float UINT32_LIMIT = 4294967296.0f;
+    float duration_msec;
 
     if (duration_sec < 0 || isnan(duration_sec)) {
         return SB_EINVAL;
     }
 
-    if (!isfinite(duration_sec) || duration_sec > MAX_DURATION_SEC) {
+    duration_msec = duration_sec * 1000.0f;
+    if (!(duration_msec < UINT32_LIMIT)) {
         return SB_EOVERFLOW;
     }
 
-    *result_msec = (uint32_t)(duration_sec * 1000.0f);
+    *result_msec = (uint32_t)duration_msec;
 
     return SB_SUCCESS;
 }
