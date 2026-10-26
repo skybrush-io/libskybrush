@@ -95,14 +95,16 @@ public:
     {
         transition_progress_t result;
 
-        if (clock < m_start) {
-            return 0;
+        /* Defensive checks; the executor never steps a transition before its
+         * start time or after its end time */
+        if (clock < m_start) { /* LCOV_EXCL_BR_LINE */
+            return 0; /* LCOV_EXCL_LINE */
         } else if (m_duration == 0) {
             return 1;
         } else {
             clock -= m_start;
             result = ((transition_progress_t)clock) / m_duration;
-            return result > 1 ? 1 : result;
+            return result > 1 ? 1 : result; /* LCOV_EXCL_BR_LINE */
         }
     }
 

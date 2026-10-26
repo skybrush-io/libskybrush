@@ -107,20 +107,30 @@ public:
             // The target where we are seeking to happens way after the start of
             // the next bytecode command, so we need to loop and step.
             proposal = m_executor.step(m_nextTimestamp);
-            if (proposal < m_nextTimestamp) {
-                proposal = m_nextTimestamp + 1;
-            }
+
+            // Defensive check; the executor never proposes a wakeup time that
+            // is earlier than the time it was stepped at
+            if (proposal < m_nextTimestamp) { // LCOV_EXCL_BR_LINE
+                proposal = m_nextTimestamp + 1; // LCOV_EXCL_LINE
+            } // LCOV_EXCL_LINE
 
             m_currentTimestamp = m_nextTimestamp;
             m_nextTimestamp = proposal;
         }
 
         // At this point, target <= m_nextTimestamp so we need to evaluate the
-        // executor exactly at the target.
-        m_nextTimestamp = m_executor.step(target);
+        // executor exactly at the target. We need to keep on stepping as long
+        // as the executor wants to wake up at the target again; this happens
+        // when multiple zero-duration commands are due at the target. This
+        // terminates because the executor does not allow infinite loops whose
+        // body takes no time.
+        do {
+            m_nextTimestamp = m_executor.step(target);
+        } while (m_nextTimestamp <= target);
         m_currentTimestamp = target;
 
-        if (nextTimestamp != 0) {
+        // All callers in the library ask for the next timestamp at the moment
+        if (nextTimestamp != 0) { // LCOV_EXCL_BR_LINE
             *nextTimestamp = m_nextTimestamp;
         }
 

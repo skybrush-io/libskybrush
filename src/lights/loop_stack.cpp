@@ -19,7 +19,7 @@
 
 #include "loop_stack.h"
 
-bool LoopStack::begin(bytecode_location_t location, uint8_t iterations)
+bool LoopStack::begin(bytecode_location_t location, uint8_t iterations, unsigned long time)
 {
     if (m_pTopItem == m_items + CONFIG_MAX_LOOP_DEPTH - 1) {
         return false;
@@ -33,16 +33,18 @@ bool LoopStack::begin(bytecode_location_t location, uint8_t iterations)
      * iterations+1, but since we start the loop immediately, we can decrease
      * it by 1.
      */
+    m_pTopItem->iterationStartTime = time;
 
     return true;
 }
 
-bytecode_location_t LoopStack::end()
+bytecode_location_t LoopStack::end(unsigned long time)
 {
     if (m_pTopItem != 0) {
         uint8_t iterationsLeftPlusOne = m_pTopItem->iterationsLeftPlusOne;
         if (iterationsLeftPlusOne == 0) {
             /* This is an infinite loop */
+            m_pTopItem->iterationStartTime = time;
             return m_pTopItem->start;
         } else if (iterationsLeftPlusOne == 1) {
             /* Last iteration */
@@ -52,6 +54,7 @@ bytecode_location_t LoopStack::end()
         } else {
             /* We still have some iterations */
             m_pTopItem->iterationsLeftPlusOne--;
+            m_pTopItem->iterationStartTime = time;
             return m_pTopItem->start;
         }
     } else {

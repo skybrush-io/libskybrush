@@ -59,11 +59,14 @@ void CommandExecutor::executeNextCommand()
 {
     uint8_t commandCode;
 
-    if (m_ended) {
+    /* Defensive check; step() does not call us when the program has ended */
+    if (m_ended) { /* LCOV_EXCL_BR_LINE */
+        /* LCOV_EXCL_START */
         /* Don't wake up for a while now as the execution of the bytecode
          * has ended */
         m_nextWakeupTime = m_currentCommandStartTime + 60000;
         return;
+        /* LCOV_EXCL_STOP */
     }
 
     commandCode = nextByte();
@@ -302,17 +305,29 @@ void CommandExecutor::handleLoopBeginCommand()
     uint8_t iterations = nextByte();
     bytecode_location_t location = m_pBytecodeStore->tell();
 
-    if (location == BYTECODE_LOCATION_NOWHERE) {
+    /* Defensive check; the only bytecode store we have supports seeking */
+    if (location == BYTECODE_LOCATION_NOWHERE) { /* LCOV_EXCL_BR_LINE */
+        /* LCOV_EXCL_START */
         stop();
         return;
+        /* LCOV_EXCL_STOP */
     }
 
-    m_loopStack.begin(location, iterations);
+    m_loopStack.begin(location, iterations, m_cumulativeDurationSinceStart);
 }
 
 void CommandExecutor::handleLoopEndCommand()
 {
-    bytecode_location_t jumpTo = m_loopStack.end();
+    bytecode_location_t jumpTo;
+
+    if (m_loopStack.innermostLoopIsInfinite() && m_loopStack.currentIterationHasNoDuration(m_cumulativeDurationSinceStart)) {
+        /* Infinite loops whose body takes no time are rejected because they
+         * would keep the executor busy forever without time moving forward */
+        stop();
+        return;
+    }
+
+    jumpTo = m_loopStack.end(m_cumulativeDurationSinceStart);
 
     if (jumpTo != BYTECODE_LOCATION_NOWHERE) {
         m_pBytecodeStore->seek(jumpTo);
