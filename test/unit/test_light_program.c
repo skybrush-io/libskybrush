@@ -81,7 +81,7 @@ void test_light_program_is_really_empty(void)
 
 void test_clear(void)
 {
-    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/test.skyb"));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/basic_show_with_yaw.skyb"));
 
     sb_light_program_clear(program);
     test_light_program_is_really_empty();

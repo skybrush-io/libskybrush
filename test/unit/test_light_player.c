@@ -111,7 +111,7 @@ void test_get_color_at(void)
     int i, j, n = sizeof(t) / sizeof(t[0]);
     const int random_order[] = { 12, 2, 5, 8, 11, 1, 4, 7, 10, 0, 3, 6, 9 };
 
-    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/test.skyb"));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixture("fixtures/basic_show_with_yaw.skyb"));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_light_player_init(&player, program));
 
     /* test querying forward */

@@ -74,6 +74,11 @@ endif()
 add_subdirectory(src)
 add_subdirectory(vendor)
 
+# Specify whether the tests that need the specification of the binary show
+# file format (conformance test cases and golden traces) are mandatory. When
+# disabled, these tests are skipped if the specification is not found.
+option(LIBSKYBRUSH_REQUIRE_SPEC_TESTS "Fail if the conformance test cases or golden traces are not found" OFF)
+
 # Enable unit test support
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     include(CTest)

@@ -137,7 +137,7 @@ void test_new(void)
 
 void test_loaded_deltas_in_memory(void)
 {
-    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixtureInMemory("fixtures/test.skyb"));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixtureInMemory("fixtures/basic_show_with_yaw.skyb"));
 
     TEST_ASSERT_EQUAL(11, sb_buffer_size(&ctrl->buffer));
     TEST_ASSERT_EQUAL(3, ctrl->header_length);
@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
-    /* basic tests with test.skyb */
+    /* basic tests with basic_show_with_yaw.skyb */
     RUN_TEST(test_new);
     RUN_TEST(test_loaded_deltas_in_memory);
     RUN_TEST(test_update_with_corrupted_body);

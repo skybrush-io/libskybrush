@@ -31,7 +31,7 @@ void closeFixture(void);
 void setUp(void)
 {
     sb_yaw_control_init(&ctrl);
-    loadFixture("fixtures/test.skyb");
+    loadFixture("fixtures/basic_show_with_yaw.skyb");
 }
 
 void tearDown(void)

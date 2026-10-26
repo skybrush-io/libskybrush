@@ -31,7 +31,7 @@ void closeFixture(void);
 void setUp(void)
 {
     trajectory = sb_trajectory_new();
-    loadFixture("fixtures/test.skyb");
+    loadFixture("fixtures/basic_show_with_yaw.skyb");
 }
 
 void tearDown(void)

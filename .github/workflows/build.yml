@@ -16,6 +16,31 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The conformance test cases and the golden traces of the binary show
+      # file format are maintained in a private repository of the organization,
+      # next to the specification. It is checked out with a read-only deploy
+      # key. Secrets are not available for pull requests from forks; the tests
+      # that need the specification are skipped in that case.
+      - name: Check whether the file format specification is accessible
+        id: spec
+        env:
+          SPEC_REPO_DEPLOY_KEY: ${{ secrets.SPEC_REPO_DEPLOY_KEY }}
+        run: |
+          if [ -n "$SPEC_REPO_DEPLOY_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Deploy key of the specification repository is not available; skipping"
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out the file format specification
+        if: steps.spec.outputs.available == 'true'
+        uses: actions/checkout@v7
+        with:
+          repository: skybrush-io/file-formats-doc
+          path: file-formats-doc
+          ssh-key: ${{ secrets.SPEC_REPO_DEPLOY_KEY }}
+
       - name: Install dependencies
         run: sudo apt-get install -y gcovr
 
@@ -26,6 +51,9 @@ jobs:
           -DBUILD_TESTING=ON
           -DLIBSKYBRUSH_ENABLE_CODE_COVERAGE=ON
           -DUSE_SANITIZER=Address\;Undefined
+          -DLIBSKYBRUSH_REQUIRE_SPEC_TESTS=${{ steps.spec.outputs.available == 'true' && 'ON' || 'OFF' }}
+          -DLIBSKYBRUSH_SKYB_CONFORMANCE_CASES=${{github.workspace}}/file-formats-doc/spec/skyb/conformance/cases.json
+          -DLIBSKYBRUSH_SKYB_TRACES=${{github.workspace}}/file-formats-doc/spec/skyb/traces
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}

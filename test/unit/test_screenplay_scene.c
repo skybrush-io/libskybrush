@@ -703,9 +703,9 @@ void test_screenplay_scene_update_from_binary_file_in_memory(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
 
     /* open fixture and read into memory */
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     if (fp == NULL) {
-        perror("fixtures/test.skyb");
+        perror("fixtures/basic_show_with_yaw.skyb");
         abort();
     }
 

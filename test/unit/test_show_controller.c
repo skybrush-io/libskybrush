@@ -180,7 +180,7 @@ void test_show_controller_scene_transition_switches_players(void)
     sb_screenplay_scene_set_origin_msec(ch1, 1000u);
 
     /* For scene 1 load real trajectory and light program from fixture */
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj_loaded = sb_trajectory_new());
     TEST_ASSERT_NOT_NULL(prog = sb_light_program_new());
@@ -326,7 +326,7 @@ void test_show_controller_play_fixture_single_scene(void)
     TEST_ASSERT_NOT_NULL(ch);
 
     /* Load trajectory and light program from fixture */
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
@@ -430,7 +430,7 @@ void test_show_controller_play_fixture_time_axis_2x(void)
     TEST_ASSERT_NOT_NULL(ch);
 
     /* Load trajectory and light program from fixture */
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));
@@ -603,7 +603,7 @@ void test_show_controller_forward_left_back_slowdown(void)
 /*
  * Integration test: verify that when a scene has a yaw control object the
  * show controller exposes yaw and yaw rate components and produces values
- * matching the yaw player (fixture: fixtures/test.skyb).
+ * matching the yaw player (fixture: fixtures/basic_show_with_yaw.skyb).
  *
  * The numerical expectations are taken from the yaw player unit tests that
  * use the same fixture.
@@ -627,7 +627,7 @@ void test_show_controller_play_fixture_with_yaw_control(void)
     TEST_ASSERT_NOT_NULL(ch);
 
     /* Load yaw control from fixture */
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(yaw = sb_yaw_control_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_update_from_binary_file(yaw, fileno(fp)));
@@ -809,7 +809,7 @@ void test_show_controller_get_current_scene(void)
 }
 
 /* Steps:
- *  - construct a show controller with a scene loaded from fixtures/test.skyb
+ *  - construct a show controller with a scene loaded from fixtures/basic_show_with_yaw.skyb
  *  - query the show controller at t=5000 ms (within fixture range)
  *  - query it again at same timestamp
  *  - invalidate the show controller
@@ -837,7 +837,7 @@ void test_show_controller_invalidate_cached_output(void)
     TEST_ASSERT_NOT_NULL(ch);
 
     /* Load trajectory and light program from fixture */
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     TEST_ASSERT_NOT_NULL(fp);
     TEST_ASSERT_NOT_NULL(traj = sb_trajectory_new());
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_binary_file(traj, fileno(fp)));

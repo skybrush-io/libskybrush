@@ -412,7 +412,7 @@ void test_screenplay_update_from_binary_file_in_memory(void)
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
 
     /* open fixture and read into memory */
-    buf = load_fixture_to_buffer("fixtures/test.skyb", &num_bytes);
+    buf = load_fixture_to_buffer("fixtures/basic_show_with_yaw.skyb", &num_bytes);
     TEST_ASSERT_NOT_NULL(buf);
 
     /* update screenplay from in-memory binary show */

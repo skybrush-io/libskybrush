@@ -38,7 +38,7 @@ void test_open_file(void)
     FILE* fp;
     int fd;
 
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     TEST_ASSERT(fp);
 
     fd = fileno(fp);
@@ -123,7 +123,7 @@ void test_read_blocks_from_file(void)
     FILE* fp;
     int fd;
 
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     TEST_ASSERT(fp);
 
     fd = fileno(fp);
@@ -143,7 +143,7 @@ void test_read_blocks_from_memory(void)
     uint8_t buf[4096];
     size_t nbytes;
 
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     TEST_ASSERT(fp);
     nbytes = fread(buf, sizeof(uint8_t), sizeof(buf) / sizeof(uint8_t), fp);
     TEST_ASSERT(nbytes > 0);
@@ -160,7 +160,7 @@ void test_find_first_block_by_type(void)
     FILE* fp;
     int fd;
 
-    fp = fopen("fixtures/test.skyb", "rb");
+    fp = fopen("fixtures/basic_show_with_yaw.skyb", "rb");
     TEST_ASSERT(fp);
 
     fd = fileno(fp);

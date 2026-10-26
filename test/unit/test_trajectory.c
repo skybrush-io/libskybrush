@@ -33,7 +33,7 @@ void closeFixture(void);
 void setUp(void)
 {
     trajectory = sb_trajectory_new();
-    loadFixture("fixtures/test.skyb");
+    loadFixture("fixtures/basic_show_with_yaw.skyb");
 }
 
 void tearDown(void)
@@ -226,7 +226,7 @@ void test_get_axis_aligned_bounding_box_from_trajectory_in_memory(void)
     sb_bounding_box_t box;
 
     closeFixture();
-    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixtureInMemory("fixtures/test.skyb"));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, loadFixtureInMemory("fixtures/basic_show_with_yaw.skyb"));
 
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(trajectory, &box));
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.x.min);
@@ -872,7 +872,7 @@ int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
-    /* basic tests with test.skyb */
+    /* basic tests with basic_show_with_yaw.skyb */
     RUN_TEST(test_new);
     RUN_TEST(test_clear);
     RUN_TEST(test_clear_view);
