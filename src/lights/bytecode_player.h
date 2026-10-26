@@ -76,46 +76,12 @@ public:
     }
 
     /**
-     * \brief Returns the bytecode store that the player will use.
-     */
-    BytecodeStore* bytecodeStore() const
-    {
-        return m_executor.bytecodeStore();
-    }
-
-    /**
      * \brief Returns the current color of the LED strip at the point the
      *        player is standing on the time axis right now.
      */
     sb_rgb_color_t currentColor() const
     {
         return m_executor.currentColor();
-    }
-
-    /**
-     * \brief Returns the current value of the pyro channel with the given index
-     *        at the point the player is standing on the time axis right now.
-     */
-    bool currentPyroChannel(int8_t index) const
-    {
-        return m_executor.currentPyroChannel(index);
-    }
-
-    /**
-     * \brief Returns the current values of the pyro channels at the point the
-     *        player is standing on the time axis right now.
-     */
-    uint8_t currentPyroChannels() const
-    {
-        return m_executor.currentPyroChannels();
-    }
-
-    /**
-     * Rewinds the playhead to the origin of the time axis (T=0).
-     */
-    void rewind()
-    {
-        seek(0);
     }
 
     /**
@@ -167,22 +133,6 @@ public:
     void setBytecodeStore(BytecodeStore* pBytecodeStore)
     {
         m_executor.setBytecodeStore(pBytecodeStore);
-    }
-
-    /**
-     * \brief Sets the signal source that the executor will use.
-     */
-    void setSignalSource(SignalSource* pSignalSource)
-    {
-        m_executor.setSignalSource(pSignalSource);
-    }
-
-    /**
-     * \brief Returns the signal source that the executor will use.
-     */
-    SignalSource* signalSource() const
-    {
-        return m_executor.signalSource();
     }
 };
 

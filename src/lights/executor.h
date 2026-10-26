@@ -27,16 +27,11 @@
 
 #include <skybrush/colors.h>
 
-#include "errors.h"
-#include "light_player_config.h"
 #include "loop_stack.h"
-#include "signal_source.h"
 #include "transition.h"
-#include "trigger.h"
 
 class BytecodeStore;
 class CommandExecutor;
-class SignalSource;
 
 /**
  * \brief Color transition handler for a command executor.
@@ -76,22 +71,6 @@ public:
     }
 
     /**
-     * Returns the command executor that the handler talks to.
-     */
-    CommandExecutor* executor() const
-    {
-        return m_pExecutor;
-    }
-
-    /**
-     * Sets the command executor that the handler talks to.
-     */
-    void setExecutor(CommandExecutor* value)
-    {
-        m_pExecutor = value;
-    }
-
-    /**
      * @brief Invokes the \c setColor() method of the executor with an interpolated color.
      *
      * @param value  the interpolation factor between the start and end color
@@ -112,22 +91,10 @@ private:
     BytecodeStore* m_pBytecodeStore;
 
     /**
-     * Object managing access to the values of the signal channels (typically from a remote controller).
-     */
-    SignalSource* m_pSignalSource;
-
-    /**
      * The current color calculated by the command executor. This is the color
      * that should be forwarded to the LED strip.
      */
     sb_rgb_color_t m_currentColor;
-
-    /**
-     * The current values of the pyro channels calculated by the command executor.
-     * These are the values of the pyro channels that should be forwarded to the
-     * appropriate GPIO pins.
-     */
-    uint8_t m_currentPyroChannels;
 
     /**
      * Whether the bytecode being executed has reached the end of the
@@ -153,13 +120,6 @@ private:
      * clock of the host device.
      */
     unsigned long m_currentCommandStartTime;
-
-    /**
-     * Clock skew compensation factor.
-     *
-     * See \ref setClockSkewCompensationFactor() for more details.
-     */
-    float m_clockSkewCompensationFactor;
 
     /**
      * Time when the internal clock of the executor was reset the last time,
@@ -197,11 +157,6 @@ private:
      */
     CommandExecutorTransitionHandler m_transitionHandler;
 
-    /**
-     * Auxiliary structure for holding information about the triggers in the code.
-     */
-    Trigger m_triggers[CONFIG_MAX_TRIGGER_COUNT];
-
 public:
     /**
      * \brief Constructor.
@@ -218,60 +173,12 @@ public:
     signed long absoluteToInternalTime(unsigned long ms);
 
     /**
-     * \brief Returns the bytecode store that the executor will use.
-     */
-    BytecodeStore* bytecodeStore() const
-    {
-        return m_pBytecodeStore;
-    }
-
-    /**
-     * \brief Returns the value of the internal clock of the executor, assuming
-     *        that the clock of the host device is at the given timestamp.
-     *
-     * \param hostDeviceClock  the value of the clock of the host device.
-     * \return the number of milliseconds elapsed since the last reset
-     *         of the internal clock or the start of the executor, whichever
-     *         was later.
-     */
-    unsigned long clock(unsigned long hostDeviceClock) const
-    {
-        return hostDeviceClock - m_lastClockResetTime;
-    }
-
-    /**
-     * \brief Returns the value of the clock skew compensation factor used by the executor.
-     */
-    float clockSkewCompensationFactor() const
-    {
-        return m_clockSkewCompensationFactor;
-    }
-
-    /**
      * \brief Returns the current color that the command executor would like to
      * output to the LED strip.
      */
     sb_rgb_color_t currentColor() const
     {
         return m_currentColor;
-    }
-
-    /**
-     * \brief Returns the current value of the given pyro channel that the command
-     * executor would like to send to the corresponding pyro GPIO pin.
-     */
-    bool currentPyroChannel(int8_t index) const
-    {
-        return (index < 0 || index >= CONFIG_NUM_PYRO_CHANNELS) ? 0 : ((m_currentPyroChannels & (1 << index)) != 0);
-    }
-
-    /**
-     * \brief Returns the current values of all the pyro channels that the command
-     * executor would like to send to the pyro GPIO pins.
-     */
-    uint8_t currentPyroChannels() const
-    {
-        return m_currentPyroChannels & ((1 << CONFIG_NUM_PYRO_CHANNELS) - 1);
     }
 
     /**
@@ -323,39 +230,6 @@ public:
     }
 
     /**
-     * \brief Sets the value of the clock skew compensation factor.
-     *
-     * The default value of this parameter is 1. It is used as a multiplier to the durations
-     * read from the bytecode; for instance, if the skew compensation factor is 1.2 and the
-     * bytecode instructs us to wait 400 milliseconds, we will instruct the host device to wait
-     * 400 * 1.2 = 480 milliseconds instead, according to the internal clock of the host device.
-     * This can be used to compensate the skew of the internal clock.
-     *
-     * This setter should be called only in a "fresh" state of the executor, i.e. before
-     * actually executing any bytecode.
-     */
-    void setClockSkewCompensationFactor(float value)
-    {
-        m_clockSkewCompensationFactor = value;
-    }
-
-    /**
-     * \brief Sets the signal source that the executor will use.
-     */
-    void setSignalSource(SignalSource* pSignalSource)
-    {
-        m_pSignalSource = pSignalSource;
-    }
-
-    /**
-     * \brief Returns the signal source that the executor will use.
-     */
-    SignalSource* signalSource() const
-    {
-        return m_pSignalSource;
-    }
-
-    /**
      * \brief This function must be called repeatedly from the main loop
      *        to keep the execution flowing.
      *
@@ -372,14 +246,6 @@ public:
     void stop();
 
 private:
-    /**
-     * \brief Checks and fires the active triggers if needed.
-     *
-     * \param now  the current timestamp of the host device. The executor
-     *        assumes that time always goes forward.
-     */
-    void checkAndFireTriggers(unsigned long now);
-
     /**
      * \brief Delays the execution of the commands until the internal clock
      *        of the \em executor reaches the given value.
@@ -407,13 +273,6 @@ private:
     void delayExecutionUntilAbsoluteTime(unsigned long ms);
 
     /**
-     * \brief Executes the action prescribed by the given trigger.
-     *
-     * This function must be called after the trigger fired.
-     */
-    void executeActionOfTrigger(const Trigger* trigger);
-
-    /**
      * \brief Executes the next command from the bytecode.
      *
      * This function is a no-op if the program has ended.
@@ -429,34 +288,12 @@ private:
     void fadeColorOfLEDStrip(sb_rgb_color_t color);
 
     /**
-     * \brief Finds a trigger that will handle the given channel.
-     *
-     * When the channel already had a previous trigger, this function
-     * will return the same trigger. When the channel did not have a trigger
-     * before, this function will find a free trigger slot and return
-     * that. When there are no more free trigger slots, the function
-     * returns NULL.
-     *
-     * \param   channelIndex  index of the channel
-     * \return  pointer to the trigger slot that will handle the given channel,
-     *          or \c NULL if there are no more available trigger slots.
-     */
-    Trigger* findTriggerForChannelIndex(uint8_t channelIndex);
-
-    /**
      * \brief Interprets the next byte from the bytecode as a duration and
      *        sets the next wakeup time of the executor appropriately.
      *
      * \return  the parsed duration
      */
     unsigned long handleDelayByte();
-
-    /**
-     * \brief Interprets the next byte from the bytecode as an easing mode.
-     *
-     * \return  the parsed easing mode
-     */
-    EasingMode handleEasingModeByte();
 
     /**
      * \brief Handles the execution of \c CMD_FADE_TO_BLACK commands.
@@ -469,11 +306,6 @@ private:
     void handleFadeToColorCommand();
 
     /**
-     * \brief Handles the execution of \c CMD_FADE_TO_COLOR_FROM_CHANNELS commands.
-     */
-    void handleFadeToColorFromChannelsCommand();
-
-    /**
      * \brief Handles the execution of \c CMD_FADE_TO_GRAY commands.
      */
     void handleFadeToGrayCommand();
@@ -482,11 +314,6 @@ private:
      * \brief Handles the execution of \c CMD_FADE_TO_WHITE commands.
      */
     void handleFadeToWhiteCommand();
-
-    /**
-     * \brief Handles the execution of \c CMD_JUMP commands.
-     */
-    void handleJumpCommand();
 
     /**
      * \brief Handles the execution of \c CMD_LOOP_BEGIN commands.
@@ -499,21 +326,6 @@ private:
     void handleLoopEndCommand();
 
     /**
-     * \brief Handles the execution of \c CMD_RESET_CLOCK commands.
-     */
-    void handleResetClockCommand();
-
-    /**
-     * \brief Handles the execution of \c CMD_PYRO_SET commands.
-     */
-    void handleSetPyroCommand();
-
-    /**
-     * \brief Handles the execution of \c CMD_PYRO_SET_ALL commands.
-     */
-    void handleSetPyroAllCommand();
-
-    /**
      * \brief Handles the execution of \c CMD_SET_BLACK commands.
      */
     void handleSetBlackCommand();
@@ -522,11 +334,6 @@ private:
      * \brief Handles the execution of \c CMD_SET_COLOR commands.
      */
     void handleSetColorCommand();
-
-    /**
-     * \brief Handles the execution of \c CMD_SET_COLOR_FROM_CHANNELS commands.
-     */
-    void handleSetColorFromChannelsCommand();
 
     /**
      * \brief Handles the execution of \c CMD_SET_GRAY commands.
@@ -542,11 +349,6 @@ private:
      * \brief Handles the execution of \c CMD_SLEEP commands.
      */
     void handleSleepCommand();
-
-    /**
-     * \brief Handles the execution of \c CMD_TRIGGERED_JUMP commands.
-     */
-    void handleTriggeredJumpCommand();
 
     /**
      * \brief Handles the execution of \c CMD_WAIT_UNTIL commands.

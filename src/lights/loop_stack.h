@@ -55,11 +55,6 @@ private:
     LoopStackItem m_items[CONFIG_MAX_LOOP_DEPTH];
 
     /**
-     * Number of active loops in the loop stack.
-     */
-    uint8_t m_numLoops;
-
-    /**
      * Pointer to the topmost item in the loop stack.
      */
     LoopStackItem* m_pTopItem;
@@ -87,25 +82,11 @@ public:
     bool begin(bytecode_location_t location, uint8_t iterations);
 
     /**
-     * Asks the loop stack to start an infinite loop at the given location.
-     *
-     * \param  location    the first instruction of the loop
-     *
-     * \return \c true if the operation was successful, \c false if the loop stack
-     *         is full
-     */
-    bool beginInfinite(bytecode_location_t location)
-    {
-        return begin(location, 0);
-    }
-
-    /**
      * Removes all the items from the loop stack.
      */
     void clear()
     {
         m_pTopItem = 0;
-        m_numLoops = 0;
     }
 
     /**
@@ -118,14 +99,6 @@ public:
      *          iterations left, \c BYTECODE_LOCATION_NOWHERE otherwise
      */
     bytecode_location_t end();
-
-    /**
-     * Returns the number of active loops in the stack.
-     */
-    uint8_t size() const
-    {
-        return m_numLoops;
-    }
 };
 
 #endif

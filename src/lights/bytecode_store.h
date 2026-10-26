@@ -23,15 +23,10 @@
  *
  * This file provides an abstract superclass named \c BytecodeStore that
  * specifies the interface that bytecode storage objects must satisfy.
- * It also contains two basic implementations of bytecode stores that simply
- * work with a chunk of memory.
  */
 #ifndef BYTECODE_STORE_H
 #define BYTECODE_STORE_H
 
-#include "commands.h"
-#include "errors.h"
-#include <assert.h>
 #include <stdint.h>
 
 /**
@@ -49,23 +44,7 @@ typedef int bytecode_location_t;
  * Pure abstract class for bytecode store objects.
  */
 class BytecodeStore {
-private:
-    /**
-     * Internal counter that is increased whenever \c suspend() is called and
-     * decreased whenever \c resume() is called. The bytestore should only
-     * return \c NOP bytes when it is suspended.
-     */
-    signed short int m_suspendCounter;
-
 public:
-    /**
-     * Constructor.
-     */
-    BytecodeStore()
-        : m_suspendCounter(0)
-    {
-    }
-
     /**
      * Destructor. Added only if we are building things for a desktop machine
      * and not an embedded one. On embedded microcontrollers, we typically
@@ -73,15 +52,6 @@ public:
      * sometimes the C++ library does not even include one).
      */
     virtual ~BytecodeStore() { }
-
-    /**
-     * \brief Returns the capacity of the store.
-     *
-     * The capacity of the store is equal to the length of the longest bytecode
-     * that one can write into it. Read-only bytecode stores should report a
-     * capacity of zero.
-     */
-    virtual unsigned int capacity() const = 0;
 
     /**
      * \brief Returns whether the store is empty.
@@ -99,17 +69,6 @@ public:
     virtual uint8_t next() = 0;
 
     /**
-     * \brief Resumes the bytecode store after a previous call to \c suspend().
-     *
-     * This function can be invoked multiple times; it must be balanced
-     * with an equal number of calls to \c suspend() when used correctly.
-     */
-    void resume()
-    {
-        m_suspendCounter--;
-    }
-
-    /**
      * \brief Rewinds the bytecode store to the start of the current bytecode.
      */
     virtual void rewind() = 0;
@@ -121,29 +80,6 @@ public:
      * point where the execution starts.
      */
     virtual void seek(bytecode_location_t location) = 0;
-
-    /**
-     * \brief Temporarily suspend the bytecode store so it will simply return
-     *        \c NOP until it is resumed.
-     *
-     * This function can be invoked multiple times; it must be balanced
-     * with an equal number of calls to \c resume() to restore the bytecode
-     * store to its original (unsuspended) state.
-     */
-    void suspend()
-    {
-        m_suspendCounter++;
-    }
-
-    /**
-     * \brief Returns whether the bytecode store is currently suspended.
-     * \return \c true if the bytecode store is currently suspended, \c false
-     *         otherwise.
-     */
-    bool suspended() const
-    {
-        return m_suspendCounter > 0;
-    }
 
     /**
      * \brief Returns the current location of the internal pointer of the
@@ -158,15 +94,6 @@ public:
      *          not support seeking
      */
     virtual bytecode_location_t tell() const = 0;
-
-    /**
-     * \brief Writes the given byte into the current location in the bytecode,
-     *        and advances the internal pointer.
-     *
-     * \return  the number of bytes written, i.e. 1 if the write was successful
-     *          and 0 if it failed
-     */
-    virtual int write(uint8_t value) = 0;
 };
 
 #endif

@@ -25,7 +25,6 @@
 #ifndef SKYBRUSH_LIGHTS_COMMANDS_H
 #define SKYBRUSH_LIGHTS_COMMANDS_H
 
-#include <skybrush/basic_types.h>
 #include <skybrush/decls.h>
 
 __BEGIN_DECLS
@@ -52,49 +51,10 @@ typedef enum
     CMD_FADE_TO_WHITE, /**< 0x0B = Fade to white */
     CMD_LOOP_BEGIN,    /**< 0x0C = Mark the beginning of a loop */
     CMD_LOOP_END,      /**< 0x0D = Mark the end of a loop */
-    CMD_RESET_CLOCK,   /**< 0x0E = Reset the internal clock */
-    CMD_UNUSED_1,
-    CMD_SET_COLOR_FROM_CHANNELS,     /**< 0x10 = Set color from channels */
-    CMD_FADE_TO_COLOR_FROM_CHANNELS, /**< 0x11 = Fade to color from channels */
-    CMD_JUMP,                        /**< 0x12 = Jump to address */
-    CMD_TRIGGERED_JUMP,              /**< 0x13 = Triggered jump to address */
-    CMD_SET_PYRO,                    /**< 0x14 = Turn on or off some pyro channels */
-    CMD_SET_PYRO_ALL,                /**< 0x15 = Set exact value for all pyro channels */
     NUMBER_OF_COMMANDS,
 } command_t;
 
 // clang-format on
-
-/**
- * Structure that defines the extra information we provide about each
- * command such as the number of arguments that we expect for the
- * command.
- */
-typedef struct
-{
-    /**
-     * \brief Number of arguments of the command.
-     *
-     * MSB is set to 1 if the last argument of the command is a variable-length
-     * integer.
-     */
-    uint8_t arg_count;
-
-    /** Additiona flags; currently unused */
-    uint8_t flags;
-} command_info_t;
-
-/**
- * Special constant that is used in the \c arg_count member of
- * \c command_info_t to denote a command that uses a given number of arguments,
- * the last of which is variable-length.
- */
-#define LAST_ARG_IS_VARINT(x) ((x) + 127)
-
-/**
- * Array that holds information for each of the commands that we support.
- */
-extern const command_info_t COMMAND_INFO[NUMBER_OF_COMMANDS];
 
 __END_DECLS
 

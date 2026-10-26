@@ -17,7 +17,10 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
+
 #include "bytecode_store.h"
+#include "commands.h"
 
 /**
  * \brief Bytecode store implementation that works from a regular C array.
@@ -55,11 +58,6 @@ public:
     {
     }
 
-    unsigned int capacity() const override
-    {
-        return 0; /* read only */
-    }
-
     virtual bool empty() const override
     {
         return m_size == 0;
@@ -67,11 +65,17 @@ public:
 
     uint8_t next() override
     {
-        if (suspended()) {
-            return CMD_NOP;
+        uint8_t result;
+
+        assert(m_nextIndex >= 0);
+        if (m_nextIndex < m_size) {
+            result = m_data[m_nextIndex];
+            m_nextIndex++;
         } else {
-            return nextByte();
+            result = CMD_END;
         }
+
+        return result;
     }
 
     void rewind() override
@@ -88,30 +92,5 @@ public:
     bytecode_location_t tell() const override
     {
         return m_nextIndex;
-    }
-
-    int write(uint8_t value) override
-    {
-        return 0;
-    }
-
-private:
-    /**
-     * \brief Returns the next byte from the bytecode store (even if it is suspended)
-     *        and advances the internal pointer.
-     */
-    uint8_t nextByte()
-    {
-        uint8_t result;
-
-        assert(m_nextIndex >= 0);
-        if (m_nextIndex < m_size) {
-            result = m_data[m_nextIndex];
-            m_nextIndex++;
-        } else {
-            result = CMD_END;
-        }
-
-        return result;
     }
 };

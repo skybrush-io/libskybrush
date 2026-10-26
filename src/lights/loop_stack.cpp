@@ -21,12 +21,11 @@
 
 bool LoopStack::begin(bytecode_location_t location, uint8_t iterations)
 {
-    if (m_pTopItem >= m_items + CONFIG_MAX_LOOP_DEPTH) {
+    if (m_pTopItem == m_items + CONFIG_MAX_LOOP_DEPTH - 1) {
         return false;
     }
 
     m_pTopItem = m_pTopItem ? m_pTopItem + 1 : m_items;
-    m_numLoops++;
     m_pTopItem->start = location;
     m_pTopItem->iterationsLeftPlusOne = iterations;
     /* Yes, the line above is correct. If this is an infinite loop, we simply
@@ -49,7 +48,6 @@ bytecode_location_t LoopStack::end()
             /* Last iteration */
             m_pTopItem->iterationsLeftPlusOne = 0;
             m_pTopItem = (m_pTopItem == m_items) ? 0 : m_pTopItem - 1;
-            m_numLoops--;
             return BYTECODE_LOCATION_NOWHERE;
         } else {
             /* We still have some iterations */
