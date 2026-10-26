@@ -222,6 +222,32 @@ void test_rgbw_conversion(void)
         sb_rgb_color_to_rgbw(color, conv)));
 }
 
+void test_rgb_from_color_temperature_at_branch_points(void)
+{
+    /* Exact values of the approximation formula of Tanner Helland around the
+     * points where its branches change, computed independently */
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(500), sb_rgb_color_make(255, 67, 0), 1));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(999), sb_rgb_color_make(255, 67, 0), 1));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(1900), sb_rgb_color_make(255, 131, 0), 1));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(6500), sb_rgb_color_make(255, 254, 250), 1));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(6600), sb_rgb_color_make(255, 255, 255), 1));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(6700), sb_rgb_color_make(254, 248, 255), 1));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(7000), sb_rgb_color_make(242, 242, 255), 1));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(20000), sb_rgb_color_make(170, 198, 255), 1));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(40000), sb_rgb_color_make(151, 185, 255), 1));
+    TEST_ASSERT_TRUE(sb_rgb_color_almost_equals(
+        sb_rgb_color_from_color_temperature(100000), sb_rgb_color_make(151, 185, 255), 1));
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -230,6 +256,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_encode_rgb565);
     RUN_TEST(test_rgb_equals);
     RUN_TEST(test_rgb_from_color_temperature);
+    RUN_TEST(test_rgb_from_color_temperature_at_branch_points);
     RUN_TEST(test_rgbw_equals);
     RUN_TEST(test_rgbw_conversion);
 

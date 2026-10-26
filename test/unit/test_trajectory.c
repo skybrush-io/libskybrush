@@ -731,6 +731,22 @@ void test_replace_end_to_land_at_not_below(void)
     TEST_ASSERT_EQUAL(50000, stats.duration_msec);
 }
 
+void test_replace_end_to_land_at_slowly_from_small_height(void)
+{
+    /* Landing velocities below 1 mm/s and descents shorter than 1 mm are
+     * valid; descending 0.5 mm with 0.5 mm/s takes one second */
+    sb_vector3_t landing_position = { 0, 0, 4999.5f };
+    sb_trajectory_stats_t stats;
+
+    prepare_stats_for_replace_end_to_land_at(trajectory, &stats);
+    TEST_ASSERT_EQUAL(45, stats.landing_time_sec);
+    TEST_ASSERT_EQUAL(5000, stats.pos_at_landing_time.z);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_replace_end_to_land_at(trajectory, &stats, landing_position, 0.5f));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 46, stats.landing_time_sec);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 46, stats.duration_sec);
+}
+
 void test_replace_end_to_land_at_missing_stats(void)
 {
     sb_vector3_t origin = { 1000, 0, 0 };
@@ -901,6 +917,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_replace_end_to_land_at);
     RUN_TEST(test_replace_end_to_land_at_missing_stats);
     RUN_TEST(test_replace_end_to_land_at_not_below);
+    RUN_TEST(test_replace_end_to_land_at_slowly_from_small_height);
     RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity);
     RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity_invalid);
     RUN_TEST(test_replace_end_to_land_at_nonzero_landing_altitude);

@@ -271,6 +271,31 @@ void test_skip_truncated_block(void)
     fclose(fp);
 }
 
+void test_open_file_descriptor_zero(void)
+{
+    /* File descriptor 0 is a valid file descriptor */
+    uint8_t buf[] = { 's', 'k', 'y', 'b', 1 };
+    sb_binary_file_parser_t parser;
+    int saved_stdin = dup(0);
+    FILE* fp;
+
+    TEST_ASSERT_TRUE(saved_stdin >= 0);
+    fp = tmpfile();
+    TEST_ASSERT_NOT_NULL(fp);
+    TEST_ASSERT_EQUAL(sizeof(buf), fwrite(buf, 1, sizeof(buf), fp));
+    TEST_ASSERT_EQUAL(0, fflush(fp));
+    TEST_ASSERT_EQUAL(0, dup2(fileno(fp), 0));
+    TEST_ASSERT_EQUAL(0, lseek(0, 0, SEEK_SET));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_binary_file_parser_init_from_file(&parser, 0));
+    TEST_ASSERT_EQUAL(1, sb_binary_file_parser_get_version(&parser));
+    sb_binary_file_parser_destroy(&parser);
+
+    TEST_ASSERT_EQUAL(0, dup2(saved_stdin, 0));
+    close(saved_stdin);
+    fclose(fp);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -282,6 +307,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_read_truncated_block_from_memory);
     RUN_TEST(test_read_block_past_end_from_memory);
     RUN_TEST(test_skip_truncated_block);
+    RUN_TEST(test_open_file_descriptor_zero);
 
     return UNITY_END();
 }

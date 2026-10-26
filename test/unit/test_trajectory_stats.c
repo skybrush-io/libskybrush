@@ -347,6 +347,52 @@ void test_calculate_landing_time_without_segments(void)
     sb_trajectory_stats_destroy(&stats);
 }
 
+void test_calculate_landing_time_with_descent_at_verticality_threshold(void)
+{
+    /* Climb to 10 m, then descend to the ground while drifting horizontally
+     * by exactly the verticality threshold (50 mm); the descent still counts
+     * as vertical, so landing is triggered 2.5 m above the ground */
+    sb_trajectory_builder_t builder;
+    sb_trajectory_stats_calculator_t calc;
+    sb_trajectory_stats_t stats;
+    sb_vector3_with_yaw_t pos = { 0, 0, 0, 0 };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 10, 0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, pos));
+    pos.z = 10000;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_line(&builder, pos, 10000));
+    pos.x = 50;
+    pos.z = 0;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_line(&builder, pos, 10000));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_builder(trajectory, &builder));
+    sb_trajectory_builder_destroy(&builder);
+
+    sb_trajectory_stats_init(&stats);
+    sb_trajectory_stats_calculator_init(&calc, 1000);
+    TEST_ASSERT_EQUAL_FLOAT(50, calc.verticality_threshold);
+    sb_trajectory_stats_calculator_set_components(&calc, SB_TRAJECTORY_STATS_LANDING_TIME);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_stats_calculator_run(&calc, trajectory, &stats));
+    sb_trajectory_stats_calculator_destroy(&calc);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 17.5, stats.landing_time_sec);
+    TEST_ASSERT_FLOAT_WITHIN(1e-2, 2500, stats.pos_at_landing_time.z);
+
+    sb_trajectory_stats_destroy(&stats);
+}
+
+void test_calculator_with_zero_acceleration(void)
+{
+    sb_trajectory_stats_calculator_t calc;
+    sb_trajectory_stats_t stats;
+
+    sb_trajectory_stats_init(&stats);
+    sb_trajectory_stats_calculator_init(&calc, 1000);
+    calc.acceleration = 0;
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_stats_calculator_run(&calc, trajectory, &stats));
+    sb_trajectory_stats_calculator_destroy(&calc);
+    sb_trajectory_stats_destroy(&stats);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -359,6 +405,8 @@ int main(int argc, char* argv[])
     RUN_TEST(test_calculate_landing_time_when_trajectory_ends_moving);
     RUN_TEST(test_calculate_landing_time_with_zero_preferred_descent_ending_mid_descent);
     RUN_TEST(test_calculate_landing_time_without_segments);
+    RUN_TEST(test_calculate_landing_time_with_descent_at_verticality_threshold);
+    RUN_TEST(test_calculator_with_zero_acceleration);
 
     return UNITY_END();
 }

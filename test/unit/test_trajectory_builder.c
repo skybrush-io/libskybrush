@@ -57,6 +57,43 @@ void test_init_invalid_scale(void)
 {
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_init(&builder, 0, 0));
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_init(&builder, 255, 0));
+
+    /* The scale is stored in the seven lower bits of the header */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_init(&builder, 128, 0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 127, 0));
+    TEST_ASSERT_EQUAL(127, SB_BUFFER(builder.buffer)[0]);
+    sb_trajectory_builder_destroy(&builder);
+}
+
+void test_append_without_start_position(void)
+{
+    /* The builder starts from the origin if no start position is set, so
+     * only the X axis changes in this segment */
+    sb_vector3_with_yaw_t target = { 10, 0, 0, 0 };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 1, 0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_line(&builder, target, 1000));
+    TEST_ASSERT_EQUAL(9 + 3 + 2, sb_buffer_size(&builder.buffer));
+    TEST_ASSERT_EQUAL_HEX8(SB_X_LINEAR, SB_BUFFER(builder.buffer)[9]);
+    sb_trajectory_builder_destroy(&builder);
+}
+
+void test_append_cubic_bezier_with_constant_axis(void)
+{
+    /* X stays constant, only Y changes along a cubic Bezier curve, so only
+     * the control points of the Y axis are written */
+    sb_vector3_with_yaw_t start = { 100, 0, 0, 0 };
+    sb_vector3_with_yaw_t ctrl1 = { 100, 10, 0, 0 };
+    sb_vector3_with_yaw_t ctrl2 = { 100, 20, 0, 0 };
+    sb_vector3_with_yaw_t target = { 100, 30, 0, 0 };
+    uint8_t expected[] = { SB_Y_BEZIER, 0xe8, 0x03, 10, 0, 20, 0, 30, 0 };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 1, 0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, start));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_cubic_bezier(&builder, ctrl1, ctrl2, target, 1000));
+    TEST_ASSERT_EQUAL(9 + sizeof(expected), sb_buffer_size(&builder.buffer));
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, SB_BUFFER(builder.buffer) + 9, sizeof(expected));
+    sb_trajectory_builder_destroy(&builder);
 }
 
 void test_set_start_position(void)
@@ -673,12 +710,116 @@ void test_move_to_in_time(void)
     SB_XDECREF(trajectory);
 }
 
+/**
+ * Builds a trajectory that moves from the origin along the X axis to the given
+ * coordinate with sb_trajectory_builder_move_to_in_time().
+ */
+static sb_trajectory_t* build_move_along_x(float x, uint32_t duration_msec, float max_acceleration)
+{
+    sb_vector3_with_yaw_t start = { 0, 0, 0, 0 };
+    sb_vector3_with_yaw_t target = { x, 0, 0, 0 };
+    sb_trajectory_t* trajectory;
+
+    TEST_ASSERT_NOT_NULL(trajectory = sb_trajectory_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 1, 0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, start));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_move_to_in_time(&builder, target, duration_msec, max_acceleration));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_builder(trajectory, &builder));
+    sb_trajectory_builder_destroy(&builder);
+
+    return trajectory;
+}
+
+void test_move_to_in_time_with_short_cruise(void)
+{
+    /* With an acceleration of 1000 mm/s^2, moving 2187.5 mm in 3 s requires a
+     * travel velocity of 1250 mm/s, reached in 1.25 s, followed by 0.5 s of
+     * constant velocity and 1.25 s of deceleration */
+    sb_trajectory_t* trajectory = build_move_along_x(2187.5f, 3000, 1000);
+    sb_trajectory_player_t player;
+    sb_vector3_with_yaw_t vec;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 1.5f, &vec));
+    TEST_ASSERT_FLOAT_WITHIN(5, 1250, vec.x);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 1.5f, &vec));
+    TEST_ASSERT_FLOAT_WITHIN(2, 1093.75f, vec.x);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 3, &vec));
+    TEST_ASSERT_FLOAT_WITHIN(1, 2187.5f, vec.x);
+    sb_trajectory_player_destroy(&player);
+
+    SB_XDECREF(trajectory);
+}
+
+void test_move_to_in_time_with_very_short_acceleration(void)
+{
+    /* Regression test: when the acceleration phase was shorter than one
+     * millisecond, its duration was converted to seconds incorrectly and the
+     * trajectory overshot the target by several meters. Here the travel
+     * velocity is about 20 mm/s, which is reached in about 0.3 ms */
+    sb_trajectory_t* trajectory = build_move_along_x(100, 5000, 65535);
+    sb_trajectory_player_t player;
+    sb_vector3_with_yaw_t vec;
+    float last_x = 0;
+    int t_msec;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+    for (t_msec = 0; t_msec <= 5000; t_msec++) {
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t_msec / 1000.0f, &vec));
+        TEST_ASSERT_TRUE(vec.x >= last_x - 1e-3f);
+        TEST_ASSERT_TRUE(vec.x <= 100 + 1e-3f);
+        last_x = vec.x;
+    }
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 2.5f, &vec));
+    TEST_ASSERT_FLOAT_WITHIN(1, 50, vec.x);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, 5, &vec));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 100, vec.x);
+    sb_trajectory_player_destroy(&player);
+
+    SB_XDECREF(trajectory);
+}
+
+void test_move_to_in_time_short_durations(void)
+{
+    sb_vector3_with_yaw_t target = { 1000, 0, 0, 0 };
+    sb_trajectory_t* trajectory;
+    sb_trajectory_player_t player;
+    sb_vector3_with_yaw_t vec;
+
+    /* Zero duration is invalid but one millisecond is not */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 1, 0));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_move_to_in_time(&builder, target, 0, 1000));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_move_to_in_time(&builder, target, 1, 1000));
+    sb_trajectory_builder_destroy(&builder);
+
+    /* Durations shorter than three milliseconds are too short for separate
+     * acceleration, cruising and deceleration phases so a straight line is
+     * used, which starts moving immediately */
+    trajectory = build_move_along_x(1000, 2, 1000);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 0, &vec));
+    TEST_ASSERT_FLOAT_WITHIN(1, 500000, vec.x);
+    sb_trajectory_player_destroy(&player);
+    SB_XDECREF(trajectory);
+
+    /* Three milliseconds are enough for the three phases, so the motion starts
+     * from rest */
+    trajectory = build_move_along_x(1000, 3, 1000);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, 0, &vec));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, vec.x);
+    sb_trajectory_player_destroy(&player);
+    SB_XDECREF(trajectory);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
 
     RUN_TEST(test_init);
     RUN_TEST(test_init_invalid_scale);
+    RUN_TEST(test_append_without_start_position);
+    RUN_TEST(test_append_cubic_bezier_with_constant_axis);
     RUN_TEST(test_set_start_position);
     RUN_TEST(test_set_start_position_invalid_coordinate);
     RUN_TEST(test_set_start_position_later);
@@ -688,6 +829,9 @@ int main(int argc, char* argv[])
     RUN_TEST(test_get_last_position);
     RUN_TEST(test_conversion_to_trajectory);
     RUN_TEST(test_move_to_in_time);
+    RUN_TEST(test_move_to_in_time_with_short_cruise);
+    RUN_TEST(test_move_to_in_time_with_very_short_acceleration);
+    RUN_TEST(test_move_to_in_time_short_durations);
 
     return UNITY_END();
 }

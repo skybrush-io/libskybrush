@@ -17,6 +17,9 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
+#include <string.h>
+
 #include <skybrush/events.h>
 #include <skybrush/formats/binary.h>
 
@@ -193,6 +196,52 @@ void test_seek_to_very_large_timestamp(void)
     TEST_ASSERT_NULL(event);
 }
 
+void test_seek_to_negative_or_nan_timestamp(void)
+{
+    /* Seeking before the start of the show (or to NaN) rewinds the player to
+     * the first event */
+    const sb_event_t* event = NULL;
+
+    sb_event_list_player_seek(&player, 60);
+    sb_event_list_player_seek(&player, -1);
+    event = sb_event_list_player_get_next_event(&player);
+    TEST_ASSERT_NOT_NULL(event);
+    TEST_ASSERT_EQUAL_UINT32(10000, event->time_msec);
+
+    sb_event_list_player_seek(&player, 60);
+    sb_event_list_player_seek(&player, NAN);
+    event = sb_event_list_player_get_next_event(&player);
+    TEST_ASSERT_NOT_NULL(event);
+    TEST_ASSERT_EQUAL_UINT32(10000, event->time_msec);
+}
+
+void test_iteration_by_time_near_end_of_time_range(void)
+{
+    /* Timestamps close to the largest representable timestamp must not be
+     * clamped prematurely */
+    sb_event_list_t late_events;
+    sb_event_list_player_t late_player;
+    sb_event_t event;
+    const sb_event_t* next;
+
+    memset(&event, 0, sizeof(event));
+    event.time_msec = 4294000000u;
+    event.type = SB_EVENT_TYPE_PYRO;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_init(&late_events, 1));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_append(&late_events, &event));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_player_init(&late_player, &late_events));
+
+    TEST_ASSERT_NULL(sb_event_list_player_get_next_event_not_later_than(&late_player, 4292000.0f));
+
+    next = sb_event_list_player_get_next_event_not_later_than(&late_player, 4294967.0f);
+    TEST_ASSERT_NOT_NULL(next);
+    TEST_ASSERT_EQUAL_UINT32(4294000000u, next->time_msec);
+
+    sb_event_list_player_destroy(&late_player);
+    SB_DECREF_STATIC(&late_events);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -201,6 +250,8 @@ int main(int argc, char* argv[])
     RUN_TEST(test_iteration_by_time);
     RUN_TEST(test_rewind_after_iteration);
     RUN_TEST(test_seek_to_very_large_timestamp);
+    RUN_TEST(test_seek_to_negative_or_nan_timestamp);
+    RUN_TEST(test_iteration_by_time_near_end_of_time_range);
 
     return UNITY_END();
 }

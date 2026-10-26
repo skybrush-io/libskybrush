@@ -898,6 +898,28 @@ void test_show_controller_invalidate_cached_output(void)
     SB_DECREF(prog);
 }
 
+void test_show_controller_update_time_at_int32_max(void)
+{
+    sb_show_controller_t ctrl;
+    sb_screenplay_t screenplay;
+    sb_screenplay_scene_t* scene = NULL;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_init(&ctrl, &screenplay));
+
+    /* INT32_MAX is still within the infinite scene */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_update_time_msec(&ctrl, INT32_MAX));
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
+
+    /* Anything later than INT32_MAX is treated as the end of the show */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_update_time_msec(&ctrl, (uint32_t)INT32_MAX + 1));
+    TEST_ASSERT_TRUE(sb_show_controller_has_reached_end(&ctrl));
+
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -905,6 +927,7 @@ int main(void)
     RUN_TEST(test_show_controller_init_sets_defaults_and_get_current_output);
     RUN_TEST(test_show_controller_update_time_without_screenplay_returns_default);
     RUN_TEST(test_show_controller_update_time_with_empty_screenplay_produces_no_components);
+    RUN_TEST(test_show_controller_update_time_at_int32_max);
     RUN_TEST(test_show_controller_scene_transition_switches_players);
     RUN_TEST(test_show_controller_output_time_multi_scene);
     RUN_TEST(test_show_controller_play_fixture_single_scene);

@@ -510,6 +510,18 @@ void test_time_axis_reverse_map_single_constant_segment(void)
     TEST_ASSERT_EQUAL_INT32(1500, sb_time_axis_reverse_map(&axis, 3.0f));
     TEST_ASSERT_EQUAL_INT32(5000, sb_time_axis_reverse_map(&axis, 10.0f));
     TEST_ASSERT_EQUAL_INT32(7000, sb_time_axis_reverse_map(&axis, 14.0f));
+
+    /* Warped times shorter than a second are also mapped through the segment */
+    TEST_ASSERT_EQUAL_INT32(250, sb_time_axis_reverse_map(&axis, 0.5f));
+    TEST_ASSERT_EQUAL_INT32(0, sb_time_axis_reverse_map(&axis, 0.0f));
+}
+
+void test_time_axis_append_segment_with_nan_rate(void)
+{
+    /* Segments where either rate is NaN are invalid */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_time_axis_append_segment(&axis, sb_time_segment_make(1000, NAN, 1.0f)));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_time_axis_append_segment(&axis, sb_time_segment_make(1000, 1.0f, NAN)));
+    TEST_ASSERT_EQUAL(0, sb_time_axis_num_segments(&axis));
 }
 
 void test_time_axis_reverse_map_across_segments(void)
@@ -879,6 +891,7 @@ int main(int argc, char* argv[])
     /* sb_time_axis_reverse_map tests */
     RUN_TEST(test_time_axis_reverse_map_empty_axis);
     RUN_TEST(test_time_axis_reverse_map_single_constant_segment);
+    RUN_TEST(test_time_axis_append_segment_with_nan_rate);
     RUN_TEST(test_time_axis_reverse_map_across_segments);
     RUN_TEST(test_time_axis_reverse_map_linear_changing_rate);
     RUN_TEST(test_time_axis_reverse_map_origin_shift);

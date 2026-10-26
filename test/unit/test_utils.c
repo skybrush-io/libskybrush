@@ -296,6 +296,30 @@ void test_bezier_cut_at(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 0, dst[3]);
 }
 
+void test_bezier_cut_at_seventh_degree(void)
+{
+    /* Seventh-degree curves have eight control points, which is the maximum */
+    float evenly_spaced[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    float last_only[8] = { 0, 0, 0, 0, 0, 0, 0, 1 };
+    float dst[8];
+    int i;
+
+    /* Evenly spaced control points describe x(t) = 7t, so the first half of
+     * the curve has evenly spaced control points from 0 to 3.5 */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, evenly_spaced, 8, 0.5));
+    for (i = 0; i < 8; i++) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-5, i * 0.5f, dst[i]);
+    }
+
+    /* These control points describe x(t) = t^7; the control points of the
+     * first half are all zero except the last one, which is 0.5^7 */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_bezier_cut_at(dst, last_only, 8, 0.5));
+    for (i = 0; i < 7; i++) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-7, 0, dst[i]);
+    }
+    TEST_ASSERT_FLOAT_WITHIN(1e-7, 1.0f / 128, dst[7]);
+}
+
 void test_make_skyb_header(void)
 {
     uint8_t buf[8];
@@ -326,6 +350,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_scale_update_vector3_with_yaw);
     RUN_TEST(test_solve_quadratic);
     RUN_TEST(test_bezier_cut_at);
+    RUN_TEST(test_bezier_cut_at_seventh_degree);
     RUN_TEST(test_make_skyb_header);
 
     return UNITY_END();

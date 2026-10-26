@@ -197,6 +197,23 @@ void test_auto_yaw_and_negative_values(void)
     sb_yaw_player_destroy(&player);
 }
 
+void test_set_constant_yaw_clamps_to_int16_range(void)
+{
+    /* The yaw offset is stored as a signed 16-bit integer in tenths of a
+     * degree; values outside this range are clamped */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_set_constant_yaw(ctrl, 3276.7f));
+    TEST_ASSERT_EQUAL(32767, ctrl->yaw_offset_ddeg);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_set_constant_yaw(ctrl, 3276.8f));
+    TEST_ASSERT_EQUAL(32767, ctrl->yaw_offset_ddeg);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_set_constant_yaw(ctrl, -3276.8f));
+    TEST_ASSERT_EQUAL(-32768, ctrl->yaw_offset_ddeg);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_yaw_control_set_constant_yaw(ctrl, -3276.9f));
+    TEST_ASSERT_EQUAL(-32768, ctrl->yaw_offset_ddeg);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -206,6 +223,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_loaded_deltas_in_memory);
     RUN_TEST(test_update_with_corrupted_body);
     RUN_TEST(test_auto_yaw_and_negative_values);
+    RUN_TEST(test_set_constant_yaw_clamps_to_int16_range);
 
     return UNITY_END();
 }

@@ -424,6 +424,13 @@ void test_update_with_out_of_range_values(void)
     TEST_ASSERT_EQUAL_INT16(4095, setup.size.x);
     TEST_ASSERT_EQUAL_INT16(4095, setup.size.y);
 
+    /* zero is the smallest allowed coordinate */
+    offset = 0;
+    WRITE_COORDS(body, offset, 0, 5);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_gcs_light_control_setup_update_from_buffer(&setup, body, offset));
+    TEST_ASSERT_EQUAL_INT16(0, setup.coords.x);
+    TEST_ASSERT_EQUAL_INT16(5, setup.coords.y);
+
     sb_gcs_light_control_setup_destroy(&setup);
 }
 

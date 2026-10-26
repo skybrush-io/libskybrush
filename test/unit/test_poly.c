@@ -853,6 +853,20 @@ void test_touches_simple(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.75f, result); /* should be untouched */
 }
 
+void test_touches_cubic_rising_then_falling(void)
+{
+    /* f(t) = 1 + 3t - 6t^2 - t^3 starts above zero and rises at first, but
+     * its derivative becomes negative before t = 1 and f(1) = -3, so it must
+     * cross zero in (0; 1), at t = 0.672472 */
+    sb_poly_t poly;
+    float xs[4] = { 1, 3, -6, -1 };
+    float result;
+
+    sb_poly_make(&poly, xs, 4);
+    TEST_ASSERT_TRUE(sb_poly_touches(&poly, 0, &result));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.672472f, result);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -872,6 +886,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_deriv);
 
     RUN_TEST(test_touches_simple);
+    RUN_TEST(test_touches_cubic_rising_then_falling);
 
     RUN_TEST(test_solve_simple);
     RUN_TEST(test_solve_roots_not_needed);

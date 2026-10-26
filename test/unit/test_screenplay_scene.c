@@ -362,6 +362,21 @@ void test_screenplay_scene_set_duration_sec_finite_rounding(void)
     SB_DECREF_STATIC(&scene);
 }
 
+void test_screenplay_scene_set_duration_sec_shorter_than_a_second(void)
+{
+    sb_screenplay_scene_t scene;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_sec(&scene, 0.5f));
+    TEST_ASSERT_EQUAL_UINT32(500u, sb_screenplay_scene_get_duration_msec(&scene));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_duration_sec(&scene, 0.0f));
+    TEST_ASSERT_EQUAL_UINT32(0u, sb_screenplay_scene_get_duration_msec(&scene));
+
+    SB_DECREF_STATIC(&scene);
+}
+
 void test_screenplay_scene_set_duration_sec_infinite(void)
 {
     sb_screenplay_scene_t scene;
@@ -817,6 +832,46 @@ void test_screenplay_scene_get_warped_time_remaining_single_realtime_segment(voi
     SB_DECREF_STATIC(&traj);
 }
 
+void test_screenplay_scene_get_warped_time_remaining_without_trajectory(void)
+{
+    sb_screenplay_scene_t scene;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(sb_screenplay_scene_get_time_axis(&scene), sb_time_segment_make_realtime(4000u)));
+
+    TEST_ASSERT_EQUAL(0.0f, sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene));
+
+    SB_DECREF_STATIC(&scene);
+}
+
+void test_screenplay_scene_get_warped_time_remaining_with_origin(void)
+{
+    /* 10 s long trajectory, time axis covers 4 s of it */
+    sb_screenplay_scene_t scene;
+    sb_trajectory_t traj;
+    sb_time_axis_t* axis;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_init(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&traj));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_i_build_hold_trajectory(&traj, 10000u));
+    sb_screenplay_scene_set_trajectory(&scene, &traj);
+
+    axis = sb_screenplay_scene_get_time_axis(&scene);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_realtime(4000u)));
+
+    /* A non-negative origin does not affect the result */
+    sb_time_axis_set_origin_msec(axis, 500);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 6.0f, sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene));
+
+    /* A negative origin means that the scene starts later on the show clock,
+     * so less of the trajectory remains to be played */
+    sb_time_axis_set_origin_msec(axis, -2000);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 4.0f, sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene));
+
+    SB_DECREF_STATIC(&scene);
+    SB_DECREF_STATIC(&traj);
+}
+
 void test_screenplay_scene_get_warped_time_remaining_single_constant_rate_segment(void)
 {
     sb_screenplay_scene_t scene;
@@ -1016,6 +1071,7 @@ int main(void)
     RUN_TEST(test_screenplay_scene_reset_clears_tag);
     RUN_TEST(test_screenplay_scene_getters_and_setters);
     RUN_TEST(test_screenplay_scene_set_duration_sec_finite_rounding);
+    RUN_TEST(test_screenplay_scene_set_duration_sec_shorter_than_a_second);
     RUN_TEST(test_screenplay_scene_set_duration_sec_infinite);
     RUN_TEST(test_screenplay_scene_set_duration_sec_negative_is_invalid_and_preserves_old);
     RUN_TEST(test_screenplay_scene_set_duration_sec_nan_is_invalid_and_preserves_old);
@@ -1027,6 +1083,8 @@ int main(void)
     RUN_TEST(test_screenplay_scene_update_from_binary_file_in_memory);
     RUN_TEST(test_screenplay_scene_get_warped_time_remaining_no_time_axis_segments);
     RUN_TEST(test_screenplay_scene_get_warped_time_remaining_single_realtime_segment);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_without_trajectory);
+    RUN_TEST(test_screenplay_scene_get_warped_time_remaining_with_origin);
     RUN_TEST(test_screenplay_scene_get_warped_time_remaining_single_constant_rate_segment);
     RUN_TEST(test_screenplay_scene_get_warped_time_remaining_single_spinup_segment);
     RUN_TEST(test_screenplay_scene_get_warped_time_remaining_single_slowdown_segment);

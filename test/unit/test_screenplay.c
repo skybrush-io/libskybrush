@@ -308,6 +308,14 @@ void test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_suc
         2.5f,
         sb_screenplay_get_time_sec_for_scene_tag_and_warped_time_in_scene(&screenplay, 3, 3.0f));
 
+    /* The first and the last instant of the scene both belong to the scene */
+    TEST_ASSERT_EQUAL_UINT32(
+        1000u,
+        sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 3, 0.0f));
+    TEST_ASSERT_EQUAL_UINT32(
+        6000u,
+        sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 3, 10.0f));
+
     TEST_ASSERT_EQUAL_UINT32(
         UINT32_MAX,
         sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 3, -1.0f));
@@ -402,6 +410,26 @@ void test_sb_screenplay_remove_last_scene(void)
  * entirely in memory. The test keeps the buffer alive until the screenplay is
  * destroyed because the scene (and its trajectory) may reference the buffer.
  */
+void test_screenplay_update_from_short_binary_file_in_memory(void)
+{
+    sb_screenplay_t screenplay;
+    sb_screenplay_scene_t* scene = NULL;
+    uint8_t buf[] = { 's' };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene));
+
+    /* Empty show data clears the screenplay */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_update_from_binary_file_in_memory(&screenplay, buf, 0));
+    TEST_ASSERT_EQUAL(0, sb_screenplay_size(&screenplay));
+
+    /* A single byte is not a valid show file */
+    TEST_ASSERT_EQUAL(SB_EPARSE, sb_screenplay_update_from_binary_file_in_memory(&screenplay, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL(0, sb_screenplay_size(&screenplay));
+
+    sb_screenplay_destroy(&screenplay);
+}
+
 void test_screenplay_update_from_binary_file_in_memory(void)
 {
     sb_screenplay_t screenplay;
@@ -562,6 +590,7 @@ int main(void)
     RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_success_and_bounds);
     RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_with_nonlinear_preceding_scene);
     RUN_TEST(test_sb_screenplay_remove_last_scene);
+    RUN_TEST(test_screenplay_update_from_short_binary_file_in_memory);
     RUN_TEST(test_screenplay_update_from_binary_file_in_memory);
     RUN_TEST(test_screenplay_update_from_binary_file_in_memory_loads_rth_plan);
     RUN_TEST(test_sb_screenplay_contains_scene);

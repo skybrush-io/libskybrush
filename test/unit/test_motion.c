@@ -47,6 +47,7 @@ void test_get_cubic_bezier_from_velocity_constraints(void)
     TEST_ASSERT_NOT_NULL(trajectory = sb_trajectory_new());
 
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel, -1, &control1, &control2));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel, 0, &control1, &control2));
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel, duration, NULL, NULL));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_get_cubic_bezier_from_velocity_constraints(start, start_vel, end, end_vel, duration, &control1, &control2));
 
@@ -123,6 +124,10 @@ void test_get_travel_time_for_distance(void)
 
     /* Test the case when we do not have time for full acceleration and deceleration */
     TEST_ASSERT_EQUAL_FLOAT(2 * sqrtf(2), sb_get_travel_time_for_distance(2, 2, 1));
+
+    /* 1 s of acceleration to 1 unit/s covers 0.5 units, followed by 1 s of
+     * deceleration covering the other 0.5 units */
+    TEST_ASSERT_EQUAL_FLOAT(2, sb_get_travel_time_for_distance(1, 1, 1));
 }
 
 void test_get_travel_velocity_for_distance(void)

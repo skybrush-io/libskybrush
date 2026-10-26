@@ -308,6 +308,29 @@ void test_append(void)
     sb_buffer_destroy(&buf);
 }
 
+void test_append_bytes_one_by_one(void)
+{
+    /* Appending a single byte to a full buffer must grow the buffer. The
+     * buffer starts with a capacity of one byte so every power of two is a
+     * point where the buffer is full */
+    sb_buffer_t buf;
+    int i;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_init(&buf, 0));
+
+    for (i = 0; i < 100; i++) {
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_buffer_append_byte(&buf, (uint8_t)i));
+        TEST_ASSERT_EQUAL(i + 1, sb_buffer_size(&buf));
+        TEST_ASSERT_TRUE(sb_buffer_capacity(&buf) >= sb_buffer_size(&buf));
+    }
+
+    for (i = 0; i < 100; i++) {
+        TEST_ASSERT_EQUAL_UINT8(i, SB_BUFFER(buf)[i]);
+    }
+
+    sb_buffer_destroy(&buf);
+}
+
 void test_append_zero_length(void)
 {
     sb_buffer_t buf;
@@ -549,6 +572,7 @@ int main(int argc, char* argv[])
 
     RUN_TEST(test_fill);
     RUN_TEST(test_append);
+    RUN_TEST(test_append_bytes_one_by_one);
     RUN_TEST(test_append_zero_length);
     RUN_TEST(test_extend_with_zeros);
 

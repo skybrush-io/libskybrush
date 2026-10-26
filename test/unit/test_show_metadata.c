@@ -158,6 +158,10 @@ void test_update_from_buffer_null_arguments(void)
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_show_metadata_update_from_buffer(&metadata, 0, 1));
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_show_metadata_update_from_buffer(0, body, sizeof(body)));
 
+    /* null output arguments */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_show_metadata_get_show_id(&metadata, 0));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_show_metadata_get_drone_index(&metadata, 0));
+
     sb_show_metadata_destroy(&metadata);
 }
 
