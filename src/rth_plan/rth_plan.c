@@ -497,20 +497,30 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
     start_with_yaw.yaw = 0.0f;
 
     SB_CHECK(sb_trajectory_builder_init(&builder, scale, /* flags = */ 0));
-    SB_CHECK(sb_trajectory_builder_set_start_position(&builder, start_with_yaw));
+
+/* The builder must be destroyed on every exit path from here on */
+#define CHECK_OR_EXIT(func)         \
+    do {                            \
+        retval = (func);            \
+        if (retval != SB_SUCCESS) { \
+            goto exit;              \
+        }                           \
+    } while (0)
+
+    CHECK_OR_EXIT(sb_trajectory_builder_set_start_position(&builder, start_with_yaw));
 
     /* Start trajectory with holding still during pre-delay */
-    SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+    CHECK_OR_EXIT(sb_uint32_msec_duration_from_float_seconds(
         &duration_msec,
         start_time + (entry->pre_delay_sec > 0 ? entry->pre_delay_sec : 0)));
-    SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
+    CHECK_OR_EXIT(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
 
     /* Initialize target from start */
     target_with_yaw = start_with_yaw;
 
     /* Add pre-neck */
     if (entry->pre_neck || entry->pre_neck_duration_sec) {
-        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+        CHECK_OR_EXIT(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->pre_neck_duration_sec));
         target_with_yaw.z += entry->pre_neck;
 
@@ -519,7 +529,7 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
             duration_msec = 1;
         }
 
-        SB_CHECK(sb_trajectory_builder_move_to_in_time(
+        CHECK_OR_EXIT(sb_trajectory_builder_move_to_in_time(
             &builder, target_with_yaw, duration_msec, max_acceleration));
     }
 
@@ -532,7 +542,7 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
         target_with_yaw.z = entry->arrival_altitude;
     }
     if (entry->flags & (SB_RTH_PLAN_ENTRY_HAS_TARGET_XY | SB_RTH_PLAN_ENTRY_HAS_TARGET_Z)) {
-        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+        CHECK_OR_EXIT(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, entry->duration_sec));
 
         if (duration_msec == 0) {
@@ -540,14 +550,14 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
             duration_msec = 1;
         }
 
-        SB_CHECK(sb_trajectory_builder_move_to_in_time(
+        CHECK_OR_EXIT(sb_trajectory_builder_move_to_in_time(
             &builder, target_with_yaw, duration_msec, max_acceleration));
     }
 
     /* Add post delay */
-    SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+    CHECK_OR_EXIT(sb_uint32_msec_duration_from_float_seconds(
         &duration_msec, entry->post_delay_sec));
-    SB_CHECK(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
+    CHECK_OR_EXIT(sb_trajectory_builder_hold_position_for(&builder, duration_msec));
 
     /* Add smooth descent to the landing altitude if needed */
     if (entry->landing_velocity > 0 && isfinite(entry->landing_velocity)) {
@@ -559,7 +569,7 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
 
         landing_duration_sec = fabsf(current_altitude - target_with_yaw.z) / landing_velocity;
 
-        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(
+        CHECK_OR_EXIT(sb_uint32_msec_duration_from_float_seconds(
             &duration_msec, landing_duration_sec));
 
         if (duration_msec == 0) {
@@ -567,13 +577,16 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
             duration_msec = 1;
         }
 
-        SB_CHECK(sb_trajectory_builder_move_to_in_time(
+        CHECK_OR_EXIT(sb_trajectory_builder_move_to_in_time(
             &builder, target_with_yaw, duration_msec, max_acceleration));
     }
 
     /* Finalize trajectory */
     retval = sb_trajectory_update_from_builder(trajectory, &builder);
 
+#undef CHECK_OR_EXIT
+
+exit:
     sb_trajectory_builder_destroy(&builder);
 
     return retval;

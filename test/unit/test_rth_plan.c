@@ -935,6 +935,38 @@ void test_convert_to_trajectory(void)
     SB_XDECREF(trajectory);
 }
 
+void test_convert_to_trajectory_with_too_long_delays(void)
+{
+    /* Delays that do not fit into 32 bits in milliseconds are rejected; the
+     * trajectory must not be modified and no memory may leak, regardless of
+     * how far the conversion got */
+    sb_rth_plan_entry_t entry;
+    sb_trajectory_t* trajectory;
+    sb_vector3_t start = { 0, 0, 10000 };
+
+    TEST_ASSERT_NOT_NULL(trajectory = sb_trajectory_new());
+
+    /* fails when holding still during the pre-delay */
+    sb_rth_plan_entry_clear(&entry, plan, 0);
+    entry.pre_delay_sec = 5000000;
+    entry.landing_velocity = NAN;
+    TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
+    TEST_ASSERT_TRUE(sb_trajectory_is_empty(trajectory));
+
+    /* fails at the post-delay, after the neck has been added to the builder */
+    sb_rth_plan_entry_clear(&entry, plan, 0);
+    entry.flags |= SB_RTH_PLAN_ENTRY_HAS_NECK;
+    entry.pre_neck = 1000;
+    entry.pre_neck_duration_sec = 1;
+    entry.post_delay_sec = 5000000;
+    entry.landing_velocity = NAN;
+    entry.max_acceleration = INFINITY;
+    TEST_ASSERT_EQUAL(SB_EOVERFLOW, sb_trajectory_update_from_rth_plan_entry(trajectory, &entry, start));
+    TEST_ASSERT_TRUE(sb_trajectory_is_empty(trajectory));
+
+    SB_XDECREF(trajectory);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -953,6 +985,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_convert_to_trajectory);
     RUN_TEST(test_convert_to_trajectory_with_large_neck);
     RUN_TEST(test_convert_to_trajectory_with_fractional_start_time);
+    RUN_TEST(test_convert_to_trajectory_with_too_long_delays);
 
     return UNITY_END();
 }
