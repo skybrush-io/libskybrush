@@ -1,0 +1,6 @@
+# LeakSanitizer suppressions for running the fuzz targets on macOS, where the
+# thread that libFuzzer starts to monitor the memory usage is reported as a
+# leak when the process exits. Use with:
+#
+#   LSAN_OPTIONS=suppressions=test/fuzz/lsan.supp ASAN_OPTIONS=detect_leaks=1
+leak:fuzzer::StartRssThread

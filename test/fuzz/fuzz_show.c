@@ -57,6 +57,12 @@
 /* Upper bound of the evenly spaced sample timestamps */
 #define MAX_SAMPLE_TIME_MSEC (3600u * 1000u)
 
+/* Number of samples taken from trajectories generated from RTH plans. These
+ * can be huge when the plan is evaluated close to the end of the time range,
+ * so they are sampled sparsely to keep each input fast. Statistics are not
+ * calculated for them; that code is fuzzed with trajectory blocks directly. */
+#define NUM_RTH_TRAJECTORY_SAMPLES 8
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
 
 /* Sample timestamps: evenly spaced ones plus a few extreme values */
@@ -72,19 +78,18 @@ static uint32_t sample_time_msec(size_t index)
     }
 }
 
-static void exercise_trajectory(sb_trajectory_t* trajectory)
+/* Samples a trajectory at num_samples of the NUM_SAMPLES sample timestamps,
+ * evenly distributed among them */
+static void exercise_trajectory_player(sb_trajectory_t* trajectory, size_t num_samples)
 {
     sb_trajectory_player_t player;
-    sb_trajectory_stats_calculator_t calc;
-    sb_trajectory_stats_t stats;
     sb_vector3_with_yaw_t vec;
-    sb_vector3_t landing;
     size_t i;
     float t;
 
     if (sb_trajectory_player_init(&player, trajectory) == SB_SUCCESS) {
-        for (i = 0; i < NUM_SAMPLES; i++) {
-            t = sample_time_msec(i) / 1000.0f;
+        for (i = 0; i < num_samples; i++) {
+            t = sample_time_msec(i * NUM_SAMPLES / num_samples) / 1000.0f;
             sb_trajectory_player_get_position_at(&player, t, &vec);
             sb_trajectory_player_get_velocity_at(&player, t, &vec);
             sb_trajectory_player_get_acceleration_at(&player, t, &vec);
@@ -94,6 +99,15 @@ static void exercise_trajectory(sb_trajectory_t* trajectory)
         sb_trajectory_player_get_position_at(&player, INFINITY, &vec);
         sb_trajectory_player_destroy(&player);
     }
+}
+
+static void exercise_trajectory(sb_trajectory_t* trajectory)
+{
+    sb_trajectory_stats_calculator_t calc;
+    sb_trajectory_stats_t stats;
+    sb_vector3_t landing;
+
+    exercise_trajectory_player(trajectory, NUM_SAMPLES);
 
     sb_trajectory_propose_takeoff_time_sec(trajectory, 2500.0f, 1000.0f, 1000.0f);
     sb_trajectory_propose_landing_time_sec(trajectory, 2500.0f, 500.0f);
@@ -183,6 +197,10 @@ static void exercise_events(sb_event_list_t* events)
 
 static void exercise_rth_plan(sb_rth_plan_t* plan)
 {
+    /* INT32_MAX + 1 would be the same as INT32_MAX in seconds as a float */
+    static const uint32_t times_msec[] = {
+        0, 1, 20, 60000, 600000, 3600000, INT32_MAX, UINT32_MAX
+    };
     sb_rth_plan_entry_t entry;
     sb_trajectory_t trajectory;
     sb_vector3_t start = { 0, 0, 10000.0f };
@@ -192,10 +210,10 @@ static void exercise_rth_plan(sb_rth_plan_t* plan)
         return; /* LCOV_EXCL_LINE */
     }
 
-    for (i = 0; i < NUM_SAMPLES; i++) {
-        if (sb_rth_plan_evaluate_at(plan, sample_time_msec(i) / 1000.0f, &entry) == SB_SUCCESS) {
+    for (i = 0; i < sizeof(times_msec) / sizeof(times_msec[0]); i++) {
+        if (sb_rth_plan_evaluate_at(plan, times_msec[i] / 1000.0f, &entry) == SB_SUCCESS) {
             if (sb_trajectory_update_from_rth_plan_entry(&trajectory, &entry, start) == SB_SUCCESS) {
-                exercise_trajectory(&trajectory);
+                exercise_trajectory_player(&trajectory, NUM_RTH_TRAJECTORY_SAMPLES);
             }
         }
     }
