@@ -1962,6 +1962,10 @@ static void j_screenplay_queries(void)
     }
     j_end_array();
 
+    /* The screenplay of the foreign scene is not needed any more; it is
+     * reused below for loading show files */
+    sb_screenplay_destroy(&other);
+
     /* Loading a screenplay from a show file in memory */
     trajectory = build_trajectory((sb_vector3_with_yaw_t)P(0, 0, 0), (sb_vector3_with_yaw_t)P(0, 0, 1000), 2000);
     show_data = make_show_file(trajectory, &show_length);
