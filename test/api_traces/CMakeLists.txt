@@ -42,3 +42,27 @@ if(LIBSKYBRUSH_PYTHON3)
         COMMENT "Regenerating the golden API traces"
     )
 endif()
+
+add_executable(generate_api_scenarios generate_api_scenarios.c ../traces/trace_output.c)
+target_link_libraries(generate_api_scenarios PUBLIC skybrush)
+
+if(LIBSKYBRUSH_PYTHON3)
+    add_test(
+        NAME api_scenarios
+        COMMAND ${LIBSKYBRUSH_PYTHON3} ${PROJECT_SOURCE_DIR}/test/traces/compare_traces.py
+            --generator $<TARGET_FILE:generate_api_scenarios>
+            --traces ${CMAKE_CURRENT_SOURCE_DIR}
+            --standalone scenarios
+    )
+
+    # Regenerates the golden trace of the scenarios
+    add_custom_target(update_api_scenarios
+        COMMAND ${LIBSKYBRUSH_PYTHON3} ${PROJECT_SOURCE_DIR}/test/traces/compare_traces.py
+            --generator $<TARGET_FILE:generate_api_scenarios>
+            --traces ${CMAKE_CURRENT_SOURCE_DIR}
+            --standalone scenarios
+            --update
+        DEPENDS generate_api_scenarios
+        COMMENT "Regenerating the golden trace of the API scenarios"
+    )
+endif()

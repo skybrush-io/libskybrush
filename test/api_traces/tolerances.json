@@ -1,34 +1,42 @@
 {
     "version": 1,
-    "description": "Tolerances to use when comparing a trace with a golden trace. The unit of a value is determined from the suffix of its key (e.g. position_mm is in millimeters); a value matches if it differs from the golden value by at most abs + rel * |golden value|. Integers without a unit (colors, timestamps in milliseconds, flags, counts and event fields) must match exactly.",
+    "description": "Tolerances to use when comparing a trace with a golden trace. The unit of a value is determined from the suffix of its key (e.g. position_mm is in millimeters); a value matches if it differs from the golden value by at most abs + rel * |golden value|. Integers without a unit (colors, timestamps in milliseconds, flags, counts and event fields) must match exactly. Values in scale units (_units) are compared to within one unit, since implementations may quantize coordinates differently by one unit; integer values computed with powf() or logf() (_approx8) are compared to within one, since math libraries may differ by an amount that changes the truncated value.",
     "by_unit": {
         "mm": {
             "abs": 0.01,
-            "rel": 1e-5
+            "rel": 1e-05
         },
         "mm_s": {
             "abs": 0.01,
-            "rel": 1e-4
+            "rel": 0.0001
         },
         "mm_s2": {
             "abs": 0.1,
-            "rel": 1e-3
+            "rel": 0.001
         },
         "deg": {
             "abs": 0.001,
-            "rel": 1e-5
+            "rel": 1e-05
         },
         "deg_s": {
             "abs": 0.001,
-            "rel": 1e-4
+            "rel": 0.0001
         },
         "sec": {
             "abs": 0.001,
+            "rel": 0
+        },
+        "units": {
+            "abs": 1.01,
+            "rel": 0
+        },
+        "approx8": {
+            "abs": 1,
             "rel": 0
         }
     },
     "default": {
         "abs": 0.0001,
-        "rel": 1e-5
+        "rel": 1e-05
     }
 }

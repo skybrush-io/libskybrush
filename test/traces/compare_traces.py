@@ -1,12 +1,14 @@
 """Checks golden traces generated from Skybrush show files.
 
 Usage: python3 compare_traces.py --generator <generator> --traces <dir>
-           [--show-files <file>...] [--update]
+           [--show-files <file>... | --standalone <name>] [--update]
 
 For each show file, runs the trace generator and compares its output with the
 golden trace of the show file (<name>.json in the traces directory), using the
 tolerances in tolerances.json in the traces directory. The show files are the
 *.skyb files of the traces directory unless they are given explicitly. With
+--standalone, the generator does not take a show file, only the path of its
+output, and its golden trace is <name>.json in the traces directory. With
 --update, the golden traces are replaced with the output of the generator
 instead.
 """
@@ -113,31 +115,40 @@ class TraceComparator:
         self.differences.append(f"{location or '.'}: {message}")
 
 
-def generate_trace(generator: Path, show_file: Path, output: Path) -> None:
-    result = subprocess.run([str(generator), str(show_file), str(output)], capture_output=True, text=True)
+def generate_trace(generator: Path, show_file: Optional[Path], output: Path) -> None:
+    args = [str(generator)] + ([str(show_file)] if show_file else []) + [str(output)]
+    result = subprocess.run(args, capture_output=True, text=True)
     if result.returncode != 0:
-        sys.exit(f"{generator} failed on {show_file}:\n{result.stderr}")
+        sys.exit(f"{generator} failed on {show_file or 'its scenarios'}:\n{result.stderr}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--generator", type=Path, required=True, help="path of the trace generator")
     parser.add_argument("--traces", type=Path, required=True, help="directory of the show files and golden traces")
-    parser.add_argument("--show-files", type=Path, nargs="+", help="show files to use instead of the ones in the traces directory")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--show-files", type=Path, nargs="+", help="show files to use instead of the ones in the traces directory")
+    group.add_argument("--standalone", metavar="NAME", help="the generator takes no show file; its golden trace is NAME.json")
     parser.add_argument("--update", action="store_true", help="replace the golden traces with the output of the generator")
     options = parser.parse_args()
 
     with open(options.traces / "tolerances.json") as fp:
         tolerances = json.load(fp)
 
-    show_files = options.show_files or sorted(options.traces.glob("*.skyb"))
-    if not show_files:
-        sys.exit(f"no show files found in {options.traces}")
+    # Each run is identified by its show file, or by None for a standalone generator
+    runs: list[tuple[str, Optional[Path]]]
+    if options.standalone:
+        runs = [(options.standalone, None)]
+    else:
+        show_files = options.show_files or sorted(options.traces.glob("*.skyb"))
+        if not show_files:
+            sys.exit(f"no show files found in {options.traces}")
+        runs = [(show_file.stem, show_file) for show_file in show_files]
 
     failed = False
     with tempfile.TemporaryDirectory() as tmpdir:
-        for show_file in show_files:
-            golden = options.traces / f"{show_file.stem}.json"
+        for name, show_file in runs:
+            golden = options.traces / f"{name}.json"
             output = Path(tmpdir) / golden.name
             generate_trace(options.generator, show_file, output)
 
@@ -147,7 +158,7 @@ def main() -> None:
                 continue
 
             if not golden.exists():
-                print(f"FAIL {show_file.name}: golden trace {golden.name} is missing")
+                print(f"FAIL {name}: golden trace {golden.name} is missing")
                 failed = True
                 continue
 
@@ -160,11 +171,11 @@ def main() -> None:
             comparator.compare(expected, actual, [], None, None)
             if comparator.differences:
                 failed = True
-                print(f"FAIL {show_file.name}: {len(comparator.differences)} difference(s)")
+                print(f"FAIL {name}: {len(comparator.differences)} difference(s)")
                 for difference in comparator.differences[:MAX_REPORTED_DIFFERENCES]:
                     print(f"  {difference}")
             else:
-                print(f"PASS {show_file.name}")
+                print(f"PASS {name}")
 
     sys.exit(1 if failed else 0)
 
