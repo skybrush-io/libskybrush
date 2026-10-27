@@ -17,6 +17,8 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <limits.h>
+
 #include <skybrush/formats/binary.h>
 #include <skybrush/lights.h>
 
@@ -541,6 +543,57 @@ void test_invalid_command_stops_execution(void)
     sb_light_player_destroy(&player);
 }
 
+static void assertSwitchesToGreenAfterLongestWait(uint8_t* bytecode, size_t size)
+{
+#if ULONG_MAX > 0xFFFFFFFFUL
+    /* The longest wait is UINT32_MAX frames of 20 ms each */
+    const unsigned long longest_wait_ms = 0xFFFFFFFFUL * 20;
+    unsigned long t_ms[] = { 0, longest_wait_ms - 1, longest_wait_ms };
+    sb_rgb_color_t expected[] = {
+        { 255, 0, 0 },
+        { 255, 0, 0 },
+        { 0, 255, 0 }
+    };
+
+    loadBytecode(bytecode, size);
+    assertColorsAt(t_ms, expected, sizeof(t_ms) / sizeof(t_ms[0]));
+    sb_light_player_destroy(&player);
+#else
+    TEST_IGNORE_MESSAGE("needs a 64-bit unsigned long");
+#endif
+}
+
+void test_varint_maximum(void)
+{
+    /* UINT32_MAX is the largest value that a varint can hold */
+    uint8_t bytecode[] = {
+        CMD_SET_COLOR, 255, 0, 0, 0xff, 0xff, 0xff, 0xff, 0x0f,
+        CMD_SET_COLOR, 0, 255, 0, 0,
+        CMD_END
+    };
+
+    assertSwitchesToGreenAfterLongestWait(bytecode, sizeof(bytecode));
+}
+
+void test_varint_overflow_is_clamped(void)
+{
+    /* Varints that do not fit into 32 bits are clamped to UINT32_MAX and
+     * the execution continues after the last byte of the varint */
+    uint8_t too_large[] = {
+        CMD_SET_COLOR, 255, 0, 0, 0x80, 0x80, 0x80, 0x80, 0x10,
+        CMD_SET_COLOR, 0, 255, 0, 0,
+        CMD_END
+    };
+    uint8_t too_long[] = {
+        CMD_SET_COLOR, 255, 0, 0, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01,
+        CMD_SET_COLOR, 0, 255, 0, 0,
+        CMD_END
+    };
+
+    assertSwitchesToGreenAfterLongestWait(too_large, sizeof(too_large));
+    assertSwitchesToGreenAfterLongestWait(too_long, sizeof(too_long));
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -561,6 +614,8 @@ int main(int argc, char* argv[])
     RUN_TEST(test_infinite_zero_duration_loops_are_rejected);
     RUN_TEST(test_finite_zero_duration_loops_are_allowed);
     RUN_TEST(test_invalid_command_stops_execution);
+    RUN_TEST(test_varint_maximum);
+    RUN_TEST(test_varint_overflow_is_clamped);
 
     return UNITY_END();
 }

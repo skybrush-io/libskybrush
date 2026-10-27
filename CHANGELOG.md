@@ -124,6 +124,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an RTH plan entry was affected when the entry started near the end of the
   representable time range.
 
+- Fixed undefined behaviour in the light player when a duration in a light
+  program is encoded as a varint that does not fit into 32 bits. Such varints
+  are now clamped to `UINT32_MAX`, and execution continues after the last byte
+  of the varint.
+
 ## [5.3.1] - 2026-09-30
 
 ### Fixed

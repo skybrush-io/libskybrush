@@ -18,6 +18,7 @@
  */
 
 #include <assert.h>
+#include <stdint.h>
 
 #include "bytecode_store.h"
 #include "commands.h"
@@ -182,17 +183,28 @@ unsigned long CommandExecutor::nextDuration()
 
 unsigned long CommandExecutor::nextVarint()
 {
-    unsigned long result = 0;
+    /* Varints are limited to 32 bits; larger values are clamped to
+     * UINT32_MAX. The remaining bytes of an overflowing varint are still
+     * consumed so the next command is read from the right place. */
+    uint32_t result = 0;
+    uint32_t value;
     uint8_t readByte;
-    uint8_t shift = 0;
+    uint8_t index = 0;
+    bool overflow = false;
 
     do {
         readByte = nextByte();
-        result |= ((unsigned long)(readByte & 0x7F)) << shift;
-        shift += 7;
+        value = readByte & 0x7F;
+
+        if (index < 4 || (index == 4 && value < 0x10)) {
+            result |= value << (7 * index);
+            index++;
+        } else {
+            overflow = true;
+        }
     } while (readByte & 0x80);
 
-    return result;
+    return overflow ? UINT32_MAX : result;
 }
 
 void CommandExecutor::rewind()
