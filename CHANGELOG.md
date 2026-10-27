@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-10-27
+
+This release hardens the parsers and players of the library against malformed
+input and fixes a number of bugs found by extending the test suite, by fuzzing,
+and by checking the library against the conformance cases and the golden traces
+of the binary show file format.
+
+When upgrading from 5.x, check the code that calls the library for the
+following:
+
+- `sb_time_axis_set_origin_msec()` and `sb_screenplay_scene_set_origin_msec()`
+  now return an error code; negative origins are rejected.
+- The yaw track embedded in the trajectory blocks of old show files is ignored;
+  use yaw control blocks instead.
+- Light programs using the opcodes of the legacy Arduino-based light controller
+  (0x0E to 0x15) stop at the first such opcode.
+- Some loading functions report different error codes or reset the object being
+  loaded; see the breaking changes below.
+
 ### Breaking changes
 
 - Removed support for light program opcodes 0x0E to 0x15 (reset clock, set or fade
@@ -39,16 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in this case.
 
 ### Added
-
-- Added `sb_buffer_update()` to replace the contents of an already initialized
-  buffer with the contents of another one; the destination buffer becomes a
-  view if the source buffer is a view and it becomes an owned buffer holding
-  a copy of the contents if the source buffer is owned.
-
-- Added `sb_color_palette_update()` to replace the contents of an already
-  initialized color palette with the contents of another one; the destination
-  palette is backed by a view if the source palette is backed by a view and it
-  owns a copy of the colors if the source palette owns its colors.
 
 - Added `sb_event_list_update_from_buffer()`, which was declared in the public
   header but never implemented.
@@ -161,6 +170,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scene with a nonzero origin. The function now also returns `UINT32_MAX` for a
   NaN warped time, and when another scene that precedes the scene with the given
   tag is active at the corresponding time.
+
+## [5.4.0] - 2026-10-07
+
+### Added
+
+- Added `sb_buffer_update()` to replace the contents of an already initialized
+  buffer with the contents of another one; the destination buffer becomes a
+  view if the source buffer is a view and it becomes an owned buffer holding
+  a copy of the contents if the source buffer is owned.
+
+- Added `sb_color_palette_update()` to replace the contents of an already
+  initialized color palette with the contents of another one; the destination
+  palette is backed by a view if the source palette is backed by a view and it
+  owns a copy of the colors if the source palette owns its colors.
 
 ## [5.3.1] - 2026-09-30
 

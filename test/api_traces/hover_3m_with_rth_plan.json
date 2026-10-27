@@ -1,7 +1,7 @@
 {
   "version": 1,
   "fixture": "hover_3m_with_rth_plan.skyb",
-  "generator": "libskybrush 5.4.0",
+  "generator": "libskybrush 6.0.0",
   "sample_interval_ms": 100,
   "trajectory": {"duration_ms": 22000, "end_position_mm": [0, 0, 0], "bounding_box_mm": [[0, 0], [0, 0], [0, 3000]]},
   "stats": [
