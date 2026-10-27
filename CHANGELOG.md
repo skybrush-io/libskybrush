@@ -137,6 +137,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   velocity were affected as well, as they cut the trajectory at its landing
   time.
 
+- Fixed the trajectory builder leaving a partially written segment behind when
+  appending a segment failed because one of its coordinates was out of range or
+  NaN. The partial segment turned into spurious segments in the trajectory
+  created from the builder. Failed operations of the builder now leave it
+  intact, including operations that consist of multiple segments of which only
+  the later ones failed.
+
 ## [5.3.1] - 2026-09-30
 
 ### Fixed

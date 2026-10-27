@@ -32,6 +32,44 @@
 #define HEADER_LENGTH 9
 #define MAX_DURATION_MSEC 60000
 
+/**
+ * State of a trajectory builder that is saved before each operation so that a
+ * failed operation leaves the builder intact; without it, a segment would be
+ * left half-written in the buffer if one of its coordinates was invalid.
+ */
+typedef struct {
+    size_t size;
+    sb_vector3_with_yaw_t last_position;
+} sb_i_trajectory_builder_checkpoint_t;
+
+static void sb_i_trajectory_builder_save(
+    const sb_trajectory_builder_t* builder, sb_i_trajectory_builder_checkpoint_t* checkpoint)
+{
+    checkpoint->size = sb_buffer_size(&builder->buffer);
+    checkpoint->last_position = builder->last_position;
+}
+
+static void sb_i_trajectory_builder_restore(
+    sb_trajectory_builder_t* builder, const sb_i_trajectory_builder_checkpoint_t* checkpoint)
+{
+    /* Shrinking the buffer never fails */
+    sb_buffer_resize(&builder->buffer, checkpoint->size);
+    builder->last_position = checkpoint->last_position;
+}
+
+static sb_error_t sb_i_trajectory_builder_append_cubic_bezier(
+    sb_trajectory_builder_t* builder, const sb_vector3_with_yaw_t control1,
+    const sb_vector3_with_yaw_t control2, const sb_vector3_with_yaw_t target,
+    uint32_t duration_msec);
+static sb_error_t sb_i_trajectory_builder_append_line(
+    sb_trajectory_builder_t* builder, const sb_vector3_with_yaw_t target,
+    uint32_t duration_msec);
+static sb_error_t sb_i_trajectory_builder_hold_position_for(
+    sb_trajectory_builder_t* builder, uint32_t duration_msec);
+static sb_error_t sb_i_trajectory_builder_move_to_in_time(
+    sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t target,
+    uint32_t duration_msec, float max_acceleration);
+
 static sb_error_t sb_i_trajectory_builder_scale_coordinate(
     sb_trajectory_builder_t* builder, float coordinate, int16_t* scaled_coordinate);
 
@@ -162,6 +200,23 @@ sb_error_t sb_trajectory_builder_append_cubic_bezier(
     const sb_vector3_with_yaw_t control2, const sb_vector3_with_yaw_t target,
     uint32_t duration_msec)
 {
+    sb_i_trajectory_builder_checkpoint_t checkpoint;
+    sb_error_t retval;
+
+    sb_i_trajectory_builder_save(builder, &checkpoint);
+    retval = sb_i_trajectory_builder_append_cubic_bezier(builder, control1, control2, target, duration_msec);
+    if (retval != SB_SUCCESS) {
+        sb_i_trajectory_builder_restore(builder, &checkpoint);
+    }
+
+    return retval;
+}
+
+static sb_error_t sb_i_trajectory_builder_append_cubic_bezier(
+    sb_trajectory_builder_t* builder, const sb_vector3_with_yaw_t control1,
+    const sb_vector3_with_yaw_t control2, const sb_vector3_with_yaw_t target,
+    uint32_t duration_msec)
+{
     if (duration_msec == 0) {
         return SB_EINVAL;
     }
@@ -223,6 +278,22 @@ sb_error_t sb_trajectory_builder_append_line(
     sb_trajectory_builder_t* builder, const sb_vector3_with_yaw_t target,
     uint32_t duration_msec)
 {
+    sb_i_trajectory_builder_checkpoint_t checkpoint;
+    sb_error_t retval;
+
+    sb_i_trajectory_builder_save(builder, &checkpoint);
+    retval = sb_i_trajectory_builder_append_line(builder, target, duration_msec);
+    if (retval != SB_SUCCESS) {
+        sb_i_trajectory_builder_restore(builder, &checkpoint);
+    }
+
+    return retval;
+}
+
+static sb_error_t sb_i_trajectory_builder_append_line(
+    sb_trajectory_builder_t* builder, const sb_vector3_with_yaw_t target,
+    uint32_t duration_msec)
+{
     if (duration_msec == 0) {
         return SB_EINVAL;
     }
@@ -243,8 +314,8 @@ sb_error_t sb_trajectory_builder_append_line(
          */
         assert(half_duration_msec > 0);
         assert(duration_msec > half_duration_msec);
-        SB_CHECK(sb_trajectory_builder_append_line(builder, midpoint, half_duration_msec));
-        SB_CHECK(sb_trajectory_builder_append_line(builder, target, duration_msec - half_duration_msec));
+        SB_CHECK(sb_i_trajectory_builder_append_line(builder, midpoint, half_duration_msec));
+        SB_CHECK(sb_i_trajectory_builder_append_line(builder, target, duration_msec - half_duration_msec));
 
         return SB_SUCCESS;
     }
@@ -297,6 +368,21 @@ sb_error_t sb_trajectory_builder_append_line(
 sb_error_t sb_trajectory_builder_hold_position_for(
     sb_trajectory_builder_t* builder, uint32_t duration_msec)
 {
+    sb_i_trajectory_builder_checkpoint_t checkpoint;
+    sb_error_t retval;
+
+    sb_i_trajectory_builder_save(builder, &checkpoint);
+    retval = sb_i_trajectory_builder_hold_position_for(builder, duration_msec);
+    if (retval != SB_SUCCESS) {
+        sb_i_trajectory_builder_restore(builder, &checkpoint);
+    }
+
+    return retval;
+}
+
+static sb_error_t sb_i_trajectory_builder_hold_position_for(
+    sb_trajectory_builder_t* builder, uint32_t duration_msec)
+{
     uint16_t current_duration_msec;
 
     while (duration_msec > 0) {
@@ -305,7 +391,7 @@ sb_error_t sb_trajectory_builder_hold_position_for(
 
         assert(current_duration_msec > 0);
 
-        SB_CHECK(sb_trajectory_builder_append_line(builder, builder->last_position, current_duration_msec));
+        SB_CHECK(sb_i_trajectory_builder_append_line(builder, builder->last_position, current_duration_msec));
     }
 
     return SB_SUCCESS;
@@ -335,6 +421,22 @@ sb_error_t sb_trajectory_builder_move_to_in_time(
     sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t target,
     uint32_t duration_msec, float max_acceleration)
 {
+    sb_i_trajectory_builder_checkpoint_t checkpoint;
+    sb_error_t retval;
+
+    sb_i_trajectory_builder_save(builder, &checkpoint);
+    retval = sb_i_trajectory_builder_move_to_in_time(builder, target, duration_msec, max_acceleration);
+    if (retval != SB_SUCCESS) {
+        sb_i_trajectory_builder_restore(builder, &checkpoint);
+    }
+
+    return retval;
+}
+
+static sb_error_t sb_i_trajectory_builder_move_to_in_time(
+    sb_trajectory_builder_t* builder, sb_vector3_with_yaw_t target,
+    uint32_t duration_msec, float max_acceleration)
+{
     sb_vector3_with_yaw_t p, q, initial_vel, travel_vel, c1, c2;
     float duration_sec;
     float distance;
@@ -347,12 +449,12 @@ sb_error_t sb_trajectory_builder_move_to_in_time(
 
     if (!isfinite(max_acceleration) || max_acceleration <= 0) {
         /* max acceleration is infinite so we can just use straight-line segments */
-        return sb_trajectory_builder_append_line(builder, target, duration_msec);
+        return sb_i_trajectory_builder_append_line(builder, target, duration_msec);
     }
 
     if (duration_msec < 3) {
         /* duration is too short so we can use a single straight-line segment */
-        return sb_trajectory_builder_append_line(builder, target, duration_msec);
+        return sb_i_trajectory_builder_append_line(builder, target, duration_msec);
     }
 
     /* calculate required travel velocity */
@@ -400,7 +502,7 @@ sb_error_t sb_trajectory_builder_move_to_in_time(
             /* end = */ q, /* end_vel = */ travel_vel,
             /* duration_sec = */ t1,
             &c1, &c2));
-    SB_CHECK(sb_trajectory_builder_append_cubic_bezier(builder, c1, c2, q, t1_msec));
+    SB_CHECK(sb_i_trajectory_builder_append_cubic_bezier(builder, c1, c2, q, t1_msec));
 
     /* add constant-velocity segment */
     p = target;
@@ -410,7 +512,7 @@ sb_error_t sb_trajectory_builder_move_to_in_time(
     p.yaw -= travel_vel.yaw * t1;
     if (duration_msec > 2 * t1_msec) {
         /* Only add the constant-velocity segment if it has a positive duration */
-        SB_CHECK(sb_trajectory_builder_append_line(builder, p, duration_msec - 2 * t1_msec));
+        SB_CHECK(sb_i_trajectory_builder_append_line(builder, p, duration_msec - 2 * t1_msec));
     }
 
     /* add segment to decelerate smoothly from travel velocity to zero */
@@ -421,7 +523,7 @@ sb_error_t sb_trajectory_builder_move_to_in_time(
             /* end = */ q, /* end_vel = */ initial_vel,
             /* duration_sec = */ t1,
             &c1, &c2));
-    SB_CHECK(sb_trajectory_builder_append_cubic_bezier(builder, c1, c2, q, t1_msec));
+    SB_CHECK(sb_i_trajectory_builder_append_cubic_bezier(builder, c1, c2, q, t1_msec));
 
     return SB_SUCCESS;
 }

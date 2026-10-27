@@ -817,6 +817,50 @@ void test_move_to_in_time_short_durations(void)
     SB_XDECREF(trajectory);
 }
 
+void test_failed_operations_leave_builder_intact(void)
+{
+    /* Operations that fail because of an invalid coordinate must not leave a
+     * partially written segment behind, even if they would consist of
+     * multiple segments of which only the later ones are invalid */
+    sb_vector3_with_yaw_t start = { 0, 0, 0, 0 };
+    sb_vector3_with_yaw_t out_of_range = { 40000, 0, 0, 0 };
+    sb_vector3_with_yaw_t nan_target = { NAN, 0, 0, 0 };
+    sb_vector3_with_yaw_t valid = { 1000, 0, 0, 0 };
+    sb_vector3_with_yaw_t last;
+    sb_trajectory_t trajectory;
+    size_t size;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 1, 0));
+    size = sb_buffer_size(&builder.buffer);
+
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_line(&builder, out_of_range, 1000));
+    TEST_ASSERT_EQUAL(size, sb_buffer_size(&builder.buffer));
+
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_cubic_bezier(&builder, valid, nan_target, valid, 1000));
+    TEST_ASSERT_EQUAL(size, sb_buffer_size(&builder.buffer));
+
+    /* Split into two halves; the first half (up to 20000) is valid */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_line(&builder, out_of_range, 120000));
+    TEST_ASSERT_EQUAL(size, sb_buffer_size(&builder.buffer));
+
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_move_to_in_time(&builder, out_of_range, 10000, 1000));
+    TEST_ASSERT_EQUAL(size, sb_buffer_size(&builder.buffer));
+
+    last = sb_trajectory_builder_get_last_position(&builder);
+    TEST_ASSERT_EQUAL_FLOAT(0, last.x);
+
+    /* The builder is still usable as if the failed operations never happened */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, start));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_line(&builder, valid, 1000));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&trajectory));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_builder(&trajectory, &builder));
+    TEST_ASSERT_EQUAL_UINT32(1000, sb_trajectory_get_total_duration_msec(&trajectory));
+
+    SB_DECREF_STATIC(&trajectory);
+    sb_trajectory_builder_destroy(&builder);
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -837,6 +881,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_move_to_in_time_with_short_cruise);
     RUN_TEST(test_move_to_in_time_with_very_short_acceleration);
     RUN_TEST(test_move_to_in_time_short_durations);
+    RUN_TEST(test_failed_operations_leave_builder_intact);
 
     return UNITY_END();
 }
