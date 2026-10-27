@@ -383,6 +383,7 @@ typedef enum {
     LANDING_TARGET_BELOW_LANDING_POSITION,
     LANDING_TARGET_START_POSITION,
     LANDING_TARGET_ABOVE_LANDING_POSITION,
+    LANDING_TARGET_HALF_MM_BELOW_LANDING_POSITION,
 } landing_target_t;
 
 typedef struct {
@@ -401,6 +402,8 @@ static const landing_case_t LANDING_CASES[] = {
     { "zero_landing_velocity", LANDING_TARGET_BELOW_LANDING_POSITION, 0, NAN },
     { "negative_landing_velocity", LANDING_TARGET_BELOW_LANDING_POSITION, -500, NAN },
     { "above_landing_position", LANDING_TARGET_ABOVE_LANDING_POSITION, 500, NAN },
+    { "slow_landing_velocity", LANDING_TARGET_BELOW_LANDING_POSITION, 0.5f, NAN },
+    { "half_mm_below_landing_position", LANDING_TARGET_HALF_MM_BELOW_LANDING_POSITION, 500, NAN },
 };
 
 static void print_landings(void)
@@ -430,6 +433,11 @@ static void print_landings(void)
             target.x = stats.pos_at_landing_time.x;
             target.y = stats.pos_at_landing_time.y;
             target.z = stats.pos_at_landing_time.z + 1000;
+            break;
+        case LANDING_TARGET_HALF_MM_BELOW_LANDING_POSITION:
+            target.x = stats.pos_at_landing_time.x;
+            target.y = stats.pos_at_landing_time.y;
+            target.z = stats.pos_at_landing_time.z - 0.5f;
             break;
         default:
             target.x = stats.pos_at_landing_time.x;
@@ -471,6 +479,118 @@ static void print_landings(void)
         SB_XDECREF(trajectory);
     }
     fprintf(out, "\n  ],\n");
+}
+
+/**
+ * Clears a trajectory that is a view into a copy of the show file; clearing
+ * writes zeros into the show file in this case
+ */
+static void print_cleared_view(void)
+{
+    sb_trajectory_t trajectory;
+    uint8_t* copy = malloc(show_length > 0 ? show_length : 1);
+    size_t i, changed = 0;
+
+    if (copy == 0) {
+        fprintf(stderr, "out of memory\n");
+        exit(1);
+    }
+    memcpy(copy, show_data, show_length);
+
+    CHECK(sb_trajectory_init(&trajectory));
+    CHECK(sb_trajectory_update_from_binary_file_in_memory(&trajectory, copy, show_length));
+    CHECK(sb_trajectory_clear(&trajectory));
+
+    for (i = 0; i < show_length; i++) {
+        changed += copy[i] != show_data[i];
+    }
+    fprintf(out, "  \"cleared_view\": {\"is_empty\": %s, \"duration_ms\": %u, \"bytes_changed_in_show_file\": %u},\n",
+        sb_trajectory_is_empty(&trajectory) ? "true" : "false",
+        (unsigned)sb_trajectory_get_total_duration_msec(&trajectory), (unsigned)changed);
+
+    SB_DECREF_STATIC(&trajectory);
+    free(copy);
+}
+
+static void print_rth_entry_summary(const sb_rth_plan_entry_t* entry)
+{
+    fprintf(out, "{\"time_sec\": ");
+    print_float(entry->time_sec);
+    fprintf(out, ", \"flags\": %d, \"duration_sec\": ", (int)entry->flags);
+    print_float(entry->duration_sec);
+    fprintf(out, ", \"landing_target_mm\": [");
+    print_float(entry->landing_target.x);
+    fprintf(out, ", ");
+    print_float(entry->landing_target.y);
+    fprintf(out, "], \"landing_altitude_mm\": ");
+    print_float(entry->landing_altitude);
+    fprintf(out, ", \"landing_velocity_mm_s\": ");
+    print_float(entry->landing_velocity);
+    fprintf(out, "}");
+}
+
+/** Queries of the RTH plan that are not covered by the trace of the file format */
+static void print_rth_plan_queries(sb_rth_plan_t* plan)
+{
+    static const float times_sec[] = { -10, -0.001f, 0, NAN, INFINITY, -INFINITY, 1e9f };
+    sb_rth_plan_entry_t entry;
+    sb_vector2_t point;
+    sb_error_t retval;
+    size_t i, n = sb_rth_plan_get_num_points(plan);
+
+    fprintf(out, "  \"rth_plan_queries\": {\"num_entries\": %u, \"num_points\": %u, \"is_empty\": %s,\n",
+        (unsigned)sb_rth_plan_get_num_entries(plan), (unsigned)n, sb_rth_plan_is_empty(plan) ? "true" : "false");
+    fprintf(out, "    \"default_acceleration_limit_mm_s2\": ");
+    print_float(sb_rth_plan_get_default_acceleration_limit(plan));
+    fprintf(out, ", \"default_landing_altitude_mm\": ");
+    print_float(sb_rth_plan_get_default_landing_altitude(plan));
+    fprintf(out, ", \"default_landing_velocity_mm_s\": ");
+    print_float(sb_rth_plan_get_default_landing_velocity(plan));
+    fprintf(out, ", \"has_default_landing_velocity\": %s,\n", sb_rth_plan_has_default_landing_velocity(plan) ? "true" : "false");
+
+    /* One more than the number of points to check the out-of-range case */
+    fprintf(out, "    \"points\": [");
+    for (i = 0; i <= n; i++) {
+        retval = sb_rth_plan_get_point(plan, i, &point);
+        fprintf(out, "%s{\"index\": %u, \"result\": ", i > 0 ? ", " : "", (unsigned)i);
+        print_error(retval);
+        if (retval == SB_SUCCESS) {
+            fprintf(out, ", \"point_mm\": [");
+            print_float(point.x);
+            fprintf(out, ", ");
+            print_float(point.y);
+            fprintf(out, "]");
+        }
+        fprintf(out, "}");
+    }
+    fprintf(out, "],\n    \"evaluate_at\": [");
+    for (i = 0; i < sizeof(times_sec) / sizeof(times_sec[0]); i++) {
+        retval = sb_rth_plan_evaluate_at(plan, times_sec[i], &entry);
+        fprintf(out, "%s\n      {\"query_time_sec\": ", i > 0 ? "," : "");
+        print_float(times_sec[i]);
+        fprintf(out, ", \"result\": ");
+        print_error(retval);
+        if (retval == SB_SUCCESS) {
+            fprintf(out, ", \"entry\": ");
+            print_rth_entry_summary(&entry);
+        }
+        fprintf(out, "}");
+    }
+
+    /* Changing the defaults affects the entries that do not override them */
+    sb_rth_plan_set_default_landing_altitude(plan, 1500);
+    sb_rth_plan_clear_default_landing_velocity(plan);
+    retval = sb_rth_plan_evaluate_at(plan, 20, &entry);
+    fprintf(out, "\n    ],\n    \"after_changing_defaults\": {\"default_landing_altitude_mm\": ");
+    print_float(sb_rth_plan_get_default_landing_altitude(plan));
+    fprintf(out, ", \"has_default_landing_velocity\": %s, \"result_at_20_sec\": ",
+        sb_rth_plan_has_default_landing_velocity(plan) ? "true" : "false");
+    print_error(retval);
+    if (retval == SB_SUCCESS) {
+        fprintf(out, ", \"entry\": ");
+        print_rth_entry_summary(&entry);
+    }
+    fprintf(out, "}},\n");
 }
 
 static void print_rth_trajectories(sb_trajectory_t* show_trajectory, sb_rth_plan_t* plan)
@@ -641,8 +761,11 @@ int main(int argc, char* argv[])
         print_proposed_times(&trajectory);
         print_cuts(sb_trajectory_get_total_duration_msec(&trajectory));
         print_landings();
+        print_cleared_view();
         if (has_rth_plan) {
             print_rth_trajectories(&trajectory, rth_plan);
+            /* Modifies the defaults of the plan, therefore this must come last */
+            print_rth_plan_queries(rth_plan);
         }
     }
     if (has_light_program) {
