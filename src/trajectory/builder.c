@@ -471,7 +471,8 @@ static sb_error_t sb_i_trajectory_builder_scale_coordinate(
     sb_trajectory_builder_t* builder, float coordinate, int16_t* scaled_coordinate)
 {
     float scaled = floorf(coordinate / builder->scale);
-    if (scaled < INT16_MIN || scaled > INT16_MAX) {
+    /* Written so that NaN is rejected as well */
+    if (!(scaled >= INT16_MIN && scaled <= INT16_MAX)) {
         return SB_EINVAL;
     } else {
         *scaled_coordinate = scaled;

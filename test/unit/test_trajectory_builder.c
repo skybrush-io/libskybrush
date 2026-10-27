@@ -17,6 +17,8 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
+
 #include <skybrush/formats/binary.h>
 #include <skybrush/trajectory.h>
 
@@ -401,6 +403,9 @@ void test_set_start_position_invalid_coordinate(void)
     vec.y = 0;
     vec.z = 0;
     vec.yaw = 0;
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_line(&builder, vec, 10000));
+
+    vec.x = NAN;
     TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_append_line(&builder, vec, 10000));
 
     sb_trajectory_builder_destroy(&builder);
