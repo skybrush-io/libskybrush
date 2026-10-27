@@ -884,6 +884,25 @@ void test_load_file_with_zero_scale(void)
         loadFixture("fixtures/zero_scale.skyb"));
 }
 
+void test_cut_at_is_exact_in_milliseconds(void)
+{
+    /* The last segment of this trajectory starts at 21.87 s, which is not
+     * exactly representable as a float. Cutting at or close to the end of
+     * such a segment must not lose a millisecond due to rounding. */
+    const float times_sec[] = { 22.0f, 21.95f, 21.87f, 32.0f };
+    const uint32_t expected_msec[] = { 22000, 21950, 21870, 22000 };
+    size_t i;
+
+    for (i = 0; i < sizeof(times_sec) / sizeof(times_sec[0]); i++) {
+        closeFixture();
+        loadFixture("fixtures/hover_3m_with_rth_plan.skyb");
+        TEST_ASSERT_EQUAL_UINT32(22000, sb_trajectory_get_total_duration_msec(trajectory));
+
+        TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_cut_at(trajectory, times_sec[i]));
+        TEST_ASSERT_EQUAL_UINT32(expected_msec[i], sb_trajectory_get_total_duration_msec(trajectory));
+    }
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -914,6 +933,7 @@ int main(int argc, char* argv[])
 
     /* editing tests */
     RUN_TEST(test_cut_at);
+    RUN_TEST(test_cut_at_is_exact_in_milliseconds);
     RUN_TEST(test_replace_end_to_land_at);
     RUN_TEST(test_replace_end_to_land_at_missing_stats);
     RUN_TEST(test_replace_end_to_land_at_not_below);

@@ -129,6 +129,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are now clamped to `UINT32_MAX`, and execution continues after the last byte
   of the varint.
 
+- Fixed `sb_trajectory_cut_at()` making the trajectory one millisecond shorter
+  than requested when cutting at or near the end of a segment whose start time
+  is not exactly representable in seconds as a float. The cut is now
+  calculated in integer milliseconds, rounded to the nearest millisecond.
+  `sb_trajectory_replace_end_to_land_at()` and its variant with a terminal
+  velocity were affected as well, as they cut the trajectory at its landing
+  time.
+
 ## [5.3.1] - 2026-09-30
 
 ### Fixed

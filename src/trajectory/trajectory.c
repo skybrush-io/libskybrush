@@ -217,15 +217,32 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
     float dst[8];
     size_t offset;
     uint8_t i, header, num_coords;
-    uint32_t duration_msec;
+    uint32_t duration_msec, cut_msec;
 
     SB_CHECK(sb_trajectory_get_segment_at(trajectory, time_sec, &state, &rel_time));
 
-    if (rel_time < 1.0e-6f) {
+    /* Decide where to cut in integer milliseconds. The start and end times of
+     * the segments are exact in milliseconds, while their float counterparts
+     * in seconds are rounded, so a cut exactly at the end of a segment could
+     * otherwise end up a fraction of a millisecond before it. */
+    if (time_sec * 1000.0f >= 4294967296.0f) {
+        cut_msec = UINT32_MAX;
+    } else if (time_sec > 0) {
+        cut_msec = (uint32_t)roundf(time_sec * 1000.0f);
+    } else {
+        cut_msec = 0;
+    }
+
+    if (state.length == 0 || cut_msec <= state.segment.start_time_msec) {
+        /* Cutting at the start of a segment, or after the end of the
+         * trajectory, where the state represents holding the last position
+         * forever without a segment in the buffer */
         SB_CHECK(sb_buffer_resize(&trajectory->buffer, state.start));
-    } else if (rel_time > 1 - 1.0e-6f) {
+    } else if (cut_msec >= state.segment.end_time_msec) {
         SB_CHECK(sb_buffer_resize(&trajectory->buffer, state.start + state.length));
     } else {
+        rel_time = (float)(cut_msec - state.segment.start_time_msec) / state.segment.duration_msec;
+
         /* We re-read the given trajectory segment and modify in-place */
         start = state.segment.start;
         SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, &start));
@@ -233,7 +250,7 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
         header = SB_BUFFER(trajectory->buffer)[offset++];
 
         /* Modify duration of segment to be cut */
-        SB_CHECK(sb_uint32_msec_duration_from_float_seconds(&duration_msec, state.segment.duration_sec * rel_time));
+        duration_msec = cut_msec - state.segment.start_time_msec;
         sb_write_uint16(SB_BUFFER(trajectory->buffer), &offset, duration_msec);
 
         /* cut along X coordinate */
