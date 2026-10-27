@@ -1,11 +1,14 @@
-"""Checks the golden traces of the Skybrush binary show file format.
+"""Checks golden traces generated from Skybrush show files.
 
-Usage: python3 compare_traces.py --generator <generate_trace> --traces <dir> [--update]
+Usage: python3 compare_traces.py --generator <generator> --traces <dir>
+           [--show-files <file>...] [--update]
 
-For each show file (*.skyb) in the traces directory, runs the trace generator
-and compares its output with the golden trace stored next to the show file
-(<name>.json), using the tolerances in tolerances.json. With --update, the
-golden traces are replaced with the output of the generator instead.
+For each show file, runs the trace generator and compares its output with the
+golden trace of the show file (<name>.json in the traces directory), using the
+tolerances in tolerances.json in the traces directory. The show files are the
+*.skyb files of the traces directory unless they are given explicitly. With
+--update, the golden traces are replaced with the output of the generator
+instead.
 """
 
 import argparse
@@ -120,20 +123,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--generator", type=Path, required=True, help="path of the trace generator")
     parser.add_argument("--traces", type=Path, required=True, help="directory of the show files and golden traces")
+    parser.add_argument("--show-files", type=Path, nargs="+", help="show files to use instead of the ones in the traces directory")
     parser.add_argument("--update", action="store_true", help="replace the golden traces with the output of the generator")
     options = parser.parse_args()
 
     with open(options.traces / "tolerances.json") as fp:
         tolerances = json.load(fp)
 
-    show_files = sorted(options.traces.glob("*.skyb"))
+    show_files = options.show_files or sorted(options.traces.glob("*.skyb"))
     if not show_files:
         sys.exit(f"no show files found in {options.traces}")
 
     failed = False
     with tempfile.TemporaryDirectory() as tmpdir:
         for show_file in show_files:
-            golden = show_file.with_suffix(".json")
+            golden = options.traces / f"{show_file.stem}.json"
             output = Path(tmpdir) / golden.name
             generate_trace(options.generator, show_file, output)
 

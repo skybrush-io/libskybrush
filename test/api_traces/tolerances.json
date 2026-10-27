@@ -1,0 +1,34 @@
+{
+    "version": 1,
+    "description": "Tolerances to use when comparing a trace with a golden trace. The unit of a value is determined from the suffix of its key (e.g. position_mm is in millimeters); a value matches if it differs from the golden value by at most abs + rel * |golden value|. Integers without a unit (colors, timestamps in milliseconds, flags, counts and event fields) must match exactly.",
+    "by_unit": {
+        "mm": {
+            "abs": 0.01,
+            "rel": 1e-5
+        },
+        "mm_s": {
+            "abs": 0.01,
+            "rel": 1e-4
+        },
+        "mm_s2": {
+            "abs": 0.1,
+            "rel": 1e-3
+        },
+        "deg": {
+            "abs": 0.001,
+            "rel": 1e-5
+        },
+        "deg_s": {
+            "abs": 0.001,
+            "rel": 1e-4
+        },
+        "sec": {
+            "abs": 0.001,
+            "rel": 0
+        }
+    },
+    "default": {
+        "abs": 0.0001,
+        "rel": 1e-5
+    }
+}

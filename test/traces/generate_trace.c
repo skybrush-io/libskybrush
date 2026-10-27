@@ -49,6 +49,8 @@
 #include <skybrush/version.h>
 #include <skybrush/yaw_control.h>
 
+#include "trace_output.h"
+
 /** Interval between consecutive samples of the trace */
 #define SAMPLE_INTERVAL_MSEC 100
 
@@ -58,66 +60,9 @@
 /** Light programs that do not end within this time are treated as endless */
 #define MAX_LIGHT_PROGRAM_DURATION_MSEC 3600000
 
-#define CHECK(expr)                                                              \
-    do {                                                                         \
-        sb_error_t __retval = (expr);                                            \
-        if (__retval != SB_SUCCESS) {                                            \
-            fprintf(stderr, "%s:%d: %s failed: %s\n", __FILE__, __LINE__, #expr, \
-                sb_error_to_string(__retval));                                   \
-            exit(1);                                                             \
-        }                                                                        \
-    } while (0)
-
-static FILE* out;
 static uint8_t* show_data;
 static size_t show_length;
 static uint32_t num_samples;
-
-/* ************************************************************************** */
-/* JSON output helpers                                                        */
-/* ************************************************************************** */
-
-/** Prints a floating-point number; non-finite numbers are printed as null */
-static void print_float(float value)
-{
-    if (isfinite(value)) {
-        /* Nine significant digits are enough to represent any float exactly */
-        fprintf(out, "%.9g", (double)value);
-    } else {
-        fprintf(out, "null");
-    }
-}
-
-static void print_vector3(sb_vector3_with_yaw_t vec)
-{
-    fprintf(out, "[");
-    print_float(vec.x);
-    fprintf(out, ", ");
-    print_float(vec.y);
-    fprintf(out, ", ");
-    print_float(vec.z);
-    fprintf(out, "]");
-}
-
-static void print_color(sb_rgb_color_t color)
-{
-    fprintf(out, "[%d, %d, %d]", color.red, color.green, color.blue);
-}
-
-static void print_hex(const uint8_t* bytes, size_t length)
-{
-    fprintf(out, "\"");
-    for (size_t i = 0; i < length; i++) {
-        fprintf(out, "%02x", bytes[i]);
-    }
-    fprintf(out, "\"");
-}
-
-/** Prints the separator between items of a per-sample array, one item per line */
-static void print_item_separator(uint32_t index)
-{
-    fprintf(out, index + 1 < num_samples ? ",\n      " : "\n    ");
-}
 
 static uint32_t sample_time_msec(uint32_t index)
 {
@@ -127,47 +72,6 @@ static uint32_t sample_time_msec(uint32_t index)
 /* ************************************************************************** */
 /* Loading the components of the show                                        */
 /* ************************************************************************** */
-
-static void read_show_file(const char* path)
-{
-    FILE* fp = fopen(path, "rb");
-    long length;
-
-    if (fp == 0) {
-        perror(path);
-        exit(1);
-    }
-
-    if (fseek(fp, 0, SEEK_END) != 0 || (length = ftell(fp)) < 0 || fseek(fp, 0, SEEK_SET) != 0) {
-        perror(path);
-        exit(1);
-    }
-
-    show_length = (size_t)length;
-    show_data = malloc(show_length > 0 ? show_length : 1);
-    if (show_data == 0 || fread(show_data, 1, show_length, fp) != show_length) {
-        perror(path);
-        exit(1);
-    }
-
-    fclose(fp);
-}
-
-/**
- * Checks the result of loading a component of the show. Returns whether the
- * component was found; exits with an error if loading failed for any other
- * reason.
- */
-static int is_present(sb_error_t retval, const char* component)
-{
-    if (retval == SB_ENOENT) {
-        return 0;
-    } else if (retval != SB_SUCCESS) {
-        fprintf(stderr, "failed to load %s: %s\n", component, sb_error_to_string(retval));
-        exit(1);
-    }
-    return 1;
-}
 
 static uint32_t max_u32(uint32_t a, uint32_t b)
 {
@@ -212,24 +116,24 @@ static void print_trajectory(sb_trajectory_t* trajectory)
     fprintf(out, "    \"position_mm\": [\n      ");
     for (i = 0; i < num_samples; i++) {
         CHECK(sb_trajectory_player_get_position_at(&player, sample_time_msec(i) / 1000.0f, &vec));
-        print_vector3(vec);
-        print_item_separator(i);
+        print_vector3_with_yaw(vec);
+        print_item_separator(i, num_samples);
     }
     fprintf(out, "],\n");
 
     fprintf(out, "    \"velocity_mm_s\": [\n      ");
     for (i = 0; i < num_samples; i++) {
         CHECK(sb_trajectory_player_get_velocity_at(&player, sample_time_msec(i) / 1000.0f, &vec));
-        print_vector3(vec);
-        print_item_separator(i);
+        print_vector3_with_yaw(vec);
+        print_item_separator(i, num_samples);
     }
     fprintf(out, "],\n");
 
     fprintf(out, "    \"acceleration_mm_s2\": [\n      ");
     for (i = 0; i < num_samples; i++) {
         CHECK(sb_trajectory_player_get_acceleration_at(&player, sample_time_msec(i) / 1000.0f, &vec));
-        print_vector3(vec);
-        print_item_separator(i);
+        print_vector3_with_yaw(vec);
+        print_item_separator(i, num_samples);
     }
     fprintf(out, "]\n");
     fprintf(out, "  },\n");
@@ -257,11 +161,11 @@ static void print_stats(sb_trajectory_t* trajectory)
     fprintf(out, ",\n    \"landing_time_sec\": ");
     print_float(stats.landing_time_sec);
     fprintf(out, ",\n    \"initial_position_mm\": ");
-    print_vector3(stats.initial_pos);
+    print_vector3_with_yaw(stats.initial_pos);
     fprintf(out, ",\n    \"position_at_landing_mm\": ");
-    print_vector3(stats.pos_at_landing_time);
+    print_vector3_with_yaw(stats.pos_at_landing_time);
     fprintf(out, ",\n    \"velocity_at_landing_mm_s\": ");
-    print_vector3(stats.vel_at_landing_time);
+    print_vector3_with_yaw(stats.vel_at_landing_time);
     fprintf(out, ",\n    \"start_to_end_distance_xy_mm\": ");
     print_float(stats.start_to_end_distance_xy);
     fprintf(out, "\n  },\n");
@@ -285,7 +189,7 @@ static void print_yaw_control(sb_yaw_control_t* ctrl)
     for (i = 0; i < num_samples; i++) {
         CHECK(sb_yaw_player_get_yaw_at(&player, sample_time_msec(i) / 1000.0f, &value));
         print_float(value);
-        print_item_separator(i);
+        print_item_separator(i, num_samples);
     }
     fprintf(out, "],\n");
 
@@ -293,7 +197,7 @@ static void print_yaw_control(sb_yaw_control_t* ctrl)
     for (i = 0; i < num_samples; i++) {
         CHECK(sb_yaw_player_get_yaw_rate_at(&player, sample_time_msec(i) / 1000.0f, &value));
         print_float(value);
-        print_item_separator(i);
+        print_item_separator(i, num_samples);
     }
     fprintf(out, "]\n");
     fprintf(out, "  },\n");
@@ -318,7 +222,7 @@ static void print_light_program(sb_light_program_t* program, uint32_t end_msec)
     fprintf(out, "    \"color\": [\n      ");
     for (i = 0; i < num_samples; i++) {
         print_color(sb_light_player_get_color_at(&player, sample_time_msec(i)));
-        print_item_separator(i);
+        print_item_separator(i, num_samples);
     }
     fprintf(out, "]\n");
     fprintf(out, "  },\n");
@@ -385,7 +289,7 @@ static void print_rth_plan(sb_rth_plan_t* plan)
         fprintf(out, ", ");
         print_float(entry.landing_altitude);
         fprintf(out, "]");
-        print_item_separator(i);
+        print_item_separator(i, num_samples);
     }
     fprintf(out, "]\n");
     fprintf(out, "  },\n");
@@ -451,26 +355,14 @@ static void print_show_controller(void)
 
         fprintf(out, "{\"position_mm\": ");
         if (sb_control_output_get_position_if_set(output, &vec)) {
-            fprintf(out, "[");
-            print_float(vec.x);
-            fprintf(out, ", ");
-            print_float(vec.y);
-            fprintf(out, ", ");
-            print_float(vec.z);
-            fprintf(out, "]");
+            print_vector3(vec);
         } else {
             fprintf(out, "null");
         }
 
         fprintf(out, ", \"velocity_mm_s\": ");
         if (sb_control_output_get_velocity_if_set(output, &vec)) {
-            fprintf(out, "[");
-            print_float(vec.x);
-            fprintf(out, ", ");
-            print_float(vec.y);
-            fprintf(out, ", ");
-            print_float(vec.z);
-            fprintf(out, "]");
+            print_vector3(vec);
         } else {
             fprintf(out, "null");
         }
@@ -497,7 +389,7 @@ static void print_show_controller(void)
         }
 
         fprintf(out, ", \"ended\": %s}", sb_show_controller_has_reached_end(&ctrl) ? "true" : "false");
-        print_item_separator(i);
+        print_item_separator(i, num_samples);
     }
     fprintf(out, "],\n");
 
@@ -545,8 +437,8 @@ int main(int argc, char* argv[])
         return 2;
     }
 
-    read_show_file(argv[1]);
-    fixture = strrchr(argv[1], '/') ? strrchr(argv[1], '/') + 1 : argv[1];
+    read_show_file(argv[1], &show_data, &show_length);
+    fixture = base_name(argv[1]);
 
     /* Load all the components of the show */
     trajectory = sb_trajectory_new();

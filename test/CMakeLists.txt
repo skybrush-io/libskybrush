@@ -1,3 +1,4 @@
+add_subdirectory(api_traces)
 add_subdirectory(benchmarks)
 add_subdirectory(fuzz)
 add_subdirectory(traces)

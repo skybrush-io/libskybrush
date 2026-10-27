@@ -6,7 +6,7 @@ set(LIBSKYBRUSH_SKYB_TRACES
     "${PROJECT_SOURCE_DIR}/../skybrush-file-formats-doc/spec/skyb/traces"
     CACHE PATH "Path to the golden traces of the Skybrush binary show file format")
 
-add_executable(generate_trace generate_trace.c)
+add_executable(generate_trace generate_trace.c trace_output.c)
 target_link_libraries(generate_trace PUBLIC skybrush)
 
 find_program(LIBSKYBRUSH_PYTHON3 NAMES python3 python)
