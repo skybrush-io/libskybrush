@@ -144,6 +144,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   intact, including operations that consist of multiple segments of which only
   the later ones failed.
 
+- Fixed `sb_event_list_add_pyro_off_events()` looping forever when the "off"
+  event of an ignition would end after the largest representable timestamp.
+  The timestamp of the "off" event wrapped around, which placed it before its
+  "on" event. Such "off" events are now added at `UINT32_MAX` instead.
+
 ## [5.3.1] - 2026-09-30
 
 ### Fixed

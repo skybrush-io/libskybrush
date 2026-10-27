@@ -21,6 +21,8 @@
 #include <skybrush/formats/binary.h>
 #include <skybrush/refcount.h>
 
+#include <string.h>
+
 #include "unity.h"
 
 sb_event_list_t* events;
@@ -541,6 +543,28 @@ void test_update_without_event_list_block(void)
     TEST_ASSERT_TRUE(sb_event_list_is_empty(events));
 }
 
+void test_add_pyro_off_events_near_the_end_of_the_time_range(void)
+{
+    /* The "off" event of an ignition that would end after the largest
+     * representable timestamp is clamped to that timestamp. A wrapped
+     * timestamp would place the "off" event before the "on" event, which used
+     * to make the function loop forever. */
+    sb_event_t event;
+
+    memset(&event, 0, sizeof(event));
+    event.type = SB_EVENT_TYPE_PYRO;
+    event.subtype = 1;
+    event.time_msec = UINT32_MAX - 300;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_append(events, &event));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_event_list_add_pyro_off_events(events, 1000));
+    TEST_ASSERT_EQUAL(2, sb_event_list_size(events));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX - 300, sb_event_list_get_ptr(events, 0)->time_msec);
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_event_list_get_ptr(events, 1)->time_msec);
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_event_list_get_ptr(events, 1)->payload.as_uint32);
+    TEST_ASSERT_TRUE(sb_event_list_is_sorted(events));
+}
+
 int main(int argc, char* argv[])
 {
     UNITY_BEGIN();
@@ -559,6 +583,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_adjust_timestamps);
     RUN_TEST(test_add_pyro_off_events);
     RUN_TEST(test_add_pyro_off_events_overlapping);
+    RUN_TEST(test_add_pyro_off_events_near_the_end_of_the_time_range);
 
     return UNITY_END();
 }

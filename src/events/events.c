@@ -444,10 +444,16 @@ sb_error_t sb_event_list_add_pyro_off_events(sb_event_list_t* events, uint32_t t
 {
     size_t i, j, n = sb_event_list_size(events);
     sb_event_t *event, *other_event;
+    uint32_t off_time_msec;
 
     for (i = 0; i < n; i++) {
         event = sb_event_list_get_ptr(events, i);
         if (is_pyro_on_event(event)) {
+            /* Clamp to the largest timestamp instead of wrapping around;
+             * a wrapped timestamp would place the "off" event before the "on"
+             * event, which would then be processed again, forever */
+            off_time_msec = event->time_msec <= UINT32_MAX - time_msec ? event->time_msec + time_msec : UINT32_MAX;
+
             // Check if there is already a matching "off" event
             sb_bool_t found_off_event = 0;
             for (j = i + 1; j < n; j++) {
@@ -459,7 +465,7 @@ sb_error_t sb_event_list_add_pyro_off_events(sb_event_list_t* events, uint32_t t
             }
 
             // If a matching "off" event was found, check if it is too far in the future
-            if (found_off_event && other_event->time_msec > event->time_msec + time_msec) {
+            if (found_off_event && other_event->time_msec > off_time_msec) {
                 // Remove the found "off" event
                 SB_CHECK(sb_event_list_remove(events, j));
                 found_off_event = 0; // Reset flag since we removed the event
@@ -469,7 +475,7 @@ sb_error_t sb_event_list_add_pyro_off_events(sb_event_list_t* events, uint32_t t
             // If no matching "off" event was found, create one
             if (!found_off_event) {
                 sb_event_t off_event;
-                off_event.time_msec = event->time_msec + time_msec;
+                off_event.time_msec = off_time_msec;
                 off_event.type = SB_EVENT_TYPE_PYRO;
                 off_event.subtype = event->subtype;
                 off_event.payload.as_uint32 = UINT32_MAX; // Indicating "off"
