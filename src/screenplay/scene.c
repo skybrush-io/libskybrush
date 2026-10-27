@@ -24,7 +24,7 @@
 #include <skybrush/screenplay.h>
 #include <skybrush/time_axis.h>
 
-static void sb_i_screenplay_scene_destroy(sb_screenplay_scene_t* scene);
+static void sb_i_screenplay_scene_destroy(void* obj);
 
 /**
  * \brief Allocates a new scene on the heap and initializes it.
@@ -79,8 +79,10 @@ sb_error_t sb_screenplay_scene_init(sb_screenplay_scene_t* scene)
  *
  * @param scene  the screenplay scene to destroy
  */
-static void sb_i_screenplay_scene_destroy(sb_screenplay_scene_t* scene)
+static void sb_i_screenplay_scene_destroy(void* obj)
 {
+    sb_screenplay_scene_t* scene = obj;
+
     sb_screenplay_scene_reset(scene);
     sb_time_axis_destroy(&scene->time_axis);
 }

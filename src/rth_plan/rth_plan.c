@@ -54,7 +54,7 @@
 #define OFFSET_OF_ENTRY_TABLE (OFFSET_OF_POINT(plan->num_points))
 #define OFFSET_OF_FIRST_ENTRY (OFFSET_OF_ENTRY_TABLE + sizeof(uint16_t))
 
-static void sb_i_rth_plan_destroy(sb_rth_plan_t* plan);
+static void sb_i_rth_plan_destroy(void* obj);
 static float sb_i_rth_plan_parse_coordinate(const sb_rth_plan_t* plan, size_t* offset);
 static sb_error_t sb_i_rth_plan_parse_duration(const sb_rth_plan_t* plan, size_t* offset, float* duration);
 static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan);
@@ -584,8 +584,10 @@ sb_error_t sb_trajectory_update_from_rth_plan_entry(
 /**
  * Destroys an RTH plan object and releases all memory that it owns.
  */
-static void sb_i_rth_plan_destroy(sb_rth_plan_t* plan)
+static void sb_i_rth_plan_destroy(void* obj)
 {
+    sb_rth_plan_t* plan = obj;
+
     sb_buffer_destroy(&plan->buffer);
 
     plan->header_length = 0;

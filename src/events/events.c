@@ -32,7 +32,7 @@
 
 static int sb_i_event_cmp_timestamps(const void* first, const void* second);
 
-static void sb_i_event_list_destroy(sb_event_list_t* events);
+static void sb_i_event_list_destroy(void* obj);
 static sb_error_t sb_i_event_list_update_from_bytes(sb_event_list_t* events, const uint8_t* buf, size_t nbytes);
 static sb_error_t sb_i_event_list_update_from_parser(sb_event_list_t* events, sb_binary_file_parser_t* parser);
 static sb_error_t sb_i_event_list_ensure_has_free_space(sb_event_list_t* events);
@@ -103,8 +103,10 @@ sb_error_t sb_event_list_init(sb_event_list_t* events, size_t max_events)
  *
  * \param events  the event list to destroy
  */
-static void sb_i_event_list_destroy(sb_event_list_t* events)
+static void sb_i_event_list_destroy(void* obj)
 {
+    sb_event_list_t* events = obj;
+
     if (events->entries != 0) {
         sb_free(events->entries);
     }

@@ -39,7 +39,7 @@
 
 static sb_error_t sb_i_yaw_control_update_from_bytes(sb_yaw_control_t* ctrl, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_yaw_control_update_from_parser(sb_yaw_control_t* ctrl, sb_binary_file_parser_t* parser);
-static void sb_i_yaw_control_destroy(sb_yaw_control_t* ctrl);
+static void sb_i_yaw_control_destroy(void* obj);
 
 static sb_error_t sb_i_yaw_player_build_current_setpoint(
     sb_yaw_player_t* player, size_t offset, uint32_t start_time_msec,
@@ -215,8 +215,10 @@ sb_error_t sb_yaw_control_update_from_binary_file_in_memory(
 /**
  * Destroys a yaw control object and releases all memory that it owns.
  */
-static void sb_i_yaw_control_destroy(sb_yaw_control_t* ctrl)
+static void sb_i_yaw_control_destroy(void* obj)
 {
+    sb_yaw_control_t* ctrl = obj;
+
     sb_buffer_destroy(&ctrl->buffer);
 
     ctrl->header_length = 0;

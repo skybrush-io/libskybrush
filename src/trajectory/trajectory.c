@@ -35,7 +35,7 @@
 #include "./trajectory.h"
 #include "./utils.h"
 
-static void sb_i_trajectory_destroy(sb_trajectory_t* trajectory);
+static void sb_i_trajectory_destroy(void* obj);
 static size_t sb_i_trajectory_parse_header(sb_trajectory_t* trajectory);
 static sb_error_t sb_i_trajectory_update_from_bytes(sb_trajectory_t* trajectory, uint8_t* buf, size_t nbytes, sb_bool_t owned);
 static sb_error_t sb_i_trajectory_update_from_parser(sb_trajectory_t* trajectory, sb_binary_file_parser_t* parser);
@@ -697,8 +697,10 @@ cleanup:
 /**
  * Destroys a trajectory object and releases all memory that it owns.
  */
-static void sb_i_trajectory_destroy(sb_trajectory_t* trajectory)
+static void sb_i_trajectory_destroy(void* obj)
 {
+    sb_trajectory_t* trajectory = obj;
+
     sb_buffer_destroy(&trajectory->buffer);
 }
 
