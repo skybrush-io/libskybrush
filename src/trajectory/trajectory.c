@@ -90,6 +90,10 @@ sb_error_t sb_trajectory_init(sb_trajectory_t* trajectory)
 /**
  * Clears the trajectory object and removes all segments from it. Also releases
  * any memory that the trajectory owns.
+ *
+ * When the trajectory is backed by a view into a buffer that it does not own
+ * (e.g., a show file loaded into memory), the trajectory is cleared by filling
+ * its part of the buffer with zeros.
  */
 sb_error_t sb_trajectory_clear(sb_trajectory_t* trajectory)
 {
@@ -144,6 +148,14 @@ sb_error_t sb_trajectory_update_from_binary_file(sb_trajectory_t* trajectory, in
  * in-memory buffer. The caller is responsible for ensuring that the buffer
  * remains valid for the lifetime of the trajectory object.
  *
+ * Operations that modify the trajectory in place, i.e. \ref sb_trajectory_cut_at()
+ * and \ref sb_trajectory_clear(), write through to the buffer: they modify
+ * the trajectory in the buffer itself. This is intentional; it avoids copying
+ * the trajectory on devices that are short on memory. Operations that may need
+ * to extend the trajectory, i.e. \ref sb_trajectory_replace_end_to_land_at() and
+ * its variants, copy the trajectory into a newly allocated buffer first and
+ * leave the original buffer intact.
+ *
  * \param trajectory  the trajectory to update
  * \param buf   the buffer holding the loaded Skybrush file in binary format
  * \param nbytes  the length of the buffer
@@ -166,6 +178,18 @@ sb_error_t sb_trajectory_update_from_binary_file_in_memory(
 
 /**
  * Updates a trajectory object from the contents of a memory buffer.
+ *
+ * The trajectory object will be backed by a \em view into the buffer. The
+ * caller is responsible for ensuring that the buffer remains valid for the
+ * lifetime of the trajectory object.
+ *
+ * Operations that modify the trajectory in place, i.e. \ref sb_trajectory_cut_at()
+ * and \ref sb_trajectory_clear(), write through to the buffer: they modify
+ * the trajectory in the buffer itself. This is intentional; it avoids copying
+ * the trajectory on devices that are short on memory. Operations that may need
+ * to extend the trajectory, i.e. \ref sb_trajectory_replace_end_to_land_at() and
+ * its variants, copy the trajectory into a newly allocated buffer first and
+ * leave the original buffer intact.
  *
  * \param trajectory  the trajectory to update
  * \param buf   the buffer holding the encoded trajectory object
@@ -203,6 +227,10 @@ sb_error_t sb_trajectory_update_from_bytes(sb_trajectory_t* trajectory, uint8_t*
 /**
  * @brief Cuts the trajectory at the given time instant, keeping the last
  * position and velocity at the given time intact and deleting all further segments.
+ *
+ * The cut is rounded to the nearest millisecond. The trajectory is modified in
+ * place; when it is backed by a view into a buffer that it does not own (e.g.,
+ * a show file loaded into memory), the buffer itself is modified.
  *
  * @param trajectory the trajectory to cut
  * @param time_sec the timestamp at which to cut the trajectory, in seconds
@@ -554,6 +582,10 @@ sb_bool_t sb_trajectory_is_empty(const sb_trajectory_t* trajectory)
  * \c sb_trajectory_replace_end_to_land_at_with_terminal_velocity() with a
  * terminal (arrival) velocity of zero.
  *
+ * When the trajectory is backed by a view into a buffer that it does not own
+ * (e.g., a show file loaded into memory), the trajectory is copied into a newly
+ * allocated buffer first, and the original buffer is left intact.
+ *
  * \param  trajectory  the trajectory to modify
  * \param  stats  the valid statistics of the trajectory to use and update. It
  *         is assumed that at least the following components are valid in the stats:
@@ -576,6 +608,10 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
 /**
  * Replaces the end of a trajectory to land smoothly to the given landing
  * position, arriving there with the given terminal (arrival) velocity.
+ *
+ * When the trajectory is backed by a view into a buffer that it does not own
+ * (e.g., a show file loaded into memory), the trajectory is copied into a newly
+ * allocated buffer first, and the original buffer is left intact.
  *
  * \param  trajectory  the trajectory to modify
  * \param  stats  the valid statistics of the trajectory to use and update. It
