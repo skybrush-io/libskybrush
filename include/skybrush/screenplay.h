@@ -161,7 +161,7 @@ void sb_screenplay_scene_set_duration_msec(
     sb_screenplay_scene_t* scene, uint32_t duration_msec);
 sb_error_t sb_screenplay_scene_set_duration_sec(
     sb_screenplay_scene_t* scene, float duration_sec);
-void sb_screenplay_scene_set_origin_msec(
+sb_error_t sb_screenplay_scene_set_origin_msec(
     sb_screenplay_scene_t* scene, int32_t origin_msec);
 sb_error_t sb_screenplay_scene_set_origin_sec(
     sb_screenplay_scene_t* scene, float origin_sec);

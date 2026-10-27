@@ -130,7 +130,7 @@ void test_screenplay_scene_origin_accessors(void)
     TEST_ASSERT_EQUAL(0, sb_screenplay_scene_get_origin_msec(&scene));
     TEST_ASSERT_EQUAL_FLOAT(0.0f, sb_screenplay_scene_get_origin_sec(&scene));
 
-    sb_screenplay_scene_set_origin_msec(&scene, 1234);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_origin_msec(&scene, 1234));
     TEST_ASSERT_EQUAL(1234, sb_screenplay_scene_get_origin_msec(&scene));
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 1.234f, sb_screenplay_scene_get_origin_sec(&scene));
 
@@ -142,6 +142,13 @@ void test_screenplay_scene_origin_accessors(void)
     err = sb_screenplay_scene_set_origin_sec(&scene, -1.0f);
     TEST_ASSERT_EQUAL(SB_EINVAL, err);
     TEST_ASSERT_EQUAL(2500, sb_screenplay_scene_get_origin_msec(&scene));
+
+    /* Negative origins are not allowed in milliseconds either */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_screenplay_scene_set_origin_msec(&scene, -1));
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_screenplay_scene_set_origin_msec(&scene, INT32_MIN));
+    TEST_ASSERT_EQUAL(2500, sb_screenplay_scene_get_origin_msec(&scene));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_origin_msec(&scene, INT32_MAX));
+    TEST_ASSERT_EQUAL(INT32_MAX, sb_screenplay_scene_get_origin_msec(&scene));
 
     SB_DECREF_STATIC(&scene);
 }
@@ -859,14 +866,14 @@ void test_screenplay_scene_get_warped_time_remaining_with_origin(void)
     axis = sb_screenplay_scene_get_time_axis(&scene);
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis, sb_time_segment_make_realtime(4000u)));
 
-    /* A non-negative origin does not affect the result */
-    sb_time_axis_set_origin_msec(axis, 500);
+    /* The origin does not affect the result */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_set_origin_msec(axis, 500));
     TEST_ASSERT_FLOAT_WITHIN(1e-6f, 6.0f, sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene));
 
-    /* A negative origin means that the scene starts later on the show clock,
-     * so less of the trajectory remains to be played */
-    sb_time_axis_set_origin_msec(axis, -2000);
-    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 4.0f, sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene));
+    /* Negative origins are not allowed; the origin is left intact */
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_time_axis_set_origin_msec(axis, -2000));
+    TEST_ASSERT_EQUAL(500, sb_time_axis_get_origin_msec(axis));
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 6.0f, sb_screenplay_scene_get_warped_time_remaining_from_trajectory_at_end_of_time_axis(&scene));
 
     SB_DECREF_STATIC(&scene);
     SB_DECREF_STATIC(&traj);

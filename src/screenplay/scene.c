@@ -499,12 +499,14 @@ void sb_screenplay_scene_set_infinite(sb_screenplay_scene_t* scene)
  * of the scene.
  *
  * @param scene  the scene to modify
- * @param origin_msec the origin of the time axis to set, in milliseconds
+ * @param origin_msec the origin of the time axis to set, in milliseconds; must
+ *        not be negative
+ * @return \c SB_EINVAL if the origin is negative, \c SB_SUCCESS otherwise
  */
-void sb_screenplay_scene_set_origin_msec(sb_screenplay_scene_t* scene, int32_t origin_msec)
+sb_error_t sb_screenplay_scene_set_origin_msec(sb_screenplay_scene_t* scene, int32_t origin_msec)
 {
     sb_time_axis_t* time_axis = sb_screenplay_scene_get_time_axis(scene);
-    sb_time_axis_set_origin_msec(time_axis, origin_msec);
+    return sb_time_axis_set_origin_msec(time_axis, origin_msec);
 }
 
 /**

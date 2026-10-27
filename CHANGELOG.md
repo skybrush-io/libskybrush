@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Events with unknown types are not rejected any more; they are kept as opaque
   events.
 
+- `sb_time_axis_set_origin_msec()` and `sb_screenplay_scene_set_origin_msec()`
+  now return an error code and reject negative origins with `SB_EINVAL`, like
+  their counterparts that take the origin in seconds. The origin is left intact
+  in this case.
+
 ### Added
 
 - Added `sb_buffer_update()` to replace the contents of an already initialized

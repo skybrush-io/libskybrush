@@ -359,13 +359,21 @@ float sb_time_axis_get_origin_sec(const sb_time_axis_t* axis)
  * @brief Sets the origin of the time axis, in milliseconds.
  *
  * The origin of the time axis is the wall clock time corresponding to warped time zero.
+ * It must not be negative.
  *
  * @param axis Pointer to the time axis structure.
- * @param origin_sec Origin of the time axis, in milliseconds.
+ * @param origin_msec Origin of the time axis, in milliseconds.
+ * @return \c SB_EINVAL if the origin is negative, \c SB_SUCCESS otherwise. The
+ *         origin is left intact on error.
  */
-void sb_time_axis_set_origin_msec(sb_time_axis_t* axis, int32_t origin_msec)
+sb_error_t sb_time_axis_set_origin_msec(sb_time_axis_t* axis, int32_t origin_msec)
 {
+    if (origin_msec < 0) {
+        return SB_EINVAL;
+    }
+
     axis->origin_msec = origin_msec;
+    return SB_SUCCESS;
 }
 
 /**
