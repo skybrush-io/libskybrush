@@ -154,6 +154,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The timestamp of the "off" event wrapped around, which placed it before its
   "on" event. Such "off" events are now added at `UINT32_MAX` instead.
 
+- Fixed `sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene()`
+  and its variant in seconds assuming that scenes follow each other on the show
+  clock. Scenes are placed on the show clock by their origins, independently of
+  each other, like the show controller does. The results were wrong for every
+  scene with a nonzero origin. The function now also returns `UINT32_MAX` for a
+  NaN warped time, and when another scene that precedes the scene with the given
+  tag is active at the corresponding time.
+
 ## [5.3.1] - 2026-09-30
 
 ### Fixed

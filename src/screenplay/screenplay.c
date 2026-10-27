@@ -387,73 +387,57 @@ void sb_screenplay_set_rth_plan(sb_screenplay_t* screenplay, sb_rth_plan_t* rth_
  * @brief Returns the time in milliseconds corresponding to a given warped time in the
  * first scene with the specified tag.
  *
- * This function searches for the scene with the specified tag in the screenplay
- * and returns the wall clock time (in milliseconds) that corresponds to the given warped
- * time in that scene, taking into account the durations (in wall clock time) of all
- * preceding scenes.
+ * This function searches for the first scene with the specified tag in the
+ * screenplay and returns the wall clock time (in milliseconds) on the show clock
+ * that corresponds to the given warped time in that scene. Scenes are placed on the
+ * show clock by their origins, independently of each other; the first and the
+ * last instant of a scene both belong to the scene.
  *
- * Returns \c UINT32_MAX (meaning: never, i.e. an infinite amount of time will pass
- * before we reach the scene with the given tag and the given warped time in it) if any
- * of the following conditions is true:
+ * Returns \c UINT32_MAX (meaning: never) if any of the following conditions is true:
  *
  * - there is no scene with the given tag
- * - the scene does not have a time axis
- * - an infinite scene precedes the scene with the given tag
+ * - the given warped time is NaN
  * - the given warped time corresponds to a time instant \em before the start of the
- *   scene with the given tag (because we are still in one of the preceding scenes at
- *   that time)
- * - the given warped time corresponds to a time instant \em after the end of the scene
- *   with the given tag (because we are already past the scene with the given tag at
- *   that time)
+ *   scene with the given tag, or \em after its end
+ * - another scene that precedes the scene with the given tag in the screenplay is
+ *   active at that time instant, i.e. the scene with the given tag is not active
+ *   then, as the first scene that contains a given time instant is the active one
  */
 uint32_t sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(
     sb_screenplay_t* screenplay, sb_screenplay_scene_tag_t tag, float warped_time)
 {
-    uint32_t time_msec = 0;
-    uint32_t scene_duration;
+    sb_screenplay_scene_t* scene = sb_screenplay_find_first_scene_with_tag(screenplay, tag);
+    int32_t origin_msec, time_msec;
+    uint32_t duration_msec;
 
-    for (size_t i = 0; i < screenplay->num_scenes; i++) {
-        sb_screenplay_scene_t* scene = screenplay->scenes[i];
-        int32_t time_rel_msec;
+    if (scene == NULL || isnan(warped_time)) {
+        return UINT32_MAX;
+    }
 
-        scene_duration = sb_screenplay_scene_get_duration_msec(scene);
+    origin_msec = sb_screenplay_scene_get_origin_msec(scene);
+    time_msec = sb_time_axis_reverse_map(sb_screenplay_scene_get_time_axis(scene), warped_time);
+    if (time_msec < origin_msec || time_msec == INT32_MAX) {
+        /* Before the start of the scene, or never */
+        return UINT32_MAX;
+    }
 
-        if (scene->tag == tag) {
-            sb_time_axis_t* time_axis = sb_screenplay_scene_get_time_axis(scene);
-            time_rel_msec = sb_time_axis_reverse_map(time_axis, warped_time);
-            if (time_rel_msec < 0) {
-                /* We are still in one of the preceding scenes at the given warped time */
-                return UINT32_MAX;
-            }
+    duration_msec = sb_screenplay_scene_get_duration_msec(scene);
+    if (duration_msec != UINT32_MAX && (uint32_t)(time_msec - origin_msec) > duration_msec) {
+        /* After the end of the scene */
+        return UINT32_MAX;
+    }
 
-            if (scene_duration <= INT32_MAX) {
-                if (time_rel_msec > (int32_t)scene_duration) {
-                    /* We are already past the scene with the given tag at the given warped time */
-                    return UINT32_MAX;
-                }
-            }
-
-            if (time_msec + (uint32_t)time_rel_msec < time_msec) {
-                /* Overflow */
-                return UINT32_MAX;
-            }
-
-            return time_msec + (uint32_t)time_rel_msec;
-        }
-
-        if (sb_screenplay_scene_is_infinite(scene)) {
-            /* Preceding scene has infinite duration -> searched scene will never be active */
-            return UINT32_MAX;
-        }
-
-        time_msec += scene_duration;
-        if (time_msec < scene_duration) {
-            /* Overflow */
+    /* The end of the scene belongs to the scene here, but the scene lookup
+     * considers it to be the start of the next scene, so we check the scenes
+     * preceding the scene with the given tag explicitly */
+    for (size_t i = 0; i < screenplay->num_scenes && screenplay->scenes[i] != scene; i++) {
+        if (sb_screenplay_scene_contains_time_msec(screenplay->scenes[i], (uint32_t)time_msec)) {
+            /* An earlier scene is active at that time */
             return UINT32_MAX;
         }
     }
 
-    return UINT32_MAX; /* No scene with the given tag */
+    return (uint32_t)time_msec;
 }
 
 /**

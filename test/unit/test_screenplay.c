@@ -293,8 +293,10 @@ void test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_suc
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene0));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene1));
 
+    /* Scenes are placed on the show clock by their origins */
     sb_screenplay_scene_set_duration_msec(scene0, 1000u);
     sb_screenplay_scene_set_duration_msec(scene1, 5000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_origin_msec(scene1, 1000u));
     sb_screenplay_scene_set_tag(scene1, 3);
 
     axis = sb_screenplay_scene_get_time_axis(scene1);
@@ -351,6 +353,7 @@ void test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_wit
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(axis0, sb_time_segment_make(2000u, 1.0f, 3.0f)));
 
     sb_screenplay_scene_set_duration_msec(scene1, 5000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_origin_msec(scene1, 2000u));
     sb_screenplay_scene_set_tag(scene1, 4);
     axis1 = sb_screenplay_scene_get_time_axis(scene1);
     TEST_ASSERT_NOT_NULL(axis1);
@@ -575,6 +578,51 @@ void test_sb_screenplay_find_first_scene_with_tag(void)
     sb_screenplay_destroy(&screenplay);
 }
 
+void test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_with_absolute_origins(void)
+{
+    /* Scenes are placed on the show clock by their origins, independently of
+     * each other, like audio clips in a sequencer. There is a gap between the
+     * first two scenes, and the third scene overlaps the second one. */
+    sb_screenplay_t screenplay;
+    sb_screenplay_scene_t *scene0, *scene1, *scene2;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&screenplay));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene1));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&screenplay, &scene2));
+
+    sb_screenplay_scene_set_duration_msec(scene0, 1000u);
+    sb_screenplay_scene_set_tag(scene0, 1);
+
+    sb_screenplay_scene_set_duration_msec(scene1, 4000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_origin_msec(scene1, 5000u));
+    sb_screenplay_scene_set_tag(scene1, 2);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_time_axis_append_segment(sb_screenplay_scene_get_time_axis(scene1), sb_time_segment_make_constant_rate(4000u, 2.0f)));
+
+    sb_screenplay_scene_set_duration_msec(scene2, 4000u);
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_scene_set_origin_msec(scene2, 7000u));
+    sb_screenplay_scene_set_tag(scene2, 3);
+
+    /* Scene 1 starts at 5 s and runs at double speed */
+    TEST_ASSERT_EQUAL_UINT32(5000u, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 2, 0.0f));
+    TEST_ASSERT_EQUAL_UINT32(6000u, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 2, 2.0f));
+    TEST_ASSERT_EQUAL_UINT32(9000u, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 2, 8.0f));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 2, -0.5f));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 2, 8.5f));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 2, NAN));
+
+    /* Scene 2 is not active until scene 1 ends at 9 s because the first scene
+     * that contains a time instant is the active one */
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 3, 1.0f));
+    TEST_ASSERT_EQUAL_UINT32(9000u, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 3, 2.0f));
+    TEST_ASSERT_EQUAL_UINT32(11000u, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 3, 4.0f));
+
+    /* The first scene is unaffected */
+    TEST_ASSERT_EQUAL_UINT32(500u, sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene(&screenplay, 1, 0.5f));
+
+    sb_screenplay_destroy(&screenplay);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -589,6 +637,7 @@ int main(void)
     RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_infinite_preceding);
     RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_success_and_bounds);
     RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_with_nonlinear_preceding_scene);
+    RUN_TEST(test_sb_screenplay_get_time_msec_for_scene_tag_and_warped_time_in_scene_with_absolute_origins);
     RUN_TEST(test_sb_screenplay_remove_last_scene);
     RUN_TEST(test_screenplay_update_from_short_binary_file_in_memory);
     RUN_TEST(test_screenplay_update_from_binary_file_in_memory);
