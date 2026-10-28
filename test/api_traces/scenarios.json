@@ -819,6 +819,26 @@
       "stats": [{"settings": "default", "takeoff_speed_mm_s": 2000, "acceleration_mm_s2": 4000, "min_ascent_mm": 2500, "preferred_descent_mm": 2500, "verticality_threshold_mm": 50, "result": "SUCCESS", "stats": {"initial_position_mm": [0, 0, 0], "duration_ms": 0, "earliest_above_sec": null, "takeoff_time_sec": null, "start_to_end_distance_xy_mm": 0, "landing_time_sec": 0, "position_at_landing_mm": [0, 0, 0], "velocity_at_landing_mm_s": [0, 0, 0]}}, {"settings": "short_preferred_descent", "takeoff_speed_mm_s": 2000, "acceleration_mm_s2": 4000, "min_ascent_mm": 2500, "preferred_descent_mm": 1500, "verticality_threshold_mm": 50, "result": "SUCCESS", "stats": {"initial_position_mm": [0, 0, 0], "duration_ms": 0, "earliest_above_sec": null, "takeoff_time_sec": null, "start_to_end_distance_xy_mm": 0, "landing_time_sec": 0, "position_at_landing_mm": [0, 0, 0], "velocity_at_landing_mm_s": [0, 0, 0]}}, {"settings": "no_preferred_descent", "takeoff_speed_mm_s": 2000, "acceleration_mm_s2": 4000, "min_ascent_mm": 2500, "preferred_descent_mm": 0, "verticality_threshold_mm": 50, "result": "SUCCESS", "stats": {"initial_position_mm": [0, 0, 0], "duration_ms": 0, "earliest_above_sec": null, "takeoff_time_sec": null, "start_to_end_distance_xy_mm": 0, "landing_time_sec": 0, "position_at_landing_mm": [0, 0, 0], "velocity_at_landing_mm_s": [0, 0, 0]}}, {"settings": "zero_takeoff_speed", "takeoff_speed_mm_s": 0, "acceleration_mm_s2": 4000, "min_ascent_mm": 2500, "preferred_descent_mm": 2500, "verticality_threshold_mm": 50, "result": "EINVAL"}, {"settings": "infinite_takeoff_speed", "takeoff_speed_mm_s": null, "acceleration_mm_s2": 4000, "min_ascent_mm": 2500, "preferred_descent_mm": 2500, "verticality_threshold_mm": 50, "result": "EINVAL"}, {"settings": "small_acceleration", "takeoff_speed_mm_s": 2000, "acceleration_mm_s2": 0.5, "min_ascent_mm": 2500, "preferred_descent_mm": 2500, "verticality_threshold_mm": 50, "result": "SUCCESS", "stats": {"initial_position_mm": [0, 0, 0], "duration_ms": 0, "earliest_above_sec": null, "takeoff_time_sec": null, "start_to_end_distance_xy_mm": 0, "landing_time_sec": 0, "position_at_landing_mm": [0, 0, 0], "velocity_at_landing_mm_s": [0, 0, 0]}}, {"settings": "small_takeoff_speed", "takeoff_speed_mm_s": 0.5, "acceleration_mm_s2": 4000, "min_ascent_mm": 2500, "preferred_descent_mm": 2500, "verticality_threshold_mm": 50, "result": "SUCCESS", "stats": {"initial_position_mm": [0, 0, 0], "duration_ms": 0, "earliest_above_sec": null, "takeoff_time_sec": null, "start_to_end_distance_xy_mm": 0, "landing_time_sec": 0, "position_at_landing_mm": [0, 0, 0], "velocity_at_landing_mm_s": [0, 0, 0]}}]
     }
   ],
+  "bounding_boxes": [
+    {
+      "scenario": "cubic_bezier_along_x",
+      "trajectory": "01000000000000000002e803e80318fcf401",
+      "result": "SUCCESS",
+      "bounding_box_mm": [[-80.6081848, 500], [0, 0], [0, 0]]
+    },
+    {
+      "scenario": "poly7_along_x",
+      "trajectory": "01000000000000000003e8030a00fbff140000001e00f6ff0500",
+      "result": "SUCCESS",
+      "bounding_box_mm": [[-9.99993896, 29.999939], [0, 0], [0, 0]]
+    },
+    {
+      "scenario": "poly7_after_cubic_bezier",
+      "trajectory": "01000000000000000002e803e80318fcf40130e8030a00fbff140000001e00f6ff0500",
+      "result": "SUCCESS",
+      "bounding_box_mm": [[-80.6081848, 500], [0, 0], [-9.99993896, 29.999939]]
+    }
+  ],
   "constant_yaw": [
     {
       "yaw_deg": 0,

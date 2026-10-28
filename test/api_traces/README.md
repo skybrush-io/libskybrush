@@ -40,6 +40,8 @@ The per-fixture traces contain the following sections, where applicable:
 - `rth_conversions`: RTH plan entries converted to trajectories
 - `time_axes`: forward and reverse mapping of time axes
 - `screenplays`: screenplays with multiple scenes, played by the show controller
+- `bounding_boxes`: axis-aligned bounding boxes of trajectories, including
+  segments of degree 7, which are bounded by their control points
 - `motion`: the public motion helpers
 - `colors`: the public color helpers
 

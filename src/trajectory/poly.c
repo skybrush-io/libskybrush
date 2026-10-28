@@ -205,6 +205,10 @@ sb_error_t sb_poly_get_extrema(const sb_poly_t* poly, sb_interval_t* result)
                     }
                 }
             }
+        } else {
+            /* Finding the roots of the derivative is implemented up to
+             * degree 2 only */
+            return SB_EUNIMPLEMENTED;
         }
     }
     }

@@ -237,6 +237,31 @@ void test_get_axis_aligned_bounding_box_from_trajectory_in_memory(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 10000, box.z.max);
 }
 
+void test_get_axis_aligned_bounding_box_with_poly7_segments(void)
+{
+    sb_bounding_box_t box;
+    uint8_t body[] = {
+        0x01, 0, 0, 0, 0, 0, 0, 0, 0,
+        /* X: cubic Bézier with control points 1000, -1000, 500 */
+        0x02, 0xe8, 0x03, 0xe8, 0x03, 0x18, 0xfc, 0xf4, 0x01,
+        /* Z: degree 7 with control points 10, -5, 20, 0, 30, -10, 5 */
+        0x30, 0xe8, 0x03, 0x0a, 0x00, 0xfb, 0xff, 0x14, 0x00, 0x00, 0x00,
+        0x1e, 0x00, 0xf6, 0xff, 0x05, 0x00
+    };
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_buffer(trajectory, body, sizeof(body)));
+
+    /* The cubic segment is bounded by its extrema, the segment of degree 7
+     * by its control points, including its start point */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_get_axis_aligned_bounding_box(trajectory, &box));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.y.min);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 0, box.y.max);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, -10, box.z.min);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 30, box.z.max);
+    TEST_ASSERT_FLOAT_WITHIN(1e-2, -80.608, box.x.min);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, 500, box.x.max);
+}
+
 void test_propose_takeoff_time_const_speed(void)
 {
     /* Test invalid values first */
@@ -916,6 +941,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_get_total_duration);
     RUN_TEST(test_get_axis_aligned_bounding_box);
     RUN_TEST(test_get_axis_aligned_bounding_box_from_trajectory_in_memory);
+    RUN_TEST(test_get_axis_aligned_bounding_box_with_poly7_segments);
     RUN_TEST(test_propose_takeoff_time_const_speed);
     RUN_TEST(test_propose_takeoff_time_const_acceleration);
     RUN_TEST(test_propose_landing_time);

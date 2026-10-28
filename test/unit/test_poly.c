@@ -255,6 +255,7 @@ void test_get_extrema(void)
     float quadratic_convex_2[3] = { 41 / 16.0f, -3 / 2.0f, 1 }; /* x^2 - 3/2*x + 41/16 */
     float quadratic_concave[3] = { 63 / 16.0f, 1 / 2.0f, -1 }; /* -x^2 + x/2 + 63/16 */
     float linear[5] = { 8, 2, 0, 0, 0 };
+    float poly7_points[8] = { 0, 10, -5, 20, 0, 30, -10, 5 };
 
     /* ignored result */
 
@@ -313,6 +314,14 @@ void test_get_extrema(void)
     TEST_ASSERT_EQUAL(0, sb_poly_get_extrema(&poly, &result));
     TEST_ASSERT_FLOAT_WITHIN(1e-5, 55 / 16.0f, result.min);
     TEST_ASSERT_EQUAL(4, result.max);
+
+    /* degree above 3 is not implemented, and the result is left alone */
+
+    sb_poly_make_bezier(&poly, 1, poly7_points, sizeof(poly7_points) / sizeof(poly7_points[0]));
+    result.min = result.max = 42;
+    TEST_ASSERT_EQUAL(SB_EUNIMPLEMENTED, sb_poly_get_extrema(&poly, &result));
+    TEST_ASSERT_EQUAL(42, result.min);
+    TEST_ASSERT_EQUAL(42, result.max);
 }
 
 void test_stretch(void)

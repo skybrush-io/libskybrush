@@ -2295,6 +2295,81 @@ static void json_stats_scenarios(void)
 }
 
 /* ************************************************************************** */
+/* Bounding boxes of trajectories                                            */
+/* ************************************************************************** */
+
+typedef struct {
+    const char* name;
+    uint8_t body[64];
+    size_t length;
+} bounding_box_case_t;
+
+/* Bodies of trajectory blocks with a scale of 1, starting at the origin. The
+ * segments of degree 7 have no closed-form extrema; they are bounded by their
+ * control points. */
+static const bounding_box_case_t BOUNDING_BOX_CASES[] = {
+    { "cubic_bezier_along_x",
+        { 0x01, 0, 0, 0, 0, 0, 0, 0, 0,
+            /* X: cubic Bézier with control points 1000, -1000, 500 */
+            0x02, 0xe8, 0x03, 0xe8, 0x03, 0x18, 0xfc, 0xf4, 0x01 },
+        18 },
+    { "poly7_along_x",
+        { 0x01, 0, 0, 0, 0, 0, 0, 0, 0,
+            /* X: degree 7 with control points 10, -5, 20, 0, 30, -10, 5 */
+            0x03, 0xe8, 0x03, 0x0a, 0x00, 0xfb, 0xff, 0x14, 0x00, 0x00, 0x00, 0x1e, 0x00, 0xf6, 0xff, 0x05, 0x00 },
+        26 },
+    { "poly7_after_cubic_bezier",
+        { 0x01, 0, 0, 0, 0, 0, 0, 0, 0,
+            /* X: cubic Bézier with control points 1000, -1000, 500 */
+            0x02, 0xe8, 0x03, 0xe8, 0x03, 0x18, 0xfc, 0xf4, 0x01,
+            /* Z: degree 7 with control points 10, -5, 20, 0, 30, -10, 5 */
+            0x30, 0xe8, 0x03, 0x0a, 0x00, 0xfb, 0xff, 0x14, 0x00, 0x00, 0x00, 0x1e, 0x00, 0xf6, 0xff, 0x05, 0x00 },
+        35 },
+};
+
+static void json_interval(sb_interval_t interval)
+{
+    json_begin_array();
+    json_float(interval.min);
+    json_float(interval.max);
+    json_end_array();
+}
+
+static void json_bounding_box_scenarios(void)
+{
+    sb_trajectory_t trajectory;
+    sb_bounding_box_t box;
+    uint8_t body[64];
+    const bounding_box_case_t* scenario;
+    size_t i;
+
+    json_key("bounding_boxes");
+    json_begin_array();
+    for (i = 0; i < sizeof(BOUNDING_BOX_CASES) / sizeof(BOUNDING_BOX_CASES[0]); i++) {
+        scenario = &BOUNDING_BOX_CASES[i];
+        memcpy(body, scenario->body, scenario->length);
+        CHECK(sb_trajectory_init(&trajectory));
+        CHECK(sb_trajectory_update_from_buffer(&trajectory, body, scenario->length));
+
+        json_begin_object();
+        json_kstring("scenario", scenario->name);
+        json_key("trajectory");
+        json_trajectory_hex(&trajectory);
+        json_kerror("result", sb_trajectory_get_axis_aligned_bounding_box(&trajectory, &box));
+        json_key("bounding_box_mm");
+        json_begin_array();
+        json_interval(box.x);
+        json_interval(box.y);
+        json_interval(box.z);
+        json_end_array();
+        json_end_object();
+
+        SB_DECREF_STATIC(&trajectory);
+    }
+    json_end_array();
+}
+
+/* ************************************************************************** */
 /* Yaw control                                                               */
 /* ************************************************************************** */
 
@@ -2368,6 +2443,7 @@ int main(int argc, char* argv[])
     json_screenplay_queries();
     json_time_axis_editing_scenarios();
     json_stats_scenarios();
+    json_bounding_box_scenarios();
     json_yaw_control_scenarios();
     json_motion_helpers();
     json_color_helpers();

@@ -332,7 +332,57 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
 }
 
 /**
+ * Returns the binomial coefficient "n choose k" for small arguments.
+ */
+static float sb_i_binomial(uint8_t n, uint8_t k)
+{
+    uint32_t result = 1;
+    uint8_t i;
+
+    for (i = 0; i < k && i < n; i++) {
+        result = result * (n - i) / (i + 1);
+    }
+
+    return result;
+}
+
+/**
+ * Computes the smallest and largest Bézier control point of a polynomial on
+ * the [0; 1] interval. The polynomial lies within the convex hull of its
+ * control points, so this bounds the polynomial on [0; 1], although not
+ * necessarily tightly. Used for polynomials whose extrema cannot be computed.
+ */
+static void sb_i_poly_get_control_point_bounds(const sb_poly_t* poly, sb_interval_t* result)
+{
+    uint8_t n = poly->num_coeffs > 0 ? poly->num_coeffs - 1 : 0;
+    uint8_t i, k;
+    float point;
+
+    result->min = INFINITY;
+    result->max = -INFINITY;
+
+    /* The k-th control point is the sum of binomial(k, i) / binomial(n, i)
+     * times the i-th coefficient, over i from 0 to k */
+    for (k = 0; k <= n; k++) {
+        point = 0;
+        for (i = 0; i <= k; i++) {
+            point += sb_i_binomial(k, i) / sb_i_binomial(n, i) * poly->coeffs[i];
+        }
+        if (point < result->min) {
+            result->min = point;
+        }
+        if (point > result->max) {
+            result->max = point;
+        }
+    }
+}
+
+/**
  * Returns the axis-aligned bounding box of the trajectory.
+ *
+ * The box is tight for segments of degree at most 3. Segments of a higher
+ * degree are bounded by their Bézier control points, which may give a larger
+ * box than necessary.
  */
 sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
     sb_trajectory_t* trajectory, sb_bounding_box_t* result)
@@ -353,15 +403,17 @@ sb_error_t sb_trajectory_get_axis_aligned_bounding_box(
         sb_poly_4d_t poly = *sb_trajectory_segment_get_poly(segment);
         sb_interval_t interval;
 
-#define CHECK_DIM(DIM)                             \
-    {                                              \
-        sb_poly_get_extrema(&poly.DIM, &interval); \
-        if (interval.min < result->DIM.min) {      \
-            result->DIM.min = interval.min;        \
-        }                                          \
-        if (interval.max > result->DIM.max) {      \
-            result->DIM.max = interval.max;        \
-        }                                          \
+#define CHECK_DIM(DIM)                                                \
+    {                                                                 \
+        if (sb_poly_get_extrema(&poly.DIM, &interval)) {              \
+            sb_i_poly_get_control_point_bounds(&poly.DIM, &interval); \
+        }                                                             \
+        if (interval.min < result->DIM.min) {                         \
+            result->DIM.min = interval.min;                           \
+        }                                                             \
+        if (interval.max > result->DIM.max) {                         \
+            result->DIM.max = interval.max;                           \
+        }                                                             \
     }
 
         CHECK_DIM(x);
