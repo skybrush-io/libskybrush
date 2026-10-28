@@ -2275,6 +2275,8 @@ static void j_stats_scenarios(void)
             j_begin_object();
             j_kstring("settings", settings[j].name);
             j_kfloat("takeoff_speed_mm_s", settings[j].takeoff_speed);
+            j_kfloat("acceleration_mm_s2", settings[j].acceleration);
+            j_kfloat("min_ascent_mm", settings[j].min_ascent);
             j_kfloat("preferred_descent_mm", settings[j].preferred_descent);
             j_kfloat("verticality_threshold_mm", settings[j].verticality_threshold);
             j_kerror("result", retval);
