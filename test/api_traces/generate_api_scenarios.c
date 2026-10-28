@@ -1248,7 +1248,7 @@ static void json_color_helpers(void)
 
     json_key("rgbw");
     json_begin_array();
-    for (mode = 0; mode < 7; mode++) {
+    for (mode = 0; mode < 10; mode++) {
         const char* name;
         int approximate = 0;
 
@@ -1279,9 +1279,24 @@ static void json_color_helpers(void)
             sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(255, 200, 100));
             name = "reference_color_255_200_100";
             break;
-        default:
+        case 6:
             sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(200, 255, 100));
             name = "reference_color_200_255_100";
+            break;
+        /* References that lack a channel; the white LED does not emit it */
+        case 7:
+            sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(255, 200, 0));
+            name = "reference_color_255_200_0";
+            break;
+        case 8:
+            sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(0, 0, 0));
+            name = "reference_color_0_0_0";
+            break;
+        default:
+            /* 1000 K has no blue */
+            sb_rgbw_conversion_use_color_temperature(&conv, 1000);
+            name = "color_temperature_1000";
+            approximate = 1;
             break;
         }
 

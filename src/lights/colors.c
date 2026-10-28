@@ -197,31 +197,39 @@ sb_rgbw_color_t sb_rgb_color_to_rgbw(sb_rgb_color_t color, sb_rgbw_conversion_t 
         break;
 
     case SB_RGBW_CONVERSION_USE_REFERENCE: {
-        float scaled[3];
-        float min_scaled;
+        const uint8_t values[3] = { color.red, color.green, color.blue };
+        uint8_t* results[3] = { &result.red, &result.green, &result.blue };
+        float scaled;
+        float min_scaled = INFINITY;
         float correction;
+        uint8_t i;
 
-        /* Code adapted from: https://www.dmurph.com/posts/2021/1/cabinet-light-3.html */
-        scaled[0] = color.red * conv.params.color_ref.mul[0];
-        scaled[1] = color.green * conv.params.color_ref.mul[1];
-        scaled[2] = color.blue * conv.params.color_ref.mul[2];
-        min_scaled = scaled[0];
-        if (min_scaled > scaled[1]) {
-            min_scaled = scaled[1];
+        /* Code adapted from: https://www.dmurph.com/posts/2021/1/cabinet-light-3.html
+         *
+         * Each channel that the white LED emits limits the white level to the
+         * amount of white that the channel can account for. A channel with a
+         * multiplier of zero is not emitted by the white LED and does not
+         * limit it. */
+        for (i = 0; i < 3; i++) {
+            if (conv.params.color_ref.mul[i] > 0) {
+                scaled = values[i] * conv.params.color_ref.mul[i];
+                if (scaled < min_scaled) {
+                    min_scaled = scaled;
+                }
+            }
         }
-        if (min_scaled > scaled[2]) {
-            min_scaled = scaled[2];
+
+        if (isinf(min_scaled)) {
+            /* The white LED emits nothing; it is not used */
+            result.white = 0;
+        } else {
+            result.white = min_scaled <= 0 ? 0 : (min_scaled <= 255 ? ((uint8_t)min_scaled) : 255);
         }
-        result.white = min_scaled <= 0 ? 0 : (min_scaled <= 255 ? ((uint8_t)min_scaled) : 255);
 
-        correction = result.white * conv.params.color_ref.div[0];
-        result.red = color.red > correction ? color.red - correction : 0;
-
-        correction = result.white * conv.params.color_ref.div[1];
-        result.green = color.green > correction ? color.green - correction : 0;
-
-        correction = result.white * conv.params.color_ref.div[2];
-        result.blue = color.blue > correction ? color.blue - correction : 0;
+        for (i = 0; i < 3; i++) {
+            correction = result.white * conv.params.color_ref.div[i];
+            *results[i] = values[i] > correction ? values[i] - correction : 0;
+        }
     }
     }
 
@@ -346,13 +354,16 @@ void sb_rgbw_conversion_use_reference_color(sb_rgbw_conversion_t* conv, sb_rgb_c
 
     conv->method = SB_RGBW_CONVERSION_USE_REFERENCE;
 
-    conv->params.color_ref.mul[0] = reference.red >= 1 ? max_value / reference.red : 255.0f;
-    conv->params.color_ref.mul[1] = reference.green >= 1 ? max_value / reference.green : 255.0f;
-    conv->params.color_ref.mul[2] = reference.blue >= 1 ? max_value / reference.blue : 255.0f;
+    /* A channel that the reference color lacks gets a multiplier and a
+     * divisor of zero: the white LED does not emit it, so it neither limits
+     * the white level nor is reduced by it */
+    conv->params.color_ref.mul[0] = reference.red >= 1 ? max_value / reference.red : 0;
+    conv->params.color_ref.mul[1] = reference.green >= 1 ? max_value / reference.green : 0;
+    conv->params.color_ref.mul[2] = reference.blue >= 1 ? max_value / reference.blue : 0;
     conv->params.color_ref.temperature = 0; /* not based on temperature */
 
     for (i = 0; i < 3; i++) {
-        conv->params.color_ref.div[i] = 1.0f / conv->params.color_ref.mul[i];
+        conv->params.color_ref.div[i] = conv->params.color_ref.mul[i] > 0 ? 1.0f / conv->params.color_ref.mul[i] : 0;
     }
 }
 

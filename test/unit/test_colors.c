@@ -240,6 +240,33 @@ void test_rgbw_conversion_with_zero_temperature_after_reference_color(void)
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected.params.color_ref.div, conv.params.color_ref.div, 3);
 }
 
+void test_rgbw_conversion_with_reference_lacking_a_channel(void)
+{
+    /* The white LED does not emit the missing channel, so the channel
+     * neither limits the white level nor is reduced by it */
+    sb_rgbw_conversion_t conv;
+    sb_rgbw_color_t expected[] = {
+        { 0, 43, 0, 200 }, { 0, 21, 50, 100 }, { 10, 20, 30, 0 }, { 0, 0, 0, 255 }
+    };
+    sb_rgbw_color_t actual[4];
+
+    sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(255, 200, 0));
+    actual[0] = sb_rgb_color_to_rgbw(sb_rgb_color_make(200, 200, 0), conv);
+    actual[1] = sb_rgb_color_to_rgbw(sb_rgb_color_make(100, 100, 50), conv);
+
+    /* A black reference leaves the white LED off */
+    sb_rgbw_conversion_use_reference_color(&conv, sb_rgb_color_make(0, 0, 0));
+    actual[2] = sb_rgb_color_to_rgbw(sb_rgb_color_make(10, 20, 30), conv);
+
+    /* 1000 K = (255, 67, 0) has no blue */
+    sb_rgbw_conversion_use_color_temperature(&conv, 1000);
+    actual[3] = sb_rgb_color_to_rgbw(sb_rgb_color_from_color_temperature(1000), conv);
+
+    for (int i = 0; i < 4; i++) {
+        TEST_ASSERT_TRUE(sb_rgbw_color_equals(expected[i], actual[i]));
+    }
+}
+
 void test_nan_gives_zero_components(void)
 {
     sb_rgb_color_t red = { 255, 0, 0 };
@@ -302,6 +329,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_rgb_from_color_temperature);
     RUN_TEST(test_rgb_from_color_temperature_at_branch_points);
     RUN_TEST(test_nan_gives_zero_components);
+    RUN_TEST(test_rgbw_conversion_with_reference_lacking_a_channel);
     RUN_TEST(test_rgbw_conversion_with_zero_temperature_after_reference_color);
     RUN_TEST(test_rgbw_equals);
     RUN_TEST(test_rgbw_conversion);
