@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.2] - 2026-10-28
+
+This release fixes two bugs of light programs found while porting the library
+to Rust. Neither changes the colors or the times of the changes of a light
+program.
+
 ### Fixed
 
 - Light programs skip the remaining iterations of a finite loop after an

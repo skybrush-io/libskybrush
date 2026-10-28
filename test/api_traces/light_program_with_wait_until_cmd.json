@@ -1,7 +1,7 @@
 {
   "version": 1,
   "fixture": "light_program_with_wait_until_cmd.skyb",
-  "generator": "libskybrush 6.0.1",
+  "generator": "libskybrush 6.0.2",
   "sample_interval_ms": 100,
   "trajectory": {"duration_ms": 53000, "end_position_mm": [0, 0, 0], "bounding_box_mm": [[0, 10000], [0, 10000], [0, 10000]]},
   "stats": [
