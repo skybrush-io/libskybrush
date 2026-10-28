@@ -849,6 +849,13 @@ void test_failed_operations_leave_builder_intact(void)
     last = sb_trajectory_builder_get_last_position(&builder);
     TEST_ASSERT_EQUAL_FLOAT(0, last.x);
 
+    /* The start position is not written partially: X is valid, Y is not */
+    nan_target.x = 5000;
+    nan_target.y = NAN;
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_builder_set_start_position(&builder, nan_target));
+    TEST_ASSERT_EQUAL_HEX8(0, SB_BUFFER(builder.buffer)[1]);
+    TEST_ASSERT_EQUAL_HEX8(0, SB_BUFFER(builder.buffer)[2]);
+
     /* The builder is still usable as if the failed operations never happened */
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, start));
     TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_append_line(&builder, valid, 1000));

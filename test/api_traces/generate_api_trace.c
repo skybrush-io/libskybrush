@@ -384,6 +384,7 @@ typedef enum {
     LANDING_TARGET_START_POSITION,
     LANDING_TARGET_ABOVE_LANDING_POSITION,
     LANDING_TARGET_HALF_MM_BELOW_LANDING_POSITION,
+    LANDING_TARGET_FAR_AWAY,
 } landing_target_t;
 
 typedef struct {
@@ -404,6 +405,8 @@ static const landing_case_t LANDING_CASES[] = {
     { "above_landing_position", LANDING_TARGET_ABOVE_LANDING_POSITION, 500, NAN },
     { "slow_landing_velocity", LANDING_TARGET_BELOW_LANDING_POSITION, 0.5f, NAN },
     { "half_mm_below_landing_position", LANDING_TARGET_HALF_MM_BELOW_LANDING_POSITION, 500, NAN },
+    /* Out of the range of any scale; the trajectory must be left intact */
+    { "far_away_position", LANDING_TARGET_FAR_AWAY, 500, NAN },
 };
 
 static void print_landings(void)
@@ -438,6 +441,11 @@ static void print_landings(void)
             target.x = stats.pos_at_landing_time.x;
             target.y = stats.pos_at_landing_time.y;
             target.z = stats.pos_at_landing_time.z - 0.5f;
+            break;
+        case LANDING_TARGET_FAR_AWAY:
+            target.x = stats.pos_at_landing_time.x + 1e7f;
+            target.y = stats.pos_at_landing_time.y;
+            target.z = stats.initial_pos.z;
             break;
         default:
             target.x = stats.pos_at_landing_time.x;

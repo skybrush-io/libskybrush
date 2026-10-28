@@ -172,10 +172,17 @@ sb_error_t sb_trajectory_builder_set_start_position(
     }
 
     size_t offset = 1;
+    int16_t x, y, z;
 
-    SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, start.x));
-    SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, start.y));
-    SB_CHECK(sb_i_trajectory_builder_write_coordinate(builder, &offset, start.z));
+    /* Check all coordinates before writing any of them so that a failure
+     * leaves the builder intact */
+    SB_CHECK(sb_i_trajectory_builder_scale_coordinate(builder, start.x, &x));
+    SB_CHECK(sb_i_trajectory_builder_scale_coordinate(builder, start.y, &y));
+    SB_CHECK(sb_i_trajectory_builder_scale_coordinate(builder, start.z, &z));
+
+    sb_write_int16(SB_BUFFER(builder->buffer), &offset, x);
+    sb_write_int16(SB_BUFFER(builder->buffer), &offset, y);
+    sb_write_int16(SB_BUFFER(builder->buffer), &offset, z);
     sb_write_int16(SB_BUFFER(builder->buffer), &offset, 0); /* retired */
 
     /* Trajectories do not carry yaw information */
@@ -569,10 +576,9 @@ sb_error_t sb_trajectory_update_from_builder(
 
 /* ************************************************************************** */
 
-static sb_error_t sb_i_trajectory_builder_scale_coordinate(
-    sb_trajectory_builder_t* builder, float coordinate, int16_t* scaled_coordinate)
+sb_error_t sb_i_trajectory_scale_coordinate(float scale, float coordinate, int16_t* scaled_coordinate)
 {
-    float scaled = floorf(coordinate / builder->scale);
+    float scaled = floorf(coordinate / scale);
     /* Written so that NaN is rejected as well */
     if (!(scaled >= INT16_MIN && scaled <= INT16_MAX)) {
         return SB_EINVAL;
@@ -580,6 +586,12 @@ static sb_error_t sb_i_trajectory_builder_scale_coordinate(
         *scaled_coordinate = scaled;
         return SB_SUCCESS;
     }
+}
+
+static sb_error_t sb_i_trajectory_builder_scale_coordinate(
+    sb_trajectory_builder_t* builder, float coordinate, int16_t* scaled_coordinate)
+{
+    return sb_i_trajectory_scale_coordinate(builder->scale, coordinate, scaled_coordinate);
 }
 
 sb_error_t sb_i_trajectory_builder_write_coordinate(

@@ -411,6 +411,10 @@ static const builder_scenario_t BUILDER_SCENARIOS[] = {
                                { OP_LINE, P(NAN, 0, 0), P(0, 0, 0), P(0, 0, 0), 1000 },
                                { OP_SET_START, P(0, NAN, 0) },
                            } },
+    { "failed_start_position_is_not_written", 1, {
+                                                     { OP_SET_START, P(1000, 2000, 3000) },
+                                                     { OP_SET_START, P(5000, NAN, 0) },
+                                                 } },
     { "invalid_scale_zero", 0, { { OP_LINE, P(0, 0, 0), P(0, 0, 0), P(0, 0, 0), 1000 } } },
     { "invalid_scale_too_large", 128, { { OP_LINE, P(0, 0, 0), P(0, 0, 0), P(0, 0, 0), 1000 } } },
     { "largest_scale", 127, { { OP_LINE, P(127000, 0, 0), P(0, 0, 0), P(0, 0, 0), 1000 } } },

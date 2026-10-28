@@ -17,6 +17,9 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
+#include <string.h>
+
 #include <skybrush/formats/binary.h>
 #include <skybrush/refcount.h>
 #include <skybrush/trajectory.h>
@@ -756,6 +759,34 @@ void test_replace_end_to_land_at_not_below(void)
     TEST_ASSERT_EQUAL(50000, stats.duration_msec);
 }
 
+void test_replace_end_to_land_at_out_of_range(void)
+{
+    /* Regression test: when a control point of the landing segment was out of
+     * the range of the scale, the function failed only after it had already
+     * cut the trajectory and updated the duration in the statistics */
+    sb_vector3_t far_away = { 1e9f, 0, 0 };
+    sb_trajectory_stats_t stats;
+    uint32_t duration_msec = sb_trajectory_get_total_duration_msec(trajectory);
+    size_t size = sb_buffer_size(&trajectory->buffer);
+    uint8_t* original = malloc(size);
+
+    TEST_ASSERT_NOT_NULL(original);
+    memcpy(original, SB_BUFFER(trajectory->buffer), size);
+
+    prepare_stats_for_replace_end_to_land_at(trajectory, &stats);
+    TEST_ASSERT_EQUAL(SB_EINVAL, sb_trajectory_replace_end_to_land_at(trajectory, &stats, far_away, 500));
+
+    /* Neither the trajectory nor the statistics may be modified on error */
+    TEST_ASSERT_EQUAL(size, sb_buffer_size(&trajectory->buffer));
+    TEST_ASSERT_EQUAL_MEMORY(original, SB_BUFFER(trajectory->buffer), size);
+    TEST_ASSERT_EQUAL_UINT32(duration_msec, sb_trajectory_get_total_duration_msec(trajectory));
+    TEST_ASSERT_EQUAL(45, stats.landing_time_sec);
+    TEST_ASSERT_EQUAL(50, stats.duration_sec);
+    TEST_ASSERT_EQUAL(50000, stats.duration_msec);
+
+    free(original);
+}
+
 void test_replace_end_to_land_at_slowly_from_small_height(void)
 {
     /* Landing velocities below 1 mm/s and descents shorter than 1 mm are
@@ -963,6 +994,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_replace_end_to_land_at);
     RUN_TEST(test_replace_end_to_land_at_missing_stats);
     RUN_TEST(test_replace_end_to_land_at_not_below);
+    RUN_TEST(test_replace_end_to_land_at_out_of_range);
     RUN_TEST(test_replace_end_to_land_at_slowly_from_small_height);
     RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity);
     RUN_TEST(test_replace_end_to_land_at_with_terminal_velocity_invalid);

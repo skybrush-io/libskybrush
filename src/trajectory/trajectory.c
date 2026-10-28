@@ -237,14 +237,15 @@ sb_error_t sb_trajectory_update_from_bytes(sb_trajectory_t* trajectory, uint8_t*
  */
 sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
 {
-    sb_trajectory_builder_t builder;
     sb_trajectory_player_state_t state;
     sb_vector3_with_yaw_t start;
     float rel_time;
     float src[8];
     float dst[8];
+    int16_t scaled[3][8];
+    uint8_t num_coords[3];
     size_t offset;
-    uint8_t i, header, num_coords;
+    uint8_t axis, i, header;
     uint32_t duration_msec, cut_msec;
 
     SB_CHECK(sb_trajectory_get_segment_at(trajectory, time_sec, &state, &rel_time));
@@ -271,61 +272,38 @@ sb_error_t sb_trajectory_cut_at(sb_trajectory_t* trajectory, float time_sec)
     } else {
         rel_time = (float)(cut_msec - state.segment.start_time_msec) / state.segment.duration_msec;
 
-        /* We re-read the given trajectory segment and modify in-place */
+        /* Cut the Bézier curve of the segment along each axis and scale the
+         * new control points. Nothing is written before all of them are known
+         * to be valid so that a failure leaves the trajectory intact. */
         start = state.segment.start;
-        SB_CHECK(sb_trajectory_builder_init_from_trajectory(&builder, trajectory, &start));
         offset = state.start;
-        header = SB_BUFFER(trajectory->buffer)[offset++];
+        header = SB_BUFFER(trajectory->buffer)[offset];
+        offset += 3; /* header and duration */
+        for (axis = 0; axis < 3; axis++) {
+            num_coords[axis] = sb_i_get_num_coords(header >> (2 * axis));
+            src[0] = axis == 0 ? start.x : (axis == 1 ? start.y : start.z);
+            for (i = 1; i < num_coords[axis]; i++) {
+                src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
+            }
+            SB_CHECK(sb_bezier_cut_at(dst, src, num_coords[axis], rel_time));
+            for (i = 1; i < num_coords[axis]; i++) {
+                SB_CHECK(sb_i_trajectory_scale_coordinate(trajectory->scale, dst[i], &scaled[axis][i]));
+            }
+        }
 
-        /* Modify duration of segment to be cut */
+        /* Rewrite the segment in place with the new duration and control
+         * points; the legacy yaw coordinates are left as they are */
+        offset = state.start + 1;
         duration_msec = cut_msec - state.segment.start_time_msec;
         sb_write_uint16(SB_BUFFER(trajectory->buffer), &offset, duration_msec);
-
-        /* cut along X coordinate */
-        num_coords = sb_i_get_num_coords(header >> 0);
-        src[0] = start.x;
-        for (i = 1; i < num_coords; i++) {
-            src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
-        }
-        SB_CHECK(sb_bezier_cut_at(dst, src, num_coords, rel_time));
-        offset -= 2 * (num_coords - 1);
-        for (i = 1; i < num_coords; i++) {
-            SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
+        for (axis = 0; axis < 3; axis++) {
+            for (i = 1; i < num_coords[axis]; i++) {
+                sb_write_int16(SB_BUFFER(trajectory->buffer), &offset, scaled[axis][i]);
+            }
         }
 
-        /* cut along Y coordinate */
-        num_coords = sb_i_get_num_coords(header >> 2);
-        src[0] = start.y;
-        for (i = 1; i < num_coords; i++) {
-            src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
-        }
-        SB_CHECK(sb_bezier_cut_at(dst, src, num_coords, rel_time));
-        offset -= 2 * (num_coords - 1);
-        for (i = 1; i < num_coords; i++) {
-            SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
-        }
-
-        /* cut along Z coordinate */
-        num_coords = sb_i_get_num_coords(header >> 4);
-        src[0] = start.z;
-        for (i = 1; i < num_coords; i++) {
-            src[i] = sb_i_trajectory_parse_coordinate(trajectory, &offset);
-        }
-        SB_CHECK(sb_bezier_cut_at(dst, src, num_coords, rel_time));
-        offset -= 2 * (num_coords - 1);
-        for (i = 1; i < num_coords; i++) {
-            SB_CHECK(sb_i_trajectory_builder_write_coordinate(&builder, &offset, dst[i]));
-        }
-
-        /* skip the legacy yaw coordinates; they are ignored */
-        num_coords = sb_i_get_num_coords(header >> 6);
-        offset += 2 * (num_coords - 1);
-
-        /* cut buffer at end of the re-written segment */
-        SB_CHECK(sb_buffer_resize(&trajectory->buffer, offset));
-
-        /* trajectory builder not needed any more */
-        sb_trajectory_builder_destroy(&builder);
+        /* Cut the buffer at the end of the rewritten segment */
+        SB_CHECK(sb_buffer_resize(&trajectory->buffer, state.start + state.length));
     }
 
     return SB_SUCCESS;
@@ -683,8 +661,10 @@ sb_error_t sb_trajectory_replace_end_to_land_at(
  *         \c SB_EINVAL if the statistics do not contain the landing time, if
  *         the velocities are invalid or if the new landing position is not
  *         below the position of the drone at the landing time (so the landing
- *         segment would have zero duration). Neither the trajectory nor the
- *         statistics are modified in this case.
+ *         segment would have zero duration) or if a control point of the
+ *         landing segment is out of the range of the scale of the trajectory.
+ *         Neither the trajectory nor the statistics are modified when the
+ *         function fails.
  */
 sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
     sb_trajectory_t* trajectory,
@@ -698,6 +678,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
     sb_trajectory_builder_t builder;
     float duration_sec;
     uint32_t duration_msec;
+    size_t original_size;
 
     if (!(stats->valid_components & SB_TRAJECTORY_STATS_LANDING_TIME)) {
         return SB_EINVAL;
@@ -748,17 +729,33 @@ sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
         /* duration_sec = */ duration_sec,
         &c1, &c2);
 
+    // Check that the landing segment can be written (its control points are
+    // in the range of the scale) before modifying anything, so that a failure
+    // leaves the trajectory and the statistics intact. The scale of a
+    // trajectory is an integer between 1 and 127 unless it is empty.
+    SB_CHECK(sb_trajectory_builder_init(&builder, (uint8_t)trajectory->scale, 0));
+    builder.last_position = stats->pos_at_landing_time;
+    retval = sb_trajectory_builder_append_cubic_bezier(&builder, c1, c2, new_end, duration_msec);
+    sb_trajectory_builder_destroy(&builder);
+    SB_CHECK(retval);
+
     // Ensure that we own the trajectory and we can modify it at will
     // (i.e. it is not a view into the already loaded show file)
     SB_CHECK(sb_buffer_ensure_owned(&trajectory->buffer));
 
     // Also ensure that we will have extra space at the end of the buffer
     // to add a final Bezier segment. 32 bytes will be enough.
+    original_size = sb_buffer_size(&trajectory->buffer);
     SB_CHECK(sb_buffer_extend_with_zeros(&trajectory->buffer, 32));
 
     // Shorten the trajectory so that it ends at the time when we cross
-    // the takeoff altitude from above
-    SB_CHECK(sb_trajectory_cut_at(trajectory, stats->landing_time_sec));
+    // the takeoff altitude from above. Cutting leaves the trajectory intact
+    // when it fails; drop the extra space then.
+    retval = sb_trajectory_cut_at(trajectory, stats->landing_time_sec);
+    if (retval) {
+        sb_buffer_resize(&trajectory->buffer, original_size);
+        return retval;
+    }
     if (stats->valid_components & SB_TRAJECTORY_STATS_DURATION) {
         stats->duration_sec = stats->landing_time_sec;
         stats->duration_msec = (uint32_t)(stats->duration_sec * 1000);

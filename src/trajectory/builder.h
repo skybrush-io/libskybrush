@@ -27,6 +27,7 @@ __BEGIN_DECLS
 
 sb_error_t sb_i_trajectory_builder_write_coordinate(
     sb_trajectory_builder_t* builder, size_t* offset, float coordinate);
+sb_error_t sb_i_trajectory_scale_coordinate(float scale, float coordinate, int16_t* scaled_coordinate);
 
 __END_DECLS
 
