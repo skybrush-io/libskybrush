@@ -18,6 +18,8 @@
  */
 
 #include <limits.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <skybrush/formats/binary.h>
 #include <skybrush/lights.h>
@@ -586,6 +588,29 @@ void test_finite_loops_after_zero_duration_iterations(void)
     sb_light_player_destroy(&player);
 }
 
+void test_programs_longer_than_65535_bytes(void)
+{
+    /* Regression test: the size of the bytecode used to be truncated to
+     * 16 bits */
+    const size_t num_nops = 70000;
+    uint8_t* bytecode = (uint8_t*)malloc(num_nops + 6);
+
+    TEST_ASSERT_NOT_NULL(bytecode);
+    memset(bytecode, CMD_NOP, num_nops);
+    bytecode[num_nops] = CMD_SET_COLOR;
+    bytecode[num_nops + 1] = 0;
+    bytecode[num_nops + 2] = 255;
+    bytecode[num_nops + 3] = 0;
+    bytecode[num_nops + 4] = 0;
+    bytecode[num_nops + 5] = CMD_END;
+
+    loadBytecode(bytecode, num_nops + 6);
+    TEST_ASSERT_EQUAL_COLOR_RGB(0, 255, 0, sb_light_player_get_color_at(&player, 0));
+    sb_light_player_destroy(&player);
+
+    free(bytecode);
+}
+
 void test_invalid_command_stops_execution(void)
 {
     uint8_t bytecode[] = {
@@ -677,6 +702,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_finite_zero_duration_loops_are_allowed);
     RUN_TEST(test_nested_zero_duration_loops_do_not_stall);
     RUN_TEST(test_finite_loops_after_zero_duration_iterations);
+    RUN_TEST(test_programs_longer_than_65535_bytes);
     RUN_TEST(test_invalid_command_stops_execution);
     RUN_TEST(test_varint_maximum);
     RUN_TEST(test_varint_overflow_is_clamped);

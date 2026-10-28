@@ -27,12 +27,15 @@
 #ifndef BYTECODE_STORE_H
 #define BYTECODE_STORE_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 /**
- * Typedef for locations in a bytecode store.
+ * Typedef for locations in a bytecode store. It is signed so that it can
+ * hold \c BYTECODE_LOCATION_NOWHERE, and wide enough for the offset of any
+ * byte of a bytecode array.
  */
-typedef int bytecode_location_t;
+typedef ptrdiff_t bytecode_location_t;
 
 /**
  * \def BYTECODE_LOCATION_NOWHERE

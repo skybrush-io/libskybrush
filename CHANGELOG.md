@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   iterations execute the body about 4 × 10^9 times). The colors and the
   times of the changes do not change.
 
+- Light programs longer than 65535 bytes are no longer truncated to their
+  first 65535 bytes, and programs longer than `INT_MAX` bytes can be
+  executed to their end, when they are loaded with
+  `sb_light_program_update_from_bytes()` or
+  `sb_light_program_update_from_buffer()`. Light program blocks of show files
+  cannot be this long.
+
 ## [6.0.1] - 2026-10-28
 
 This release fixes bugs found while porting the library to Rust. Only one of

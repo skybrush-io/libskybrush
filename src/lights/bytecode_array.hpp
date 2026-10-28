@@ -18,6 +18,7 @@
  */
 
 #include <assert.h>
+#include <stddef.h>
 
 #include "bytecode_store.h"
 #include "commands.h"
@@ -37,12 +38,12 @@ private:
     /**
      * The index of the next byte to be returned from the store.
      */
-    int m_nextIndex;
+    size_t m_nextIndex;
 
     /**
      * The size of the array.
      */
-    uint16_t m_size;
+    size_t m_size;
 
 public:
     /**
@@ -51,7 +52,7 @@ public:
      * @param data  The array that the bytecode store wraps.
      * @param size  The size of the array.
      */
-    ArrayBytecodeStore(const uint8_t* data, uint16_t size)
+    ArrayBytecodeStore(const uint8_t* data, size_t size)
         : m_data(data)
         , m_nextIndex(0)
         , m_size(size)
@@ -67,7 +68,6 @@ public:
     {
         uint8_t result;
 
-        assert(m_nextIndex >= 0);
         if (m_nextIndex < m_size) {
             result = m_data[m_nextIndex];
             m_nextIndex++;
@@ -86,11 +86,11 @@ public:
     void seek(bytecode_location_t location) override
     {
         assert(location >= 0);
-        m_nextIndex = location;
+        m_nextIndex = (size_t)location;
     }
 
     bytecode_location_t tell() const override
     {
-        return m_nextIndex;
+        return (bytecode_location_t)m_nextIndex;
     }
 };
