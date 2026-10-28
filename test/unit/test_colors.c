@@ -17,6 +17,8 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <math.h>
+
 #include <skybrush/colors.h>
 
 #include "unity.h"
@@ -222,6 +224,32 @@ void test_rgbw_conversion(void)
         sb_rgb_color_to_rgbw(color, conv)));
 }
 
+void test_nan_gives_zero_components(void)
+{
+    sb_rgb_color_t red = { 255, 0, 0 };
+    sb_rgb_color_t green = { 0, 255, 0 };
+    sb_rgb_color_t color;
+
+    /* Converting NaN to an integer type is undefined behaviour */
+    color = sb_rgb_color_linear_interpolation(red, green, NAN);
+    TEST_ASSERT_EQUAL(0, color.red);
+    TEST_ASSERT_EQUAL(0, color.green);
+    TEST_ASSERT_EQUAL(0, color.blue);
+
+    color = sb_rgb_color_from_color_temperature(NAN);
+    TEST_ASSERT_EQUAL(0, color.red);
+    TEST_ASSERT_EQUAL(0, color.green);
+    TEST_ASSERT_EQUAL(0, color.blue);
+
+    /* Values out of range still saturate */
+    color = sb_rgb_color_linear_interpolation(red, green, 1.5f);
+    TEST_ASSERT_EQUAL(0, color.red);
+    TEST_ASSERT_EQUAL(255, color.green);
+    color = sb_rgb_color_linear_interpolation(red, green, -0.5f);
+    TEST_ASSERT_EQUAL(255, color.red);
+    TEST_ASSERT_EQUAL(0, color.green);
+}
+
 void test_rgb_from_color_temperature_at_branch_points(void)
 {
     /* Exact values of the approximation formula of Tanner Helland around the
@@ -257,6 +285,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_rgb_equals);
     RUN_TEST(test_rgb_from_color_temperature);
     RUN_TEST(test_rgb_from_color_temperature_at_branch_points);
+    RUN_TEST(test_nan_gives_zero_components);
     RUN_TEST(test_rgbw_equals);
     RUN_TEST(test_rgbw_conversion);
 

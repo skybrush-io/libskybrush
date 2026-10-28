@@ -85,6 +85,20 @@ sb_bool_t sb_rgb_color_almost_equals(sb_rgb_color_t first, sb_rgb_color_t second
 }
 
 /**
+ * Converts a float to a color component, truncating it towards zero. Values
+ * below 0 or above 255 saturate, and NaN becomes zero; converting these to an
+ * integer type directly would be undefined behaviour.
+ */
+static uint8_t sb_i_color_component(float value)
+{
+    /* Written so that NaN becomes zero as well */
+    if (!(value > 0)) {
+        return 0;
+    }
+    return value > 255 ? 255 : (uint8_t)value;
+}
+
+/**
  * \brief Linearly interpolates between two colors
  *
  * \param  first   the first color
@@ -99,9 +113,9 @@ sb_rgb_color_t sb_rgb_color_linear_interpolation(
 {
     sb_rgb_color_t result;
 
-    result.red = clamp(first.red + (second.red - first.red) * ratio, 0, 255);
-    result.green = clamp(first.green + (second.green - first.green) * ratio, 0, 255);
-    result.blue = clamp(first.blue + (second.blue - first.blue) * ratio, 0, 255);
+    result.red = sb_i_color_component(first.red + (second.red - first.red) * ratio);
+    result.green = sb_i_color_component(first.green + (second.green - first.green) * ratio);
+    result.blue = sb_i_color_component(first.blue + (second.blue - first.blue) * ratio);
 
     return result;
 }
@@ -363,7 +377,7 @@ sb_rgb_color_t sb_rgb_color_from_color_temperature(float temperature)
         result.red = 255;
     } else {
         value = 329.698727446f * powf(temp_div - 60, -0.1332047592f);
-        result.red = (value < 0) ? 0 : (value > 255 ? 255 : value);
+        result.red = sb_i_color_component(value);
     }
 
     /* green */
@@ -372,14 +386,14 @@ sb_rgb_color_t sb_rgb_color_from_color_temperature(float temperature)
     } else {
         value = 288.1221695283f * powf(temp_div - 60, -0.0755148492f);
     }
-    result.green = (value < 0) ? 0 : (value > 255 ? 255 : value);
+    result.green = sb_i_color_component(value);
 
     /* blue */
     if (temp_div >= 66) {
         result.blue = 255;
     } else {
         value = 138.5177312231f * logf(temp_div - 10) - 305.0447927307f;
-        result.blue = (value < 0) ? 0 : (value > 255 ? 255 : value);
+        result.blue = sb_i_color_component(value);
     }
 
     return result;
