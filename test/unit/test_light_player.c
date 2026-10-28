@@ -524,6 +524,68 @@ void test_finite_zero_duration_loops_are_allowed(void)
     sb_light_player_destroy(&player);
 }
 
+void test_nested_zero_duration_loops_do_not_stall(void)
+{
+    /* Regression test: the body of these loops would be executed about
+     * 4 * 10^9 times if every iteration were executed. The remaining
+     * iterations of a loop are skipped after an iteration that takes no
+     * time, since they would set the same colors at the same instant. */
+    uint8_t bytecode[] = {
+        CMD_LOOP_BEGIN, 255,
+        CMD_LOOP_BEGIN, 255,
+        CMD_LOOP_BEGIN, 255,
+        CMD_LOOP_BEGIN, 255,
+        CMD_SET_COLOR, 255, 0, 0, 0,
+        CMD_LOOP_END,
+        CMD_LOOP_END,
+        CMD_LOOP_END,
+        CMD_LOOP_END,
+        CMD_SET_COLOR, 0, 255, 0, MS_1000,
+        CMD_END
+    };
+
+    loadBytecode(bytecode, sizeof(bytecode));
+    TEST_ASSERT_EQUAL_COLOR_RGB(0, 255, 0, sb_light_player_get_color_at(&player, 0));
+    TEST_ASSERT_EQUAL(1000, player.next_timestamp);
+    TEST_ASSERT_FALSE(sb_light_player_seek(&player, 999, 0));
+    TEST_ASSERT_TRUE(sb_light_player_seek(&player, 1000, 0));
+    sb_light_player_destroy(&player);
+}
+
+void test_finite_loops_after_zero_duration_iterations(void)
+{
+    /* The first iteration of the inner loop takes time and the rest do not.
+     * In the second iteration of the outer loop, the inner loop takes no
+     * time at all, so its blue color is replaced by green at once. */
+    uint8_t bytecode[] = {
+        CMD_LOOP_BEGIN, 2,
+        CMD_SET_COLOR, 255, 0, 0, MS_500,
+        CMD_LOOP_BEGIN, 3,
+        CMD_SET_COLOR, 0, 0, 255, 0,
+        CMD_WAIT_UNTIL, MS_1000,
+        CMD_LOOP_END,
+        CMD_LOOP_END,
+        CMD_SET_COLOR, 0, 255, 0, MS_1000,
+        CMD_END
+    };
+    unsigned long t_ms[] = { 0, 499, 500, 999, 1000, 1499, 1500, 2499, 2500 };
+    sb_rgb_color_t expected[] = {
+        { 255, 0, 0 },
+        { 255, 0, 0 },
+        { 0, 0, 255 },
+        { 0, 0, 255 },
+        { 255, 0, 0 },
+        { 255, 0, 0 },
+        { 0, 255, 0 },
+        { 0, 255, 0 },
+        { 0, 255, 0 },
+    };
+
+    loadBytecode(bytecode, sizeof(bytecode));
+    assertColorsAt(t_ms, expected, sizeof(t_ms) / sizeof(t_ms[0]));
+    sb_light_player_destroy(&player);
+}
+
 void test_invalid_command_stops_execution(void)
 {
     uint8_t bytecode[] = {
@@ -613,6 +675,8 @@ int main(int argc, char* argv[])
     RUN_TEST(test_loops_nested_too_deep);
     RUN_TEST(test_infinite_zero_duration_loops_are_rejected);
     RUN_TEST(test_finite_zero_duration_loops_are_allowed);
+    RUN_TEST(test_nested_zero_duration_loops_do_not_stall);
+    RUN_TEST(test_finite_loops_after_zero_duration_iterations);
     RUN_TEST(test_invalid_command_stops_execution);
     RUN_TEST(test_varint_maximum);
     RUN_TEST(test_varint_overflow_is_clamped);

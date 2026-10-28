@@ -340,10 +340,17 @@ void CommandExecutor::handleLoopEndCommand()
 {
     bytecode_location_t jumpTo;
 
-    if (m_loopStack.innermostLoopIsInfinite() && m_loopStack.currentIterationHasNoDuration(m_cumulativeDurationSinceStart)) {
-        /* Infinite loops whose body takes no time are rejected because they
-         * would keep the executor busy forever without time moving forward */
-        stop();
+    if (m_loopStack.currentIterationHasNoDuration(m_cumulativeDurationSinceStart)) {
+        /* An iteration that takes no time sets the same colors at the same
+         * instant as the next one would, so the remaining iterations are
+         * skipped. Repeating them could keep the executor busy for a long
+         * time with nested loops, or forever with an infinite loop, which is
+         * rejected. */
+        if (m_loopStack.innermostLoopIsInfinite()) {
+            stop();
+        } else {
+            m_loopStack.leave();
+        }
         return;
     }
 

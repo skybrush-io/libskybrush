@@ -112,6 +112,18 @@ public:
     bytecode_location_t end(unsigned long time);
 
     /**
+     * Leaves the innermost loop without executing its remaining iterations.
+     */
+    void leave()
+    {
+        /* The null check is defensive; the executor calls this function only
+         * when there is an active loop */
+        if (m_pTopItem != 0) { /* LCOV_EXCL_BR_LINE */
+            m_pTopItem = (m_pTopItem == m_items) ? 0 : m_pTopItem - 1;
+        }
+    }
+
+    /**
      * Returns whether the current iteration of the innermost loop took no
      * time at all, assuming that the internal clock of the executor is at
      * the given value.
@@ -122,9 +134,7 @@ public:
      */
     bool currentIterationHasNoDuration(unsigned long time) const
     {
-        /* The null check is defensive; the executor calls this function only
-         * when there is an active loop */
-        return m_pTopItem != 0 && m_pTopItem->iterationStartTime == time; /* LCOV_EXCL_BR_LINE */
+        return m_pTopItem != 0 && m_pTopItem->iterationStartTime == time;
     }
 
     /**

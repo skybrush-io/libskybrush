@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Light programs skip the remaining iterations of a finite loop after an
+  iteration that takes no time, since they would set the same colors at the
+  same instant again. Previously, nested loops of this kind could keep the
+  light player busy for seconds or more in a single seek (four levels of 255
+  iterations execute the body about 4 × 10^9 times). The colors and the
+  times of the changes do not change.
+
 ## [6.0.1] - 2026-10-28
 
 This release fixes bugs found while porting the library to Rust. Only one of
