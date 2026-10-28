@@ -304,7 +304,10 @@ void sb_rgbw_conversion_use_min_subtraction(sb_rgbw_conversion_t* conv)
  */
 void sb_rgbw_conversion_use_color_temperature(sb_rgbw_conversion_t* conv, float temperature)
 {
-    if (conv->method == SB_RGBW_CONVERSION_USE_REFERENCE && conv->params.color_ref.temperature == temperature) {
+    /* Nothing to do if the conversion is already set up with the same
+     * temperature. A conversion set up with a reference color records a
+     * temperature of zero, so zero never counts as the same temperature. */
+    if (conv->method == SB_RGBW_CONVERSION_USE_REFERENCE && conv->params.color_ref.temperature != 0 && conv->params.color_ref.temperature == temperature) {
         return;
     }
 

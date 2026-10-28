@@ -224,6 +224,22 @@ void test_rgbw_conversion(void)
         sb_rgb_color_to_rgbw(color, conv)));
 }
 
+void test_rgbw_conversion_with_zero_temperature_after_reference_color(void)
+{
+    sb_rgbw_conversion_t conv, expected;
+    sb_rgb_color_t reference = { 255, 128, 64 };
+
+    /* A conversion set up with a reference color records a temperature of
+     * zero; setting it up with a temperature of zero afterwards must not keep
+     * the reference color */
+    sb_rgbw_conversion_use_reference_color(&conv, reference);
+    sb_rgbw_conversion_use_color_temperature(&conv, 0);
+    sb_rgbw_conversion_use_reference_color(&expected, sb_rgb_color_from_color_temperature(0));
+
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected.params.color_ref.mul, conv.params.color_ref.mul, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected.params.color_ref.div, conv.params.color_ref.div, 3);
+}
+
 void test_nan_gives_zero_components(void)
 {
     sb_rgb_color_t red = { 255, 0, 0 };
@@ -286,6 +302,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_rgb_from_color_temperature);
     RUN_TEST(test_rgb_from_color_temperature_at_branch_points);
     RUN_TEST(test_nan_gives_zero_components);
+    RUN_TEST(test_rgbw_conversion_with_zero_temperature_after_reference_color);
     RUN_TEST(test_rgbw_equals);
     RUN_TEST(test_rgbw_conversion);
 
