@@ -29,6 +29,7 @@
 #include <skybrush/utils.h>
 
 #include "../parsing.h"
+#include "../utils.h"
 
 #include "./builder.h"
 #include "./player.h"
@@ -780,7 +781,7 @@ sb_error_t sb_trajectory_replace_end_to_land_at_with_terminal_velocity(
     stats->vel_at_landing_time = end_vel;
     if (stats->valid_components & SB_TRAJECTORY_STATS_DURATION) {
         stats->duration_sec += duration_sec;
-        stats->duration_msec += duration_msec;
+        stats->duration_msec = sb_i_add_saturating_u32(stats->duration_msec, duration_msec);
     }
     if (stats->valid_components & SB_TRAJECTORY_STATS_START_END_DISTANCE) {
         stats->start_to_end_distance_xy = hypotf(

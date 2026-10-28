@@ -28,6 +28,7 @@
 #include <skybrush/utils.h>
 
 #include "../parsing.h"
+#include "../utils.h"
 #include "./player.h"
 #include "./trajectory.h"
 #include "./utils.h"
@@ -232,7 +233,7 @@ sb_error_t sb_trajectory_player_get_total_duration_msec(
     SB_CHECK(sb_trajectory_player_rewind(player));
 
     while (sb_trajectory_player_has_more_segments(player)) {
-        result += player->state.segment.duration_msec;
+        result = sb_i_add_saturating_u32(result, player->state.segment.duration_msec);
         SB_CHECK(sb_trajectory_player_build_next_segment(player));
     }
 
@@ -375,7 +376,7 @@ static sb_error_t sb_i_trajectory_player_build_current_segment(
     /* Parse duration and calculate end time */
     segment->duration_msec = sb_parse_uint16(SB_BUFFER(trajectory->buffer), &offset);
     segment->duration_sec = segment->duration_msec / 1000.0f;
-    segment->end_time_msec = segment->start_time_msec + segment->duration_msec;
+    segment->end_time_msec = sb_i_add_saturating_u32(segment->start_time_msec, segment->duration_msec);
     segment->end_time_sec = segment->end_time_msec / 1000.0f;
 
     /* Polynomials will be created lazily */

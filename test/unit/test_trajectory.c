@@ -22,6 +22,7 @@
 
 #include <skybrush/formats/binary.h>
 #include <skybrush/refcount.h>
+#include <skybrush/stats.h>
 #include <skybrush/trajectory.h>
 
 #include "unity.h"
@@ -263,6 +264,42 @@ void test_get_axis_aligned_bounding_box_with_poly7_segments(void)
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 30, box.z.max);
     TEST_ASSERT_FLOAT_WITHIN(1e-2, -80.608, box.x.min);
     TEST_ASSERT_FLOAT_WITHIN(1e-3, 500, box.x.max);
+}
+
+void test_total_duration_saturates(void)
+{
+    /* 65538 segments of 65535 ms each last longer than UINT32_MAX ms; the
+     * total duration and the end times of the segments must saturate
+     * instead of wrapping around */
+    size_t num_segments = 65538;
+    size_t size = 9 + 3 * num_segments;
+    uint8_t* body = calloc(size, 1);
+    sb_trajectory_stats_calculator_t calc;
+    sb_trajectory_stats_t stats;
+    size_t i;
+
+    TEST_ASSERT_NOT_NULL(body);
+    body[0] = 1;
+    for (i = 0; i < num_segments; i++) {
+        /* A constant segment of 65535 ms */
+        body[9 + 3 * i + 1] = 0xff;
+        body[9 + 3 * i + 2] = 0xff;
+    }
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_buffer(trajectory, body, size));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, sb_trajectory_get_total_duration_msec(trajectory));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_stats_init(&stats));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_stats_calculator_init(&calc, 1000));
+    calc.components = SB_TRAJECTORY_STATS_DURATION;
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_stats_calculator_run(&calc, trajectory, &stats));
+    TEST_ASSERT_EQUAL_UINT32(UINT32_MAX, stats.duration_msec);
+    sb_trajectory_stats_calculator_destroy(&calc);
+    sb_trajectory_stats_destroy(&stats);
+
+    /* Release the view before the buffer */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_clear(trajectory));
+    free(body);
 }
 
 void test_propose_takeoff_time_const_speed(void)
@@ -973,6 +1010,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_get_axis_aligned_bounding_box);
     RUN_TEST(test_get_axis_aligned_bounding_box_from_trajectory_in_memory);
     RUN_TEST(test_get_axis_aligned_bounding_box_with_poly7_segments);
+    RUN_TEST(test_total_duration_saturates);
     RUN_TEST(test_propose_takeoff_time_const_speed);
     RUN_TEST(test_propose_takeoff_time_const_acceleration);
     RUN_TEST(test_propose_landing_time);

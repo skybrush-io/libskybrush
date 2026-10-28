@@ -30,6 +30,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdint.h>
+
 #include <skybrush/decls.h>
 
 __BEGIN_DECLS
@@ -45,6 +47,15 @@ __BEGIN_DECLS
  * not a valid declaration at file scope.
  */
 #define SB_STATIC_ASSERT(condition) ((void)sizeof(char[1 - 2 * !(condition)]))
+
+/**
+ * \brief Adds two unsigned 32-bit integers, saturating at \c UINT32_MAX
+ * instead of wrapping around.
+ */
+static inline uint32_t sb_i_add_saturating_u32(uint32_t a, uint32_t b)
+{
+    return a > UINT32_MAX - b ? UINT32_MAX : a + b;
+}
 
 __END_DECLS
 

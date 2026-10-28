@@ -26,6 +26,8 @@
 #include <skybrush/stats.h>
 #include <skybrush/trajectory.h>
 
+#include "../utils.h"
+
 static sb_bool_t sb_i_is_segment_descending_vertically(
     const sb_trajectory_segment_t* segment, float threshold);
 
@@ -190,7 +192,7 @@ sb_error_t sb_trajectory_stats_calculator_run(
     while (sb_trajectory_player_has_more_segments(&player)) {
         if (components & SB_TRAJECTORY_STATS_DURATION) {
             /* Add the duration of the current segment to the total duration */
-            result->duration_msec += segment->duration_msec;
+            result->duration_msec = sb_i_add_saturating_u32(result->duration_msec, segment->duration_msec);
         }
 
         if (components & SB_TRAJECTORY_STATS_TAKEOFF_TIME) {
