@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1] - 2026-10-28
+
+This release fixes bugs found while porting the library to Rust. Only one of
+them changes the output for valid input: RGBW conversions with a reference
+color that lacks a red, green or blue component, including color temperatures
+up to about 1900 K, now use the white LED (see below).
+
+### Fixed
+
+- RGBW conversions with a reference color that lacks a channel now ignore that
+  channel: it neither limits the white level nor is reduced by it, and a black
+  reference leaves the white LED off. Previously, a color without that channel
+  could not use the white LED at all, the white LED subtracted up to one unit
+  from the channel, and a black reference turned the white LED fully on.
+
+- `sb_trajectory_get_axis_aligned_bounding_box()` bounds segments of degree 7
+  by their Bézier control points. Previously, it extended the bounding box
+  with the interval left over from the previous axis or segment, or with
+  uninitialized memory.
+
+- `sb_poly_get_extrema()` returns `SB_EUNIMPLEMENTED` for polynomials of degree
+  above 3, as documented, instead of `SB_SUCCESS` without a result.
+
+- `sb_trajectory_builder_set_start_position()`, `sb_trajectory_cut_at()` and
+  `sb_trajectory_replace_end_to_land_at_with_terminal_velocity()` leave the
+  builder, the trajectory and the statistics intact when they fail because of
+  a coordinate out of range. Previously, they modified them partly.
+
+- Converting a NaN ratio in `sb_rgb_color_linear_interpolation()` or a NaN
+  temperature in `sb_rgb_color_from_color_temperature()` to a color component
+  gives zero instead of undefined behaviour.
+
+- The total duration of a trajectory, the end times of its segments and the
+  duration in the trajectory statistics saturate at `UINT32_MAX` instead of
+  wrapping around for trajectories longer than about 49.7 days.
+
+- `sb_rgbw_conversion_use_color_temperature()` with a temperature of zero no
+  longer keeps a reference color set up earlier.
+
 ## [6.0.0] - 2026-10-27
 
 This release hardens the parsers and players of the library against malformed
