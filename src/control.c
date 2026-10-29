@@ -247,6 +247,9 @@ void sb_control_output_time_invalidate(sb_control_output_time_t* time)
 /* ************************************************************************* */
 
 static sb_error_t sb_i_show_controller_set_current_scene(
+    sb_show_controller_t* ctrl, sb_screenplay_scene_t* scene, ssize_t scene_index);
+static void sb_i_show_controller_destroy_players(sb_show_controller_t* ctrl);
+static sb_error_t sb_i_show_controller_sync_players(
     sb_show_controller_t* ctrl, sb_screenplay_scene_t* scene);
 static void sb_i_show_controller_invalidate_output(sb_show_controller_t* ctrl);
 
@@ -266,6 +269,7 @@ sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* 
     memset(ctrl, 0, sizeof(sb_show_controller_t));
 
     ctrl->screenplay = screenplay;
+    ctrl->current_scene_index = -1;
 
     sb_control_output_clear(&ctrl->default_output);
     sb_control_output_set_velocity(&ctrl->default_output, zero);
@@ -284,7 +288,7 @@ sb_error_t sb_show_controller_init(sb_show_controller_t* ctrl, sb_screenplay_t* 
 void sb_show_controller_destroy(sb_show_controller_t* ctrl)
 {
     sb_i_show_controller_invalidate_output(ctrl);
-    sb_i_show_controller_set_current_scene(ctrl, NULL); /* always successful */
+    sb_i_show_controller_set_current_scene(ctrl, NULL, -1); /* always successful */
     sb_control_output_clear(&ctrl->output);
 }
 
@@ -379,8 +383,13 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
         return SB_SUCCESS;
     }
 
-    scene = ctrl->screenplay ? sb_screenplay_get_scene_ptr_at_time_msec(ctrl->screenplay, time_msec, &scene_index) : NULL;
-    SB_CHECK(sb_i_show_controller_set_current_scene(ctrl, scene));
+    if (ctrl->screenplay) {
+        scene = sb_screenplay_get_scene_ptr_at_time_msec(ctrl->screenplay, time_msec, &scene_index);
+    } else {
+        scene = NULL;
+        scene_index = -1;
+    }
+    SB_CHECK(sb_i_show_controller_set_current_scene(ctrl, scene, scene_index));
 
     /* time_in_scene_msec is now up-to-date */
 
@@ -479,10 +488,13 @@ const sb_event_t* sb_show_controller_get_next_event(sb_show_controller_t* ctrl)
  */
 void sb_show_controller_notify_screenplay_changed(sb_show_controller_t* ctrl)
 {
-    if (!sb_screenplay_contains_scene(ctrl->screenplay, sb_show_controller_get_current_scene(ctrl))) {
+    if (ctrl->current_scene && !sb_screenplay_contains_scene(ctrl->screenplay, ctrl->current_scene)) {
         /* Current scene was removed from the screenplay, we need to drop our reference
-         * to it. */
-        sb_i_show_controller_set_current_scene(ctrl, NULL); /* always successful */
+         * to it. The players are kept: if the scene at the same index plays the same
+         * components at the next update, they continue where they are, so the events
+         * of the scene are not fired again. */
+        SB_XDECREF(ctrl->current_scene);
+        ctrl->current_scene = NULL;
     }
 
     sb_i_show_controller_invalidate_output(ctrl);
@@ -504,13 +516,36 @@ static void sb_i_show_controller_invalidate_output(sb_show_controller_t* ctrl)
     ctrl->reached_end = 0;
 }
 
+/**
+ * @brief Sets the current scene of the show controller and updates the players.
+ *
+ * The players of the components of the scene are kept if the index of the scene
+ * did not change and they play the same components; otherwise they are replaced.
+ */
 static sb_error_t sb_i_show_controller_set_current_scene(
-    sb_show_controller_t* ctrl, sb_screenplay_scene_t* scene)
+    sb_show_controller_t* ctrl, sb_screenplay_scene_t* scene, ssize_t scene_index)
 {
-    if (scene == ctrl->current_scene) {
-        return SB_SUCCESS;
+    if (scene == NULL) {
+        scene_index = -1;
     }
 
+    if (scene_index != ctrl->current_scene_index) {
+        /* The players of another scene start from scratch */
+        sb_i_show_controller_destroy_players(ctrl);
+    }
+
+    if (scene != ctrl->current_scene) {
+        SB_XINCREF(scene);
+        SB_XDECREF(ctrl->current_scene);
+        ctrl->current_scene = scene;
+    }
+    ctrl->current_scene_index = scene_index;
+
+    return scene ? sb_i_show_controller_sync_players(ctrl, scene) : SB_SUCCESS;
+}
+
+static void sb_i_show_controller_destroy_players(sb_show_controller_t* ctrl)
+{
     if (ctrl->trajectory_player) {
         sb_trajectory_player_destroy(ctrl->trajectory_player);
         sb_free(ctrl->trajectory_player);
@@ -530,43 +565,63 @@ static sb_error_t sb_i_show_controller_set_current_scene(
         sb_event_list_player_destroy(ctrl->event_list_player);
         sb_free(ctrl->event_list_player);
     }
+}
 
-    SB_XINCREF(scene);
-    SB_XDECREF(ctrl->current_scene);
-    ctrl->current_scene = scene;
-
-    if (scene) {
-        if (scene->trajectory) {
-            ctrl->trajectory_player = sb_calloc(sb_trajectory_player_t, 1);
-            if (ctrl->trajectory_player == NULL) {
-                return SB_ENOMEM; /* LCOV_EXCL_LINE */
-            }
-            SB_CHECK(sb_trajectory_player_init(ctrl->trajectory_player, scene->trajectory));
+/**
+ * @brief Makes the players of the show controller play the components of the given scene.
+ *
+ * A player whose component did not change keeps its state; a player whose component
+ * was replaced or removed is destroyed, and a player is created for each new component.
+ */
+static sb_error_t sb_i_show_controller_sync_players(
+    sb_show_controller_t* ctrl, sb_screenplay_scene_t* scene)
+{
+    if (ctrl->trajectory_player && ctrl->trajectory_player->trajectory != scene->trajectory) {
+        sb_trajectory_player_destroy(ctrl->trajectory_player);
+        sb_free(ctrl->trajectory_player);
+    }
+    if (ctrl->trajectory_player == NULL && scene->trajectory) {
+        ctrl->trajectory_player = sb_calloc(sb_trajectory_player_t, 1);
+        if (ctrl->trajectory_player == NULL) {
+            return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }
+        SB_CHECK(sb_trajectory_player_init(ctrl->trajectory_player, scene->trajectory));
+    }
 
-        if (scene->light_program) {
-            ctrl->light_player = sb_calloc(sb_light_player_t, 1);
-            if (ctrl->light_player == NULL) {
-                return SB_ENOMEM; /* LCOV_EXCL_LINE */
-            }
-            SB_CHECK(sb_light_player_init(ctrl->light_player, scene->light_program));
+    if (ctrl->light_player && ctrl->light_player->program != scene->light_program) {
+        sb_light_player_destroy(ctrl->light_player);
+        sb_free(ctrl->light_player);
+    }
+    if (ctrl->light_player == NULL && scene->light_program) {
+        ctrl->light_player = sb_calloc(sb_light_player_t, 1);
+        if (ctrl->light_player == NULL) {
+            return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }
+        SB_CHECK(sb_light_player_init(ctrl->light_player, scene->light_program));
+    }
 
-        if (scene->yaw_control) {
-            ctrl->yaw_player = sb_calloc(sb_yaw_player_t, 1);
-            if (ctrl->yaw_player == NULL) {
-                return SB_ENOMEM; /* LCOV_EXCL_LINE */
-            }
-            SB_CHECK(sb_yaw_player_init(ctrl->yaw_player, scene->yaw_control));
+    if (ctrl->yaw_player && ctrl->yaw_player->ctrl != scene->yaw_control) {
+        sb_yaw_player_destroy(ctrl->yaw_player);
+        sb_free(ctrl->yaw_player);
+    }
+    if (ctrl->yaw_player == NULL && scene->yaw_control) {
+        ctrl->yaw_player = sb_calloc(sb_yaw_player_t, 1);
+        if (ctrl->yaw_player == NULL) {
+            return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }
+        SB_CHECK(sb_yaw_player_init(ctrl->yaw_player, scene->yaw_control));
+    }
 
-        if (scene->events) {
-            ctrl->event_list_player = sb_calloc(sb_event_list_player_t, 1);
-            if (ctrl->event_list_player == NULL) {
-                return SB_ENOMEM; /* LCOV_EXCL_LINE */
-            }
-            SB_CHECK(sb_event_list_player_init(ctrl->event_list_player, scene->events));
+    if (ctrl->event_list_player && ctrl->event_list_player->events != scene->events) {
+        sb_event_list_player_destroy(ctrl->event_list_player);
+        sb_free(ctrl->event_list_player);
+    }
+    if (ctrl->event_list_player == NULL && scene->events) {
+        ctrl->event_list_player = sb_calloc(sb_event_list_player_t, 1);
+        if (ctrl->event_list_player == NULL) {
+            return SB_ENOMEM; /* LCOV_EXCL_LINE */
         }
+        SB_CHECK(sb_event_list_player_init(ctrl->event_list_player, scene->events));
     }
 
     return SB_SUCCESS;

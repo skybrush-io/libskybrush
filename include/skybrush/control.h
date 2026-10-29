@@ -128,6 +128,14 @@ typedef struct sb_show_controller_s {
     /** The current scene of the screenplay being played */
     sb_screenplay_scene_t* current_scene;
 
+    /**
+     * The index of the current scene in the screenplay, or -1 if there is none.
+     * The players are kept as long as the scene at this index plays the same
+     * components, even if the screenplay is modified or replaced in the
+     * meantime, so that the events of the scene are not fired again.
+     */
+    ssize_t current_scene_index;
+
     /** The trajectory player; \c NULL if the current scene has no trajectory */
     sb_trajectory_player_t* trajectory_player;
 

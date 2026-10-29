@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The show controller keeps the players of the current scene when the
+  screenplay is modified or replaced, as long as the scene at the same index
+  plays the same components, and replaces the player of a component that was
+  replaced. Previously, replacing the screenplay (e.g. after a new time axis
+  configuration) created the players from scratch, so the events of the scene
+  up to the current time were fired again, and replacing a component of the
+  current scene had no effect until another scene became the current one.
+
 ## [6.0.2] - 2026-10-28
 
 This release fixes two bugs of light programs found while porting the library

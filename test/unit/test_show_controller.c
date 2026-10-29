@@ -20,6 +20,7 @@
 #include "unity.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <skybrush/control.h>
 #include <skybrush/lights.h>
@@ -920,6 +921,112 @@ void test_show_controller_update_time_at_int32_max(void)
     sb_screenplay_destroy(&screenplay);
 }
 
+/* Loads the show file with the given name into a screenplay with a single scene.
+ * The components of the scene are views into the returned buffer, which must be
+ * freed after the screenplay is destroyed. */
+static uint8_t* load_screenplay(sb_screenplay_t* screenplay, const char* fname)
+{
+    FILE* fp;
+    uint8_t* buf;
+    long size;
+
+    fp = fopen(fname, "rb");
+    TEST_ASSERT_NOT_NULL(fp);
+    fseek(fp, 0, SEEK_END);
+    size = ftell(fp);
+    rewind(fp);
+    buf = (uint8_t*)malloc(size);
+    TEST_ASSERT_NOT_NULL(buf);
+    TEST_ASSERT_EQUAL(size, fread(buf, 1, size, fp));
+    fclose(fp);
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(screenplay));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_update_from_binary_file_in_memory(screenplay, buf, size));
+
+    return buf;
+}
+
+static int count_fired_events(sb_show_controller_t* ctrl, uint32_t time_msec)
+{
+    int count = 0;
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_update_time_msec(ctrl, time_msec));
+    while (sb_show_controller_get_next_event(ctrl)) {
+        count++;
+    }
+
+    return count;
+}
+
+void test_show_controller_replacing_screenplay_does_not_fire_events_again(void)
+{
+    uint8_t* show;
+    sb_show_controller_t ctrl;
+    sb_screenplay_t screenplay, new_screenplay;
+    sb_screenplay_scene_t* scene;
+
+    show = load_screenplay(&screenplay, "fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_init(&ctrl, &screenplay));
+
+    /* The first event is at 10 s */
+    TEST_ASSERT_EQUAL(1, count_fired_events(&ctrl, 10000));
+    TEST_ASSERT_EQUAL(0, count_fired_events(&ctrl, 10100));
+
+    /* Replace the screenplay with a new one whose scene shares the components of the
+     * old one, as the firmware does when a new time axis configuration arrives */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_init(&new_screenplay));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_screenplay_append_new_scene(&new_screenplay, &scene));
+    sb_screenplay_scene_update_contents_from(scene, sb_screenplay_get_scene_ptr(&screenplay, 0));
+    sb_screenplay_destroy(&screenplay);
+    screenplay = new_screenplay;
+    sb_show_controller_notify_screenplay_changed(&ctrl);
+
+    /* Regression test: the events of the scene used to be fired again because the
+     * players were created from scratch */
+    TEST_ASSERT_EQUAL(0, count_fired_events(&ctrl, 10200));
+
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
+    free(show);
+}
+
+void test_show_controller_replaced_trajectory_takes_effect(void)
+{
+    uint8_t* show;
+    sb_show_controller_t ctrl;
+    sb_screenplay_t screenplay;
+    sb_screenplay_scene_t* scene;
+    sb_trajectory_t* trajectory;
+    sb_trajectory_builder_t builder;
+    sb_vector3_with_yaw_t start = { 1234, 0, 0, 0 };
+    sb_vector3_t position;
+
+    show = load_screenplay(&screenplay, "fixtures/pyro_events.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_init(&ctrl, &screenplay));
+    TEST_ASSERT_EQUAL(1, count_fired_events(&ctrl, 10000));
+
+    TEST_ASSERT_NOT_NULL(trajectory = sb_trajectory_new());
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 1, 0));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, start));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_hold_position_for(&builder, 60000));
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_builder(trajectory, &builder));
+    sb_trajectory_builder_destroy(&builder);
+
+    scene = sb_screenplay_get_scene_ptr(&screenplay, 0);
+    sb_screenplay_scene_set_trajectory(scene, trajectory);
+    SB_DECREF(trajectory);
+    sb_show_controller_notify_screenplay_changed(&ctrl);
+
+    /* Regression test: the controller used to keep playing the old trajectory */
+    TEST_ASSERT_EQUAL(0, count_fired_events(&ctrl, 10000));
+    TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(sb_show_controller_get_current_output(&ctrl), &position));
+    TEST_ASSERT_EQUAL_FLOAT(1234, position.x);
+
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
+    free(show);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -937,6 +1044,8 @@ int main(void)
     RUN_TEST(test_show_controller_invalidate_cached_output);
     RUN_TEST(test_show_controller_current_scene_dropped_on_scene_removal);
     RUN_TEST(test_show_controller_get_current_scene);
+    RUN_TEST(test_show_controller_replacing_screenplay_does_not_fire_events_again);
+    RUN_TEST(test_show_controller_replaced_trajectory_takes_effect);
 
     return UNITY_END();
 }
