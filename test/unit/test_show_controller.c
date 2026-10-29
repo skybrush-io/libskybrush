@@ -958,6 +958,36 @@ static int count_fired_events(sb_show_controller_t* ctrl, uint32_t time_msec)
     return count;
 }
 
+void test_show_controller_cached_output_after_time_beyond_int32_max(void)
+{
+    uint8_t* show;
+    sb_show_controller_t ctrl;
+    sb_screenplay_t screenplay;
+    sb_control_output_time_t output_time;
+
+    show = load_screenplay(&screenplay, "fixtures/basic_show_with_yaw.skyb");
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_init(&ctrl, &screenplay));
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_update_time_msec(&ctrl, 5000));
+    TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(sb_show_controller_get_current_output(&ctrl), NULL));
+
+    /* The output time belongs to the time beyond INT32_MAX */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_update_time_msec(&ctrl, (uint32_t)INT32_MAX + 1));
+    TEST_ASSERT_TRUE(sb_show_controller_has_reached_end(&ctrl));
+    output_time = sb_show_controller_get_current_output_time(&ctrl);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)INT32_MAX + 1, output_time.time_msec);
+
+    /* Regression test: going back to the earlier time used to return the cached
+     * default output because the output time was not updated above */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_show_controller_update_time_msec(&ctrl, 5000));
+    TEST_ASSERT_FALSE(sb_show_controller_has_reached_end(&ctrl));
+    TEST_ASSERT_TRUE(sb_control_output_get_position_if_set(sb_show_controller_get_current_output(&ctrl), NULL));
+
+    sb_show_controller_destroy(&ctrl);
+    sb_screenplay_destroy(&screenplay);
+    free(show);
+}
+
 void test_show_controller_replacing_screenplay_does_not_fire_events_again(void)
 {
     uint8_t* show;
@@ -1044,6 +1074,7 @@ int main(void)
     RUN_TEST(test_show_controller_invalidate_cached_output);
     RUN_TEST(test_show_controller_current_scene_dropped_on_scene_removal);
     RUN_TEST(test_show_controller_get_current_scene);
+    RUN_TEST(test_show_controller_cached_output_after_time_beyond_int32_max);
     RUN_TEST(test_show_controller_replacing_screenplay_does_not_fire_events_again);
     RUN_TEST(test_show_controller_replaced_trajectory_takes_effect);
 

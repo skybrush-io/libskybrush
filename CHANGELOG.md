@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   up to the current time were fired again, and replacing a component of the
   current scene had no effect until another scene became the current one.
 
+- `sb_show_controller_update_time_msec()` records the time of the output for
+  times beyond `INT32_MAX` too. Previously, the output time was left at the
+  previous time, so a later update at that time returned the default output
+  from the cache.
+
 ## [6.0.2] - 2026-10-28
 
 This release fixes two bugs of light programs found while porting the library

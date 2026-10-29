@@ -376,14 +376,11 @@ sb_error_t sb_show_controller_update_time_msec(sb_show_controller_t* ctrl, uint3
     sb_control_output_clear(out);
 
     if (time_msec > INT32_MAX) {
-        /* Out of bounds because we can only submit an int32_t to sb_time_axis_map_ex() */
-        warped_time_sec = 0.0f;
-        *out = ctrl->default_output;
-        ctrl->reached_end = 1;
-        return SB_SUCCESS;
-    }
-
-    if (ctrl->screenplay) {
+        /* Out of bounds because we can only submit an int32_t to sb_time_axis_map_ex();
+         * handled like a time instant between scenes */
+        scene = NULL;
+        scene_index = -1;
+    } else if (ctrl->screenplay) {
         scene = sb_screenplay_get_scene_ptr_at_time_msec(ctrl->screenplay, time_msec, &scene_index);
     } else {
         scene = NULL;
