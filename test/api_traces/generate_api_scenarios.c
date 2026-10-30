@@ -397,6 +397,12 @@ static const builder_scenario_t BUILDER_SCENARIOS[] = {
                                                 { OP_MOVE_TO_IN_TIME, P(200, 0, 0), P(0, 0, 0), P(0, 0, 0), 2, 1000 },
                                                 { OP_MOVE_TO_IN_TIME, P(300, 0, 0), P(0, 0, 0), P(0, 0, 0), 3, 1000 },
                                             } },
+    /* A move that does not change the position holds the position */
+    { "move_to_in_time_without_moving", 1, {
+                                               { OP_SET_START, P(100, 200, 300) },
+                                               { OP_MOVE_TO_IN_TIME, P(100, 200, 300), P(0, 0, 0), P(0, 0, 0), 5000, 1000 },
+                                               { OP_MOVE_TO_IN_TIME, P(100, 200, 300), P(0, 0, 0), P(0, 0, 0), 150000, INFINITY },
+                                           } },
     { "large_coordinates_with_scale", 10, {
                                               { OP_SET_START, P(-300000, 250000, 0) },
                                               { OP_LINE, P(300000, -250000, 100000), P(0, 0, 0), P(0, 0, 0), 60000 },

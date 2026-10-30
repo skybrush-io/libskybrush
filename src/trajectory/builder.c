@@ -454,6 +454,14 @@ static sb_error_t sb_i_trajectory_builder_move_to_in_time(
         return SB_EINVAL;
     }
 
+    p = builder->last_position;
+    distance = hypotf(hypotf(target.x - p.x, target.y - p.y), target.z - p.z);
+    if (distance == 0) {
+        /* A move that does not change the position holds the position; the
+         * motion profile below would divide by the zero length of the move */
+        return sb_i_trajectory_builder_hold_position_for(builder, duration_msec);
+    }
+
     if (!isfinite(max_acceleration) || max_acceleration <= 0) {
         /* max acceleration is infinite so we can just use straight-line segments */
         return sb_i_trajectory_builder_append_line(builder, target, duration_msec);
@@ -465,8 +473,6 @@ static sb_error_t sb_i_trajectory_builder_move_to_in_time(
     }
 
     /* calculate required travel velocity */
-    p = builder->last_position;
-    distance = hypotf(hypotf(target.x - p.x, target.y - p.y), target.z - p.z);
     duration_sec = duration_msec / 1000.0f;
     v2 = sb_get_travel_velocity_for_distance(distance, duration_sec, max_acceleration);
 

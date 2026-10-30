@@ -817,6 +817,55 @@ void test_move_to_in_time_short_durations(void)
     SB_XDECREF(trajectory);
 }
 
+void test_move_to_in_time_without_moving(void)
+{
+    /* A move to the current position holds the position for the given
+     * duration, regardless of the maximum acceleration; it used to divide the
+     * direction of the move by its zero length */
+    static const float max_accelerations[] = { 1000, INFINITY };
+    static const uint32_t durations_msec[] = { 2, 5000, 150000 };
+    sb_vector3_with_yaw_t start = { 100, 200, 300, 0 };
+    sb_vector3_with_yaw_t pos, vel, last;
+    sb_trajectory_t trajectory;
+    sb_trajectory_player_t player;
+    size_t i, j, k;
+    float t;
+
+    for (i = 0; i < sizeof(max_accelerations) / sizeof(max_accelerations[0]); i++) {
+        for (j = 0; j < sizeof(durations_msec) / sizeof(durations_msec[0]); j++) {
+            TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_init(&builder, 1, 0));
+            TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_set_start_position(&builder, start));
+            TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_builder_move_to_in_time(&builder, start, durations_msec[j], max_accelerations[i]));
+
+            last = sb_trajectory_builder_get_last_position(&builder);
+            TEST_ASSERT_EQUAL_FLOAT(start.x, last.x);
+            TEST_ASSERT_EQUAL_FLOAT(start.y, last.y);
+            TEST_ASSERT_EQUAL_FLOAT(start.z, last.z);
+
+            TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_init(&trajectory));
+            TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_update_from_builder(&trajectory, &builder));
+            TEST_ASSERT_EQUAL_UINT32(durations_msec[j], sb_trajectory_get_total_duration_msec(&trajectory));
+
+            TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_init(&player, &trajectory));
+            for (k = 0; k <= 4; k++) {
+                t = durations_msec[j] / 1000.0f * k / 4;
+                TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_position_at(&player, t, &pos));
+                TEST_ASSERT_EQUAL_FLOAT(start.x, pos.x);
+                TEST_ASSERT_EQUAL_FLOAT(start.y, pos.y);
+                TEST_ASSERT_EQUAL_FLOAT(start.z, pos.z);
+                TEST_ASSERT_EQUAL(SB_SUCCESS, sb_trajectory_player_get_velocity_at(&player, t, &vel));
+                TEST_ASSERT_EQUAL_FLOAT(0, vel.x);
+                TEST_ASSERT_EQUAL_FLOAT(0, vel.y);
+                TEST_ASSERT_EQUAL_FLOAT(0, vel.z);
+            }
+            sb_trajectory_player_destroy(&player);
+
+            SB_DECREF_STATIC(&trajectory);
+            sb_trajectory_builder_destroy(&builder);
+        }
+    }
+}
+
 void test_failed_operations_leave_builder_intact(void)
 {
     /* Operations that fail because of an invalid coordinate must not leave a
@@ -888,6 +937,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_move_to_in_time_with_short_cruise);
     RUN_TEST(test_move_to_in_time_with_very_short_acceleration);
     RUN_TEST(test_move_to_in_time_short_durations);
+    RUN_TEST(test_move_to_in_time_without_moving);
     RUN_TEST(test_failed_operations_leave_builder_intact);
 
     return UNITY_END();

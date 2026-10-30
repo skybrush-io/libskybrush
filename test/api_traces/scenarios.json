@@ -67,6 +67,13 @@
       "trajectory": {"is_empty": false, "start_position_mm": [0, 0, 0], "scale": 1, "duration_ms": 6, "segments": [{"start_ms": 0, "duration_ms": 1, "position_units": [[0, 0, 0], [25, 0, 0], [50, 0, 0], [75, 0, 0], [100, 0, 0]]}, {"start_ms": 1, "duration_ms": 2, "position_units": [[100, 0, 0], [125, 0, 0], [150, 0, 0], [175, 0, 0], [199.999985, 0, 0]]}, {"start_ms": 3, "duration_ms": 1, "position_units": [[199.999985, 0, 0], [203.03125, 0, 0], [212.250015, 0, 0], [227.843781, 0, 0], [250.000061, 0, 0]]}, {"start_ms": 4, "duration_ms": 1, "position_units": [[250.000061, 0, 0], [250, 0, 0], [250, 0, 0], [250, 0, 0], [250.000046, 0, 0]]}, {"start_ms": 5, "duration_ms": 1, "position_units": [[250, 0, 0], [271.734375, 0, 0], [287.375, 0, 0], [296.828125, 0, 0], [299.999969, 0, 0]]}]}
     },
     {
+      "scenario": "move_to_in_time_without_moving",
+      "scale": 1,
+      "init_result": "SUCCESS",
+      "ops": [{"op": "set_start_position", "position_mm": [100, 200, 300, 0], "result": "SUCCESS"}, {"op": "move_to_in_time", "target_mm": [100, 200, 300, 0], "duration_ms": 5000, "max_acceleration_mm_s2": 1000, "result": "SUCCESS"}, {"op": "move_to_in_time", "target_mm": [100, 200, 300, 0], "duration_ms": 150000, "max_acceleration_mm_s2": null, "result": "SUCCESS"}],
+      "trajectory": {"is_empty": false, "start_position_mm": [100, 200, 300], "scale": 1, "duration_ms": 155000, "segments": [{"start_ms": 0, "duration_ms": 5000, "position_units": [[100, 200, 300], [100, 200, 300], [100, 200, 300], [100, 200, 300], [100, 200, 300]]}, {"start_ms": 5000, "duration_ms": 60000, "position_units": [[100, 200, 300], [100, 200, 300], [100, 200, 300], [100, 200, 300], [100, 200, 300]]}, {"start_ms": 65000, "duration_ms": 60000, "position_units": [[100, 200, 300], [100, 200, 300], [100, 200, 300], [100, 200, 300], [100, 200, 300]]}, {"start_ms": 125000, "duration_ms": 30000, "position_units": [[100, 200, 300], [100, 200, 300], [100, 200, 300], [100, 200, 300], [100, 200, 300]]}]}
+    },
+    {
       "scenario": "large_coordinates_with_scale",
       "scale": 10,
       "init_result": "SUCCESS",

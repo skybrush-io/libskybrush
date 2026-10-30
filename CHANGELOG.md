@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `sb_trajectory_builder_move_to_in_time()` failing with `SB_EINVAL`
+  when the target is the current position, as it divided the direction of the
+  move by its zero length. A move that does not change the position now holds
+  the position for the given duration.
+
 ## [6.0.3] - 2026-10-30
 
 ### Fixed
