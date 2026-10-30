@@ -1,7 +1,7 @@
 {
   "version": 1,
   "fixture": "real_show.skyb",
-  "generator": "libskybrush 6.0.3",
+  "generator": "libskybrush 6.0.4",
   "sample_interval_ms": 100,
   "trajectory": {"duration_ms": 600850, "end_position_mm": [67458, -1200, 4998], "bounding_box_mm": [[63192, 180108], [-51138, 29190], [0, 109452]]},
   "stats": [
