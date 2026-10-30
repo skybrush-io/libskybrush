@@ -1,0 +1,40 @@
+[version]
+current = "6.0.2"
+regex = '''
+  (?P<major>\d+)
+  \.
+  (?P<minor>\d+)
+  \.
+  (?P<patch>\d+)
+'''
+
+[git]
+message_template = "chore: bumped version to {new_version}"
+tag_template = "{new_version}"
+
+[[file]]
+src = "include/skybrush/version.h"
+version_template = "{major}"
+search = "#define SKYBRUSH_VERSION_MAJOR {current_version}"
+
+[[file]]
+src = "include/skybrush/version.h"
+version_template = "{minor}"
+search = "#define SKYBRUSH_VERSION_MINOR {current_version}"
+
+[[file]]
+src = "include/skybrush/version.h"
+version_template = "{patch}"
+search = "#define SKYBRUSH_VERSION_PATCH {current_version}"
+
+[[file]]
+src = "Doxyfile"
+search = "PROJECT_NUMBER         = {current_version}"
+
+[[file]]
+src = "test/api_traces/*.json"
+search = '"generator": "libskybrush {current_version}"'
+
+[[before_commit]]
+name = "Move the unreleased changes in the changelog under the new version"
+cmd = "python3 etc/scripts/release_changelog.py {new_version}"
