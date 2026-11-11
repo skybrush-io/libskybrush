@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- An RTH plan block with a scale factor of zero is now an empty plan, the same
+  way as a trajectory block with a scale factor of zero. Its points and
+  entries are ignored, and the drone lands in place at any time. Earlier, the
+  scale factor was applied as-is, which moved every target point to the
+  origin.
+
 ## [6.0.4] - 2026-10-30
 
 ### Fixed

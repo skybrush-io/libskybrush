@@ -420,6 +420,34 @@ void test_update_with_corrupted_body(void)
     TEST_ASSERT_EQUAL(0, sb_rth_plan_get_num_entries(plan));
 }
 
+void test_update_with_zero_scale(void)
+{
+    /* Two points and two entries; the second entry targets the first point */
+    static uint8_t zero_scale[] = {
+        0x00, 0x00, 0xD0, 0x07, 0xE8, 0x03, 0x00, 0x00, 0x02, 0x00,
+        0x2C, 0x01, 0x90, 0x01, 0x70, 0xFE, 0xD4, 0xFE,
+        0x02, 0x00,
+        SB_RTH_PLAN_ENTRY_HAS_POST_DELAY, 0x00, 0x00,
+        SB_RTH_PLAN_ENTRY_HAS_TARGET_XY | SB_RTH_PLAN_ENTRY_HAS_POST_DELAY, 0x0F, 0x00, 0x32, 0x05
+    };
+    /* The reserved bit of the scale is set and the point array is truncated */
+    static uint8_t zero_scale_malformed[] = {
+        0x00, 0x80, 0xD0, 0x07, 0xE8, 0x03, 0x00, 0x00, 0x02, 0x00,
+        0x2C, 0x01, 0x90
+    };
+
+    /* A scale of zero means that the plan is empty, even if the rest of the
+     * block is malformed */
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_update_from_buffer(plan, zero_scale, sizeof(zero_scale)));
+    test_rth_plan_is_really_empty();
+
+    TEST_ASSERT_EQUAL(SB_SUCCESS, sb_rth_plan_update_from_buffer(plan, zero_scale_malformed, sizeof(zero_scale_malformed)));
+    test_rth_plan_is_really_empty();
+
+    /* The header of the block must still be complete */
+    TEST_ASSERT_EQUAL(SB_ECORRUPTED, sb_rth_plan_update_from_buffer(plan, zero_scale, 9));
+}
+
 void test_plan_duration_too_large(void)
 {
     sb_rth_plan_entry_t entry;
@@ -981,6 +1009,7 @@ int main(int argc, char* argv[])
     RUN_TEST(test_default_landing_altitude);
     RUN_TEST(test_evaluate_at);
     RUN_TEST(test_update_with_corrupted_body);
+    RUN_TEST(test_update_with_zero_scale);
     RUN_TEST(test_plan_duration_too_large);
     RUN_TEST(test_convert_to_trajectory);
     RUN_TEST(test_convert_to_trajectory_with_large_neck);

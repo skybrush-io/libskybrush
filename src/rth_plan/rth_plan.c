@@ -148,6 +148,12 @@ float sb_rth_plan_get_default_landing_velocity(const sb_rth_plan_t* plan)
 size_t sb_rth_plan_get_num_entries(const sb_rth_plan_t* plan)
 {
     size_t offset = OFFSET_OF_ENTRY_TABLE;
+
+    if (plan->scale == 0) {
+        /* A plan with a scale of zero is empty; the entry table is ignored */
+        return 0;
+    }
+
     return offset + 2 <= sb_buffer_size(&plan->buffer)
         ? sb_parse_uint16(SB_BUFFER(plan->buffer), &offset)
         : 0;
@@ -631,6 +637,12 @@ static size_t sb_i_rth_plan_parse_header(sb_rth_plan_t* plan)
     /* next two bytes are the preferred */
     plan->num_points = sb_parse_uint16(buf, &offset);
 
+    /* A scale of zero means that the plan is empty; the points are ignored.
+     * Applying the scale would move every point to the origin instead */
+    if (plan->scale == 0) {
+        plan->num_points = 0;
+    }
+
     /* Zero in the binary representation means no constraint */
     if (plan->max_acceleration == 0) {
         plan->max_acceleration = INFINITY;
@@ -712,6 +724,11 @@ static sb_error_t sb_i_rth_plan_validate_bytes(const uint8_t* buf, size_t nbytes
 
     if (nbytes < SIZE_OF_HEADER) {
         return SB_ECORRUPTED;
+    }
+
+    if ((buf[1] & 0x7f) == 0) {
+        /* Scale is zero; the plan is empty and the rest of the block is ignored */
+        return SB_SUCCESS;
     }
 
     offset = SIZE_OF_HEADER - sizeof(uint16_t);
