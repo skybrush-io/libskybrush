@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generator": "libskybrush 6.0.4",
+  "generator": "libskybrush 6.0.5",
   "sample_interval_ms": 100,
   "builder": [
     {

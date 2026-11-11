@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.5] - 2026-11-11
+
 ### Fixed
 
 - An RTH plan block with a scale factor of zero is now an empty plan, the same

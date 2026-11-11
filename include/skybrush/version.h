@@ -41,7 +41,7 @@
  * \def SKYBRUSH_VERSION_PATCH
  * Patch level of \c libskybrush
  */
-#define SKYBRUSH_VERSION_PATCH 4
+#define SKYBRUSH_VERSION_PATCH 5
 
 /**
  * \def SKYBRUSH_VERSION
